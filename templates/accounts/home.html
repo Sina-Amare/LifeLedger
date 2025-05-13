@@ -1,109 +1,264 @@
-{% extends 'base.html' %} {% block title %}LifeLedger - Cherish Your
-Memories{%endblock %} {% block content %}
-
-<!-- Hero Section -->
+{% extends 'base.html' %} {% block title %}LifeLedger - Cherish Your Memories,
+Discover Your Emotions{% endblock %} {% block content %}
 <section
   class="relative min-h-screen flex items-center justify-center bg-cover bg-center text-center text-white fade-in-section"
 >
-  <div class="absolute inset-0 bg-gradient-hero opacity-90"></div>
+  <div
+    class="absolute inset-0 bg-gradient-to-br from-primary-light via-secondary-light to-accent-light opacity-70 dark:from-primary-dark dark:via-secondary-dark dark:to-accent-dark dark:opacity-60"
+  ></div>
+
   <img
-    src="https://images.unsplash.com/photo-1532635248-94d8c7de5023?auto=format&fit=crop&w=1600&q=80"
-    class="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
-    alt="Calm abstract notebook"
+    src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+    class="absolute inset-0 w-full h-full object-cover"
+    alt="Person writing in a journal with a scenic background"
   />
-  <div class="relative z-10 px-4">
-    <h1 class="text-5xl md:text-6xl font-bold mb-6 text-shadow drop-shadow-lg">
+
+  <div class="relative z-10 p-6">
+    <h1 class="text-5xl md:text-7xl font-bold mb-6 text-shadow text-white">
       LifeLedger
     </h1>
-    <p class="text-xl md:text-2xl mb-10 drop-shadow">
-      Reflect, Remember, and Grow through Your Personal Journal
+    <p
+      class="text-xl md:text-3xl mb-10 text-shadow max-w-2xl mx-auto text-gray-100"
+    >
+      Capture Your Memories, Discover Your Emotions, and Chronicle Your Life's
+      Journey.
     </p>
-    <div class="space-x-4">
+    <div class="space-y-4 md:space-y-0 md:space-x-4">
       <a
         href="{% url 'accounts:login' %}"
-        class="px-6 py-3 bg-white text-accent-purple rounded-lg font-semibold hover:bg-accent-blue hover:text-white transition duration-300"
+        class="inline-block px-8 py-3 bg-white text-primary-light rounded-lg shadow-lg hover:bg-gray-100 transform hover:scale-105 transition duration-300 font-semibold text-lg"
         >Login</a
       >
       <a
         href="{% url 'accounts:signup' %}"
-        class="px-6 py-3 bg-white text-accent-purple rounded-lg font-semibold hover:bg-accent-pink hover:text-white transition duration-300"
-        >Sign Up</a
+        class="inline-block px-8 py-3 bg-accent-light text-white rounded-lg shadow-lg hover:bg-accent-dark transform hover:scale-105 transition duration-300 font-semibold text-lg"
+        >Get Started</a
       >
     </div>
   </div>
 </section>
 
-<!-- Features Section -->
-<section class="py-20 bg-light-bg dark:bg-dark-bg fade-in-section">
-  <div class="container mx-auto px-4">
-    <h2
-      class="text-4xl font-bold text-center mb-12 text-primary-text dark:text-dark-text"
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark">
+  <div class="container mx-auto px-4 space-y-20 md:space-y-28">
+    <div class="text-center mb-12 md:mb-16">
+      <h2
+        class="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-4"
+      >
+        Why LifeLedger?
+      </h2>
+      <p class="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+        A simple, beautiful, and secure place to document your life's moments
+        and reflections.
+      </p>
+    </div>
+
+    <div
+      class="flex flex-col md:flex-row items-center gap-8 md:gap-12 fade-in-right"
     >
-      Why LifeLedger?
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
-      <div
-        class="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow hover:shadow-lg transition duration-300"
-      >
-        <div class="text-4xl mb-4">🧠</div>
-        <h3 class="text-xl font-semibold mb-2">Self Reflection</h3>
-        <p class="text-muted-gray dark:text-gray-300">
-          Discover patterns in your thoughts and emotions to better understand
-          yourself.
+      <div class="w-full md:w-1/2">
+        <img
+          src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+          class="w-full rounded-xl shadow-custom-light dark:shadow-custom-dark transform hover:scale-105 transition duration-300"
+          alt="Creative journaling setup with a laptop and notebook"
+        />
+      </div>
+      <div class="w-full md:w-1/2 text-center md:text-left">
+        <span
+          class="text-sm font-semibold text-primary-light dark:text-primary-dark uppercase tracking-wider"
+          >Organize & Cherish</span
+        >
+        <h3
+          class="text-3xl md:text-4xl font-semibold my-3 text-text-light dark:text-text-dark"
+        >
+          Record Your Memories
+        </h3>
+        <p class="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+          Effortlessly capture your daily experiences, thoughts, and milestones
+          in a beautifully designed digital journal. Your personal space to
+          write, reflect, and remember.
         </p>
       </div>
-      <div
-        class="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow hover:shadow-lg transition duration-300"
-      >
-        <div class="text-4xl mb-4">📅</div>
-        <h3 class="text-xl font-semibold mb-2">Daily Journal</h3>
-        <p class="text-muted-gray dark:text-gray-300">
-          Easily track your daily mood, thoughts, and experiences in one place.
+    </div>
+
+    <div
+      class="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12 fade-in-left"
+    >
+      <div class="w-full md:w-1/2">
+        <img
+          src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+          class="w-full rounded-xl shadow-custom-light dark:shadow-custom-dark transform hover:scale-105 transition duration-300"
+          alt="Team analyzing charts and data on a screen, symbolizing reflection"
+        />
+      </div>
+      <div class="w-full md:w-1/2 text-center md:text-right">
+        <span
+          class="text-sm font-semibold text-secondary-light dark:text-secondary-dark uppercase tracking-wider"
+          >Gain Insights</span
+        >
+        <h3
+          class="text-3xl md:text-4xl font-semibold my-3 text-text-light dark:text-text-dark"
+        >
+          Reflect & Analyze
+        </h3>
+        <p class="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+          Dive deep into your past entries, uncover patterns in your emotions
+          and experiences, and gain meaningful insights for personal growth.
         </p>
       </div>
-      <div
-        class="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow hover:shadow-lg transition duration-300"
-      >
-        <div class="text-4xl mb-4">📈</div>
-        <h3 class="text-xl font-semibold mb-2">Growth Insights</h3>
-        <p class="text-muted-gray dark:text-gray-300">
-          Visualize your emotional journey and celebrate your personal progress.
+    </div>
+
+    <div
+      class="flex flex-col md:flex-row items-center gap-8 md:gap-12 fade-in-right"
+    >
+      <div class="w-full md:w-1/2">
+        <img
+          src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+          class="w-full rounded-xl shadow-custom-light dark:shadow-custom-dark transform hover:scale-105 transition duration-300"
+          alt="People collaborating and sharing ideas happily"
+        />
+      </div>
+      <div class="w-full md:w-1/2 text-center md:text-left">
+        <span
+          class="text-sm font-semibold text-accent-light dark:text-accent-dark uppercase tracking-wider"
+          >Connect & Preserve</span
+        >
+        <h3
+          class="text-3xl md:text-4xl font-semibold my-3 text-text-light dark:text-text-dark"
+        >
+          Share Stories Securely
+        </h3>
+        <p class="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+          Choose to share specific memories or entire journals with loved ones,
+          privately and securely. Preserve your legacy for generations to come.
         </p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Call-to-Action Section -->
 <section
-  class="py-16 bg-gradient-to-r from-accent-purple to-accent-blue text-center fade-in-section"
+  class="py-16 md:py-24 bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark text-center fade-in-section"
 >
   <div class="container mx-auto px-4">
-    <h2 class="text-4xl font-bold text-white mb-6 tracking-tight">
-      Begin Your Journey
+    <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+      Begin Your Journey Today
     </h2>
-    <p class="text-lg text-white/80 mb-8">
-      Join LifeLedger today and start preserving your life’s most precious
-      moments.
+    <p class="text-xl text-gray-100 dark:text-gray-200 mb-10 max-w-xl mx-auto">
+      Join LifeLedger and start preserving your life’s most precious moments and
+      invaluable insights.
     </p>
-    <a
-      href="{% url 'accounts:signup' %}"
-      class="px-6 py-3 bg-white text-accent-purple rounded-lg font-semibold hover:bg-accent-green hover:text-white transition duration-300"
-      >Get Started</a
-    >
+    <div class="space-x-4">
+      <a
+        href="{% url 'accounts:signup' %}"
+        class="inline-block px-10 py-4 bg-white text-primary-light rounded-lg shadow-xl hover:bg-gray-100 transform hover:scale-105 transition duration-300 font-semibold text-lg"
+        >Get Started Free</a
+      >
+    </div>
   </div>
 </section>
 
-<!-- Footer Section -->
-<footer class="bg-dark-bg text-dark-text py-8 fade-in-section">
-  <div class="container mx-auto text-center">
-    <p class="text-sm">&copy; 2025 LifeLedger. All rights reserved.</p>
-    <div class="mt-2 space-x-4 text-muted-gray text-sm">
-      <a href="#" class="hover:underline">Privacy</a>
-      <a href="#" class="hover:underline">Terms</a>
-      <a href="#" class="hover:underline">Contact</a>
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark">
+  <div class="container mx-auto px-4">
+    <h2
+      class="text-3xl md:text-4xl font-bold text-center text-text-light dark:text-text-dark mb-12 md:mb-16"
+    >
+      Loved by Journalers
+    </h2>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div
+        class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark fade-in-left"
+      >
+        <p class="text-gray-600 dark:text-gray-400 italic mb-4">
+          "LifeLedger has transformed how I reflect on my days. It's so
+          intuitive and beautiful!"
+        </p>
+        <p class="font-semibold text-text-light dark:text-text-dark">
+          - Alex P.
+        </p>
+      </div>
+      <div
+        class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark fade-in-section"
+      >
+        <p class="text-gray-600 dark:text-gray-400 italic mb-4">
+          "The analytics feature is a game-changer. I'm learning so much about
+          myself."
+        </p>
+        <p class="font-semibold text-text-light dark:text-text-dark">
+          - Jamie K.
+        </p>
+      </div>
+      <div
+        class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark fade-in-right"
+      >
+        <p class="text-gray-600 dark:text-gray-400 italic mb-4">
+          "Finally, a secure place to keep my thoughts and share them
+          selectively with family."
+        </p>
+        <p class="font-semibold text-text-light dark:text-text-dark">
+          - Casey L.
+        </p>
+      </div>
     </div>
   </div>
-</footer>
+</section>
 
+<style>
+  /* Previous animations are good, just ensuring they are compatible with new classes */
+  @keyframes fade-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in-section,
+  .fade-in-right,
+  .fade-in-left {
+    opacity: 0;
+    /* transition-delay: 0.2s; /* Adding a small delay for animations */
+  }
+
+  .fade-in-section.visible,
+  .fade-in-right.visible,
+  .fade-in-left.visible {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+
+  /* To ensure animation doesn't replay if user scrolls up after first play */
+  /* .visible {
+    animation-play-state: paused; 
+  } */
+
+  .text-shadow {
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6); /* Made text shadow a bit more prominent */
+  }
+</style>
 {% endblock %}
