@@ -1,0 +1,25 @@
+{
+  "name": "lifeledger",
+  "version": "1.0.0",
+  "description": "\"# LifeLedger\" \r \"A web app for managing and analyzing life memories.\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sina-Amare/LifeLedger.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sina-Amare/LifeLedger/issues"
+  },
+  "homepage": "https://github.com/Sina-Amare/LifeLedger#readme",
+  "dependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.10"
+  }
+}
