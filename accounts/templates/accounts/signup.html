@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-md mx-auto">
+            <h2 class="text-3xl font-bold text-center text-text-light dark:text-text-dark mb-8">Create Your Account</h2>
+
+            <form method="post" action="{% url 'accounts:signup' %}">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="mb-4 text-red-500 dark:text-red-400 text-sm">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="mb-4">
+                        <label
+                            for="{{ field.id_for_label }}"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        >
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {% for error in field.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button
+                    type="submit"
+                    class="w-full bg-primary-light text-white py-2 px-4 rounded-md hover:bg-primary-dark transition duration-300 font-semibold"
+                >
+                    Sign Up
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
+                Already have an account?
+                <a
+                    href="{% url 'accounts:login' %}"
+                    class="text-primary-light dark:text-primary-dark hover:underline"
+                >Login here</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

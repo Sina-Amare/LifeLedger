@@ -1,10 +1,11 @@
 {% extends 'base.html' %} {% block title %}LifeLedger - Cherish Your Memories,
 Discover Your Emotions{% endblock %} {% block content %}
+
 <section
   class="relative min-h-screen flex items-center justify-center bg-cover bg-center text-center text-white fade-in-section"
 >
   <div
-    class="absolute inset-0 bg-gradient-to-br from-primary-light via-secondary-light to-accent-light opacity-70 dark:from-primary-dark dark:via-secondary-dark dark:to-accent-dark dark:opacity-60"
+    class="absolute inset-0 bg-gradient-to-br from-primary-light via-secondary-light to-accent-light opacity-85 dark:from-primary-dark dark:via-secondary-dark dark:to-accent-dark dark:opacity-75"
   ></div>
 
   <img
@@ -203,7 +204,7 @@ Discover Your Emotions{% endblock %} {% block content %}
 </section>
 
 <style>
-  /* Previous animations are good, just ensuring they are compatible with new classes */
+  /* Keyframes for fade-in animations */
   @keyframes fade-in-right {
     from {
       opacity: 0;
@@ -237,28 +238,32 @@ Discover Your Emotions{% endblock %} {% block content %}
     }
   }
 
+  /* Initial state for elements before they become visible */
   .fade-in-section,
   .fade-in-right,
   .fade-in-left {
     opacity: 0;
-    /* transition-delay: 0.2s; /* Adding a small delay for animations */
+    /* Removed transition-delay for now, can add back if desired */
   }
 
+  /* State when the element is visible and animation should play */
   .fade-in-section.visible,
   .fade-in-right.visible,
   .fade-in-left.visible {
     opacity: 1;
-    transform: translateX(0) translateY(0);
+    transform: translateX(0) translateY(0); /* Ensure transform is reset */
+    /* Apply transition for smooth animation */
     transition: opacity 0.8s ease-out, transform 0.8s ease-out;
   }
 
-  /* To ensure animation doesn't replay if user scrolls up after first play */
+  /* To ensure animation doesn't replay if user scrolls up after first play (optional, handled by JS observer logic) */
   /* .visible {
-    animation-play-state: paused; 
-  } */
+     animation-play-state: paused;
+   } */
 
+  /* Improved text shadow for better readability on background image */
   .text-shadow {
-    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6); /* Made text shadow a bit more prominent */
+    text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.8); /* Increased blur and intensity */
   }
 </style>
 {% endblock %}

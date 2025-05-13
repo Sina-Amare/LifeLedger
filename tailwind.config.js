@@ -1,12 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Specify content paths for Tailwind to scan for classes
   content: [
     "./templates/**/*.html",
     "./accounts/templates/**/*.html",
     "./journal/templates/**/*.html",
   ],
   theme: {
+    // Extend Tailwind's default theme
     extend: {
+      // Define custom colors for light and dark modes
       colors: {
         // New Palette
         "primary-light": "#3B82F6", // Main blue for light mode (e.g., buttons)
@@ -29,23 +32,27 @@ module.exports = {
         "border-dark": "#374151", // Border color in dark mode
 
         // Previous colors that might still be used or for gradients
+        // Consider removing if not used elsewhere for cleaner config
         "light-blue-start": "#3a8dff",
         "light-blue-end": "#4fa8ff",
-        "blue-purple": "#9b5de5", // We might replace this with new colors
-        "pink-purple": "#ec4899", // We might replace this with new colors
+        "blue-purple": "#9b5de5",
+        "pink-purple": "#ec4899",
         "button-blue": "#3B82F6", // Aligned with primary-light
         "button-red": "#ef4444",
         "welcome-bg": "#F9FAFB", // Aligned with background-light
         "dark-purple": "#111827", // Aligned with background-dark
       },
+      // Define custom background images (gradients)
       backgroundImage: {
-        // New gradient for Hero Section
+        // New gradient for Hero Section (currently using inline gradient classes in HTML)
         "gradient-hero-light": "linear-gradient(135deg, #60A5FA, #34D399)", // Blue to green/teal
         "gradient-hero-dark": "linear-gradient(135deg, #3B82F6, #10B981)", // Darker version of the gradient
       },
+      // Define custom font families
       fontFamily: {
         sans: ["Inter", "sans-serif"], // Inter font you were using is good
       },
+      // Define custom box shadows for cards etc.
       boxShadow: {
         "custom-light":
           "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
@@ -54,6 +61,8 @@ module.exports = {
       },
     },
   },
+  // Add plugins here if you use any
   plugins: [],
-  darkMode: "class", // Enables class-based dark mode (e.g., <html class="dark">)
+  // Enable class-based dark mode (e.g., <html class="dark">)
+  darkMode: "class",
 };
