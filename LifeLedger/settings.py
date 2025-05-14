@@ -167,3 +167,8 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'webmaster@localhost') # De
 # Requires 'django.contrib.sites' in INSTALLED_APPS
 SITE_ID = int(os.getenv('SITE_ID', 1)) # Default site ID is 1
 
+
+# Email Debugging (Optional)
+# if DEBUG:
+#     import logging
+#     logging.basicConfig(level=logging.DEBUG)
