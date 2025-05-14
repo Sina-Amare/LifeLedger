@@ -23,31 +23,50 @@
         class="container mx-auto flex justify-between items-center p-4 md:px-6"
       >
         <a
-          href="/"
+          href="/" {# Link logo to homepage #}
           class="text-2xl font-bold text-primary-light dark:text-primary-dark"
           >LifeLedger</a
         >
         <div class="flex items-center space-x-4">
-          <a
-            href="{% url 'accounts:login' %}"
-            class="px-4 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 text-sm font-medium"
-            >Login</a
-          >
-          <a
-            href="{% url 'accounts:signup' %}"
-            class="px-4 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300 text-sm font-medium"
-            >Sign Up</a
-          >
+          {# Check if the user is logged in #}
+          {% if user.is_authenticated %}
+            {# Display for authenticated users #}
+            <span class="text-text-light dark:text-text-dark text-sm font-medium hidden md:inline">
+              Hello, {{ user.username }}
+            </span>
+            {# Profile Icon Link (replace '#' with actual profile URL later) #}
+            <a href="#" class="text-xl focus:outline-none text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
+                <i class="fas fa-user-circle"></i> {# Using a user-circle icon #}
+            </a>
+            {# Logout Link - Now points to the confirmation page URL #}
+            <a
+              href="{% url 'accounts:logout_confirm' %}" {# Link to the new logout confirmation URL #}
+              class="px-4 py-2 bg-button-red text-white rounded-md hover:bg-red-700 transition duration-300 text-sm font-medium"
+              >Logout</a
+            >
+          {% else %}
+            {# Display for unauthenticated users #}
+            <a
+              href="{% url 'accounts:login' %}"
+              class="px-4 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 text-sm font-medium"
+              >Login</a
+            >
+            <a
+              href="{% url 'accounts:signup' %}"
+              class="px-4 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300 text-sm font-medium"
+              >Sign Up</a
+            >
+          {% endif %}
+          {# Theme Toggle Button (always visible) #}
           <button
             id="theme-toggle"
             class="text-xl focus:outline-none text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark"
           >
-            <i class="fas fa-sun"></i>
+            <i class="fas fa-sun"></i> {# Icon will be updated by theme.js #}
           </button>
         </div>
       </div>
     </nav>
-
     <main class="w-full">{% block content %} {% endblock %}</main>
 
     <footer

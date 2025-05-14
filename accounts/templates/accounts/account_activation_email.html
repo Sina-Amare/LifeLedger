@@ -1,0 +1,29 @@
+{# This is the HTML version of the account activation email. #}
+{# Variables like {{ user.username }}, {{ domain }}, {{ activation_url }} are available. #}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Activate Your LifeLedger Account</title>
+</head>
+<body style="font-family: sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <h2 style="color: #3B82F6; text-align: center; margin-bottom: 20px;">Activate Your LifeLedger Account</h2>
+        <p>Hi {{ user.username }},</p>
+        <p>Thank you for signing up for LifeLedger! To get started, please activate your account by clicking the link below:</p>
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="{{ activation_url }}"
+               style="display: inline-block; padding: 12px 24px; background-color: #10B981; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
+               Activate Account
+            </a>
+        </p>
+        <p>If the button above doesn't work, you can copy and paste the following link into your web browser:</p>
+        <p style="word-break: break-all;"><a href="{{ activation_url }}">{{ activation_url }}</a></p>
+        <p>If you did not sign up for LifeLedger, please ignore this email.</p>
+        <p>Thank you,<br>The LifeLedger Team</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="text-align: center; font-size: 0.9em; color: #aaa;">&copy; {% now "Y" %} LifeLedger. All rights reserved.</p>
+    </div>
+</body>
+</html>

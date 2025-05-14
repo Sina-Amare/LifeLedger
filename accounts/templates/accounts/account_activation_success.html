@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Activation Successful{% endblock %}
+
+{% block content %}
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-md mx-auto text-center">
+            <h2 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6">Account Activated!</h2>
+            <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                Your account has been successfully activated. You can now log in.
+            </p>
+            <a
+                href="{% url 'accounts:login' %}"
+                class="inline-block px-6 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 font-semibold"
+            >
+                Go to Login
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{# NOTE: Ensure the min-h-screen-minus-nav-footer class is in your main CSS file. #}

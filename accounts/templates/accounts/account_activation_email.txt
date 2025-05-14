@@ -1,0 +1,13 @@
+{# This is the plain text version of the account activation email. #}
+{# Variables like {{ user.username }}, {{ domain }}, {{ activation_url }} are available. #}
+
+Hi {{ user.username }},
+
+Please click on the link below to activate your LifeLedger account:
+
+{{ activation_url }}
+
+If you did not sign up for LifeLedger, please ignore this email.
+
+Thank you,
+The LifeLedger Team

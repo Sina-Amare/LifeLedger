@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-8">
+            Welcome to Your Dashboard, {{ user.username }}!
+        </h2>
+        <p class="text-lg text-gray-600 dark:text-gray-400">
+            This is your personal space. Here you will find quick access to your journal, analytics, and other features.
+        </p>
+
+        {# Future: Add cards or links to different sections like Journal, Analytics, Timeline, etc. #}
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {# Example Card (replace with actual links and content later) #}
+            <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
+                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">My Journal</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Write a new entry or view your past memories.</p>
+                <a href="#" class="inline-block px-6 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300">Go to Journal</a>
+            </div>
+
+            {# Add more cards for other features like Analytics, Timeline, AI Insights, etc. #}
+             <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
+                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Analytics</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Discover insights about your emotions and activities.</p>
+                <a href="#" class="inline-block px-6 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300">View Analytics</a>
+            </div>
+
+             <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
+                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Public Timeline</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Explore shared stories from the community.</p>
+                <a href="#" class="inline-block px-6 py-2 bg-accent-light text-white rounded-md hover:bg-accent-dark transition duration-300">See Timeline</a>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

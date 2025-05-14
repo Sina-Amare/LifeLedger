@@ -1,0 +1,26 @@
+{% extends 'base.html' %} {% block title %}Confirm Logout{% endblock %} {% block content %}
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-md mx-auto text-center">
+            <h2 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6">Confirm Logout</h2>
+            <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                Are you sure you want to log out, {{ user.username }}?
+            </p>
+
+            {# Form to send POST request for logout #}
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <div class="flex justify-center space-x-4">
+                    {# Submit button to confirm logout #}
+                    <button type="submit" class="px-6 py-2 bg-button-red text-white rounded-md hover:bg-red-700 transition duration-300 font-semibold">
+                        Yes, Log Out
+                    </button> {# Link to cancel logout and go back (e.g., to dashboard) #}
+                    <a href="{% url 'accounts:home' %}" {# Link back to the homepage/dashboard #} class="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300 font-semibold">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

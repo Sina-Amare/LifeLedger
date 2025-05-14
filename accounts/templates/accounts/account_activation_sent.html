@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Activation Email Sent{% endblock %}
+
+{% block content %}
+<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-md mx-auto text-center">
+            <h2 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6">Activation Email Sent</h2>
+            <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                Thank you for signing up! Please check your email inbox (and spam folder) to activate your account.
+            </p>
+            {# Optional: Add a link to resend activation email or go back to login #}
+            {# <p class="text-center text-sm mt-4">Didn't receive the email? <a href="#" class="text-primary-light dark:text-primary-dark hover:underline">Resend</a> | <a href="{% url 'accounts:login' %}" class="text-primary-light dark:text-primary-dark hover:underline">Login Page</a></p> #}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{# NOTE: Ensure the min-h-screen-minus-nav-footer class is in your main CSS file. #}
