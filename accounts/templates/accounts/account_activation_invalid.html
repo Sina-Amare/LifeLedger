@@ -10,17 +10,44 @@
             <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
                 The activation link is invalid or has expired.
             </p>
-            {# Optional: Add links to resend activation email or go back to signup/login #}
-            <p class="text-center text-sm mt-4">
-                <a href="{% url 'accounts:signup' %}" class="text-primary-light dark:text-primary-dark hover:underline">Sign Up Again</a>
-                 |
-                <a href="{% url 'accounts:login' %}" class="text-primary-light dark:text-primary-dark hover:underline">Login Page</a>
-                 {# Optional: Link to resend email if you implement that feature #}
-                 {# | <a href="#" class="text-primary-light dark:text-primary-dark hover:underline">Resend Activation Email</a> #}
+            {# Button to go back to the homepage #}
+            <a
+                href="{% url 'accounts:home' %}" {# Link back to the homepage #}
+                class="inline-block px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300 font-semibold"
+            >
+                Go to Homepage
+            </a>
+             {# Link to resend activation email page with arrow indicator #}
+            <p class="text-center text-sm mt-4 flex items-center justify-center"> {# Use flex to align items #}
+                 Didn't receive the email?
+                 <a href="{% url 'accounts:resend_activation_email' %}" class="text-primary-light dark:text-primary-dark hover:underline flex items-center ml-1"> {# Use flex to align items #}
+                    Resend Activation Email
+                    {# Arrow icon - using Font Awesome #}
+                    <i class="fas fa-arrow-right ml-1 arrow-indicator"></i> {# Add arrow-indicator class for styling/animation #}
+                 </a>
             </p>
         </div>
     </div>
 </section>
 {% endblock %}
 
-{# NOTE: Ensure the min-h-screen-minus-nav-footer class is in your main CSS file. #}
+{# Add basic Tailwind form styling for input fields and arrow animation #}
+{% block extra_css %}
+<style>
+    /* Arrow animation */
+    .arrow-indicator {
+        animation: pulse-arrow 2s infinite; /* Apply the animation */
+    }
+
+    @keyframes pulse-arrow {
+        0%, 100% {
+            opacity: 1; /* Fully visible */
+            transform: translateX(0); /* Normal position */
+        }
+        50% {
+            opacity: 0.5; /* Half visible */
+            transform: translateX(4px); /* Move slightly to the right */
+        }
+    }
+</style>
+{% endblock %}

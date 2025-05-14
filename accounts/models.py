@@ -14,6 +14,7 @@ class UserProfile(models.Model):
     Uses a One-to-One relationship with the User model.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    # activation_key can be null and blank after activation
     activation_key = models.CharField(max_length=64, blank=True, null=True, unique=True)
     # You can add other profile-related fields here in the future
 

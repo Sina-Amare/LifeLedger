@@ -1,11 +1,13 @@
 # accounts/urls.py
 
-from django.urls import path, re_path # Keep re_path for other potential regex needs, or change to path if not needed elsewhere
-# Import necessary views
+from django.urls import path, re_path
+# Import necessary views and TemplateView
+from django.views.generic import TemplateView # Import TemplateView
 from .views import (
     SignUpView, CustomLoginView, CustomLogoutView, HomeView,
     LogoutConfirmView, AccountActivationSentView, AccountActivateView,
-    AccountActivationSuccessView, AccountActivationInvalidView # Import the new success/invalid views
+    AccountActivationSuccessView, AccountActivationInvalidView,
+    ResendActivationEmailView # Import the new resend view
 )
 
 app_name = 'accounts'  # Namespace for these app-specific URL names
@@ -29,9 +31,15 @@ urlpatterns = [
     # URL pattern for the email activation link processing using activation key
     path('activate/<str:activation_key>/', AccountActivateView.as_view(), name='activate'),
 
-    # New URL patterns for activation success/invalid pages
+    # URL pattern for activation success page
     path('account-activation-success/', AccountActivationSuccessView.as_view(), name='account_activation_success'),
+    # URL pattern for activation invalid page
     path('account-activation-invalid/', AccountActivationInvalidView.as_view(), name='account_activation_invalid'),
+
+    # URL patterns for resending activation email
+    path('resend-activation-email/', ResendActivationEmailView.as_view(), name='resend_activation_email'),
+    # Use TemplateView directly here, so it needs to be imported
+    path('resend-activation-email/sent/', TemplateView.as_view(template_name='accounts/resend_activation_email_sent.html'), name='resend_activation_email_sent'),
 
 
     # URL pattern for the homepage/dashboard

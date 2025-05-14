@@ -11,7 +11,11 @@
                 Thank you for signing up! Please check your email inbox (and spam folder) to activate your account.
             </p>
             {# Optional: Add a link to resend activation email or go back to login #}
-            {# <p class="text-center text-sm mt-4">Didn't receive the email? <a href="#" class="text-primary-light dark:text-primary-dark hover:underline">Resend</a> | <a href="{% url 'accounts:login' %}" class="text-primary-light dark:text-primary-dark hover:underline">Login Page</a></p> #}
+            <p class="text-center text-sm mt-4">
+                 Didn't receive the email? <a href="{% url 'accounts:resend_activation_email' %}" class="text-primary-light dark:text-primary-dark hover:underline">Resend Activation Email</a>
+                 |
+                 <a href="{% url 'accounts:login' %}" class="text-primary-light dark:text-primary-dark hover:underline">Login Page</a>
+            </p>
         </div>
     </div>
 </section>
