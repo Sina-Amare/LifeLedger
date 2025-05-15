@@ -13,14 +13,14 @@ urlpatterns = [
     path('new/', views.JournalEntryCreateView.as_view(), name='journal_create'),
 
     # URL for viewing the details of a single journal entry (e.g., /journal/123/)
-    # <int:pk> captures the primary key from the URL and passes it to the view
     path('<int:pk>/', views.JournalEntryDetailView.as_view(), name='journal_detail'),
 
     # URL for editing an existing journal entry (e.g., /journal/123/edit/)
     path('<int:pk>/edit/', views.JournalEntryUpdateView.as_view(), name='journal_update'),
 
-    # URL for deleting an existing journal entry (e.g., /journal/123/delete/)
-    path('<int:pk>/delete/', views.JournalEntryDeleteView.as_view(), name='journal_delete'),
+    # URL for deleting an existing journal entry via Ajax POST (e.g., /journal/123/delete/)
+    # This URL now points to the custom Ajax delete view
+    path('<int:pk>/delete/', views.JournalEntryAjaxDeleteView.as_view(), name='journal_delete'),
 
     # TODO: Add URLs for file uploads/deletions related to entries later.
     # TODO: Add URLs for AI processing status/results later.

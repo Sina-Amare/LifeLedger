@@ -7,12 +7,14 @@ from django.views.generic import (
     DetailView,
     CreateView,
     UpdateView,
-    DeleteView,
+    # DeleteView, # We will replace DeleteView with a custom View for Ajax delete
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseForbidden # Import HttpResponseForbidden
+from django.views import View # Import View
 
 from .models import JournalEntry, JournalAttachment
-from .forms import JournalEntryForm # Import the custom form
+from .forms import JournalEntryForm
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
     """
@@ -53,7 +55,7 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
     Uses the custom JournalEntryForm.
     """
     model = JournalEntry
-    form_class = JournalEntryForm # Use the custom form
+    form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
 
     def form_valid(self, form):
@@ -81,7 +83,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     Uses the custom JournalEntryForm.
     """
     model = JournalEntry
-    form_class = JournalEntryForm # Use the custom form
+    form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
 
     def test_func(self):
@@ -103,23 +105,45 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     # TODO: Re-trigger Celery tasks for AI processing if content changes? (Decision needed)
 
 
-class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+# Custom View for handling Ajax Delete
+class JournalEntryAjaxDeleteView(LoginRequiredMixin, View):
     """
-    Provides a confirmation page to delete a journal entry and handles deletion.
+    Handles deletion of a journal entry via Ajax POST request.
     Requires user to be logged in and to be the owner of the entry.
+    GET requests to this URL are not allowed and will return 405 Method Not Allowed.
     """
-    model = JournalEntry
-    template_name = 'journal/journal_confirm_delete.html'
-    context_object_name = 'journal_entry'
-    success_url = reverse_lazy('journal:journal_list')
+    def post(self, request, pk, *args, **kwargs):
+        """
+        Handles the POST request for deletion (expected to be Ajax).
+        Finds the object, checks permissions, deletes it, and returns JSON response.
+        """
+        # Ensure the request is Ajax (optional but good practice)
+        # if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        #     return HttpResponseNotAllowed(['POST'], "Only Ajax POST requests are allowed.")
 
-    def test_func(self):
+        # Get the journal entry object or return 404 if not found
+        journal_entry = get_object_or_404(JournalEntry, pk=pk)
+
+        # Check if the logged-in user is the owner of the entry
+        if journal_entry.user != request.user:
+            # Return 403 Forbidden if the user is not the owner
+            return HttpResponseForbidden("You do not have permission to delete this entry.")
+
+        # If user is the owner, delete the entry
+        try:
+            journal_entry.delete()
+            # Return a JSON response indicating success
+            return JsonResponse({'success': True, 'entry_id': pk})
+        except Exception as e:
+            # Handle potential errors during deletion
+            return JsonResponse({'success': False, 'message': f'Error deleting entry: {e}'}, status=500)
+
+
+    def get(self, request, *args, **kwargs):
         """
-        Checks if the logged-in user is the owner of the journal entry.
-        Required by UserPassesTestMixin.
+        Handles GET requests. Returns 405 Method Not Allowed as GET delete is not supported.
         """
-        journal_entry = self.get_object()
-        return journal_entry.user == self.request.user
+        return HttpResponseNotAllowed(['POST']) # Only POST is allowed for deletion
 
     # TODO: Handle deletion of associated files when deleting the entry
 
