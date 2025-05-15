@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sites', # Add django.contrib.sites for email activation domain
     'accounts',
     'journal',
+    'widget_tweaks'
 ]
 
 MIDDLEWARE = [

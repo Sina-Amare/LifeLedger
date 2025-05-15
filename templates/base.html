@@ -1,10 +1,12 @@
+{% load static %} {# Load static files tag #}
 <!DOCTYPE html>
 <html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}LifeLedger{% endblock %}</title>
-    <link href="/static/css/output.css" rel="stylesheet" />
+    {# Use static tag for static files #}
+    <link href="{% static 'css/output.css' %}" rel="stylesheet" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -13,10 +15,13 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+     {# Add extra CSS block for page-specific styles #}
+    {% block extra_css %}{% endblock %}
   </head>
 
+  {# Apply flexbox to the body to push footer to the bottom #}
   <body
-    class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans selection:bg-primary-light selection:text-white"
+    class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans selection:bg-primary-light selection:text-white"
   >
     <nav class="bg-card-light dark:bg-card-dark shadow-md sticky top-0 z-50">
       <div
@@ -67,8 +72,11 @@
         </div>
       </div>
     </nav>
-    <main class="w-full">{% block content %} {% endblock %}</main>
 
+    {# Main content area - Use flex-grow to take up available space #}
+    <main class="flex-grow w-full">{% block content %} {% endblock %}</main>
+
+    {# Footer - Will be pushed to the bottom by flex-grow on main #}
     <footer
       class="bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark mt-16"
     >
@@ -82,7 +90,12 @@
       </div>
     </footer>
 
-    <script src="/static/js/theme.js"></script>
-    <script src="/static/js/scroll.js"></script>
+    {# Add extra JS block for page-specific scripts #}
+    {% block extra_js %}{% endblock %}
+
+    {# Include theme and scroll scripts #}
+    {# Use static tag for static files #}
+    <script src="{% static 'js/theme.js' %}"></script>
+    <script src="{% static 'js/scroll.js' %}"></script>
   </body>
 </html>

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Journal Entry{% else %}Write New Journal Entry{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6 text-center">
+            {% if form.instance.pk %}Edit Journal Entry{% else %}Write New Journal Entry{% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data"> {# Add enctype for file uploads #}
+            {% csrf_token %}
+
+            {# Display non-field errors #}
+            {% if form.non_field_errors %}
+                <div class="mb-4">
+                    {% for error in form.non_field_errors %}
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {# Loop through form fields and manually render with Tailwind classes #}
+            {% for field in form %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                        {{ field.label }}
+                    </label>
+
+                    {# Manually render field based on widget type name and apply classes #}
+                    {# Using the custom 'widget_type_name' attribute added in forms.py #}
+                    {% if field.widget_type_name == 'CheckboxInput' %}
+                        <div class="flex items-center">
+                            {# Render checkbox input directly #}
+                            <input type="checkbox"
+                                   name="{{ field.name }}"
+                                   id="{{ field.id_for_label }}"
+                                   value="{{ field.value|default:'on' }}"
+                                   class="h-4 w-4 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-primary-light dark:focus:ring-primary-dark"
+                                   {% if field.value %}checked{% endif %}>
+                            <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-text-light dark:text-text-dark">
+                                {{ field.label }}
+                            </label>
+                        </div>
+                    {% elif field.widget_type_name == 'Textarea' %}
+                        {# Render textarea directly #}
+                        <textarea name="{{ field.name }}"
+                                  id="{{ field.id_for_label }}"
+                                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
+                                  {% if field.field.required %}required{% endif %}
+                                  {% if field.field.widget.attrs.rows %}rows="{{ field.field.widget.attrs.rows }}"{% endif %}
+                                  {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>{{ field.value|default:'' }}</textarea>
+                    {% elif field.widget_type_name == 'Select' %}
+                         {# Render select directly #}
+                         <select name="{{ field.name }}"
+                                 id="{{ field.id_for_label }}"
+                                 class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm appearance-none transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
+                                 {% if field.field.required %}required{% endif %}>
+                             {% for value, text in field.field.choices %}
+                                 <option value="{{ value }}" {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                             {% endfor %}
+                         </select>
+                    {% else %}
+                        {# Render other input types (text, email, password, etc.) directly #}
+                        <input type="{{ field.field.widget.input_type }}"
+                               name="{{ field.name }}"
+                               id="{{ field.id_for_label }}"
+                               value="{{ field.value|default:'' }}"
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
+                               {% if field.field.required %}required{% endif %}
+                               {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
+                               {# Add other common input attributes as needed #}
+                               {% for attr, val in field.field.widget.attrs.items %}
+                                   {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' and attr != 'maxlength' and attr != 'placeholder' %}
+                                       {{ attr }}="{{ val }}"
+                                   {% endif %}
+                               {% endfor %}
+                               >
+                    {% endif %}
+
+                    {# Help text and errors #}
+                    {% if field.help_text %}
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            {# TODO: Add formset for attachments here later #}
+            {# Example (will require a formset in views and forms.py): #}
+            {# <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4 mt-6">Attachments</h3> #}
+            {# {{ attachment_formset.management_form }} #}
+            {# {% for form in attachment_formset %} #}
+            {#     {{ form.as_p }} #}
+            {# {% endfor %} #}
+
+
+            <button type="submit" class="w-full px-4 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 font-semibold mt-6 shadow-md">
+                {% if form.instance.pk %}Save Changes{% else %}Save Entry{% endif %}
+            </button>
+        </form>
+
+        {# Link back to the journal list or detail page #}
+        <div class="mt-6 text-center">
+             {% if form.instance.pk %}
+                 <a href="{% url 'journal:journal_detail' pk=form.instance.pk %}" class="text-primary-light dark:text-primary-dark hover:underline">Cancel</a>
+             {% else %}
+                 <a href="{% url 'journal:journal_list' %}" class="text-primary-light dark:text-primary-dark hover:underline">Cancel</a>
+             {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{# Note: Tailwind classes for form inputs are now applied directly in this template #}
+{# by manually rendering the HTML tags based on widget type name. #}

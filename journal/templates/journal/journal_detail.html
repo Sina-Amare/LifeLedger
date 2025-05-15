@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ journal_entry.title|default:"Untitled Entry" }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark">
+        <h1 class="text-4xl font-bold text-primary-light dark:text-primary-dark mb-4">{{ journal_entry.title|default:"Untitled Entry" }}</h1>
+
+        {# Metadata: Date, Mood, Location, Favorite #}
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <p class="mb-1">
+                <i class="far fa-calendar-alt mr-1"></i> {# Calendar icon #}
+                {{ journal_entry.created_at|date:"F j, Y" }} at {{ journal_entry.created_at|date:"P" }}
+                {% if journal_entry.created_at != journal_entry.updated_at %}
+                    (Last updated: {{ journal_entry.updated_at|date:"F j, Y" }} at {{ journal_entry.updated_at|date:"P" }})
+                {% endif %}
+            </p>
+            {% if journal_entry.mood %}
+                <p class="mb-1">
+                    <i class="far fa-smile mr-1"></i> {# Smile icon #}
+                    Mood: {{ journal_entry.mood }}
+                </p>
+            {% endif %}
+            {% if journal_entry.location %}
+                <p class="mb-1">
+                    <i class="fas fa-map-marker-alt mr-1"></i> {# Map marker icon #}
+                    Location: {{ journal_entry.location }}
+                </p>
+            {% endif %}
+             {% if journal_entry.is_favorite %}
+                 <p class="text-yellow-500 mt-2"><i class="fas fa-star mr-1"></i> Favorite</p> {# Star icon #}
+             {% endif %}
+        </div>
+
+        {# AI Quote - Styled prominently #}
+        {% if journal_entry.ai_quote %}
+            <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md italic text-gray-800 dark:text-gray-200 mb-6 border-l-4 border-primary-light dark:border-primary-dark">
+                <p>"{{ journal_entry.ai_quote }}"</p>
+            </div>
+        {% endif %}
+
+        {# Main Content #}
+        <div class="prose dark:prose-invert max-w-none text-text-light dark:text-text-dark mb-6">
+            {{ journal_entry.content|linebreaksbr }} {# Display content with line breaks #}
+        </div>
+
+        {# Attachments - Placeholder for future implementation #}
+        {% if journal_entry.attachments.all %}
+            <div class="mt-6 border-t border-border-light dark:border-border-dark pt-6">
+                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Attachments</h3>
+                {# TODO: Loop through attachments and display them (images, audio players, etc.) #}
+                <p class="text-gray-600 dark:text-gray-400">Attachments will be displayed here.</p>
+            </div>
+        {% endif %}
+
+        {# Actions: Edit and Delete #}
+        <div class="mt-6 flex space-x-4">
+            <a href="{% url 'journal:journal_update' pk=journal_entry.pk %}" class="px-4 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300 font-semibold shadow-md">
+                Edit
+            </a>
+            <a href="{% url 'journal:journal_delete' pk=journal_entry.pk %}" class="px-4 py-2 bg-button-red text-white rounded-md hover:bg-red-700 transition duration-300 font-semibold shadow-md">
+                Delete
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

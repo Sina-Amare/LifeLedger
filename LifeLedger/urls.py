@@ -11,4 +11,5 @@ urlpatterns = [
     # path('journal/', include('journal.urls')), # Uncomment if you have a journal app
     # Root URL for the project (handled by accounts.urls.home)
     path('', include('accounts.urls')), # Include accounts urls at the root for the homepage
+    path('journal/', include('journal.urls'))
 ]
