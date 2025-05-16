@@ -186,4 +186,40 @@ SITE_ID = int(os.getenv('SITE_ID', 1)) # Default site ID is 1
 # Settings for media files (user-uploaded files)
 MEDIA_ROOT = BASE_DIR / 'media' # Files will be stored in a 'media' directory at the project root
 MEDIA_URL = '/media/' # URL prefix for accessing media files
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'journal': { # Your app's logger
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False, # <--- CHANGE THIS TO FALSE
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}

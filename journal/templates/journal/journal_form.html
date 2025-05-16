@@ -1,274 +1,252 @@
 {% extends 'base.html' %}
-{% load static %} {# Load static files #}
-{# Remove widget_tweaks load as we are rendering manually #}
-{# {% load widget_tweaks %} #}
-{% load i18n %} {# Load i18n for potential translation issues #}
-
+{% load static %}
+{% load i18n %}
 
 {% block title %}
     {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Write New Journal Entry" %}{% endif %}
 {% endblock %}
 
-{% block extra_head %} {# Assuming base.html has an extra_head block in the <head> #}
+{% block extra_head %}
 <style>
     /* Force consistent focus styles for text inputs, textareas, and selects */
     input[type="text"]:focus,
     textarea:focus,
     select:focus {
-        outline: none !important; /* Remove default outline */
-        /* Apply a consistent box-shadow for the ring effect */
-        /* Using a light blue color (similar to Tailwind blue-400) with transparency */
-        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important;
-        /* Apply a consistent border color */
+        outline: none !important;
+        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important; /* Tailwind blue-400 equivalent */
         border-color: #60a5fa !important; /* Tailwind blue-400 */
     }
 
-    /* Adjust focus styles for dark mode */
     .dark input[type="text"]:focus,
     .dark textarea:focus,
     .dark select:focus {
-         /* Using a slightly lighter blue for dark mode (similar to Tailwind blue-300) with transparency */
-         box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
-         /* Apply a consistent border color for dark mode */
-         border-color: #93c5fd !important; /* Tailwind blue-300 */
+        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important; /* Tailwind blue-300 equivalent */
+        border-color: #93c5fd !important; /* Tailwind blue-300 */
     }
 
-    /* Optional: Adjust file input focus if needed, though they often behave differently */
-    /* input[type="file"]:focus {
-        outline: 2px solid #60a5fa !important;
-        outline-offset: 2px;
-    } */
-
-    /* Custom styling for the file input button using Tailwind classes */
-    /* This targets the ::file-selector-button pseudo-element */
+    /* Custom styling for the file input button using Tailwind-like classes */
     .custom-file-input::file-selector-button {
         margin-right: 1rem; /* file:mr-4 */
         padding-top: 0.5rem; /* file:py-2 */
         padding-bottom: 0.5rem; /* file:py-2 */
         padding-left: 1rem; /* file:px-4 */
         padding-right: 1rem; /* file:px-4 */
-        border-radius: 9999px; /* file:rounded-full */
+        border-radius: 0.375rem; /* file:rounded-md */
         border-width: 0; /* file:border-0 */
         font-size: 0.875rem; /* file:text-sm */
         font-weight: 600; /* file:font-semibold */
         background-color: #3b82f6; /* file:bg-primary-light (example blue-500) */
         color: #ffffff; /* file:text-white */
         cursor: pointer;
-        transition-property: color, background-color, border-color, text-decoration, fill, stroke;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
+        transition-duration: 150ms;
     }
 
-    /* Hover effect for the file input button */
     .custom-file-input:hover::file-selector-button {
         background-color: #2563eb; /* hover:file:bg-primary-dark (example blue-600) */
     }
 
-    /* Dark mode adjustments for the file input button */
     .dark .custom-file-input::file-selector-button {
-         background-color: #60a5fa; /* Dark mode primary-light (example blue-400) */
+        background-color: #60a5fa; /* Dark mode primary-light (example blue-400) */
     }
 
     .dark .custom-file-input:hover::file-selector-button {
-         background-color: #3b82f6; /* Dark mode hover:primary-dark (example blue-500) */
+        background-color: #3b82f6; /* Dark mode hover:primary-dark (example blue-500) */
     }
-
-
 </style>
 {% endblock %}
 
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-2xl mx-auto">
+    <div class="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-3xl mx-auto">
         <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6 text-center">
             {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Write New Journal Entry" %}{% endif %}
         </h1>
 
-        {# Ensure enctype="multipart/form-data" is set for file uploads #}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
             {# Display non-field errors for the main form #}
             {% if form.non_field_errors %}
-                <div class="mb-4">
+                <div class="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 rounded-md">
                     {% for error in form.non_field_errors %}
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                        <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
 
-            {# Loop through standard form fields and manually render with Tailwind classes #}
-            {# Exclude 'shared_details' and 'is_favorite' as they are handled separately #}
-            {# The 'file' field is handled by the formset now, so it's not in the main form #}
+            {# Loop through standard form fields #}
             {% for field in form %}
-                {# Only render fields that are NOT 'shared_details' or 'is_favorite' in this loop #}
                 {% if field.name != 'shared_details' and field.name != 'is_favorite' %}
-
                     <div class="mb-4">
-                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                            {{ field.label }}
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                            {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
                         </label>
-
-                        {# Manually render field based on string representation of the widget #}
-                        {# Apply the full set of Tailwind classes directly to each tag type #}
                         {% if "Textarea" in field.field.widget|stringformat:"s" %}
-                            {# Render textarea directly with full Tailwind classes #}
                             <textarea name="{{ field.name }}"
-                                        id="{{ field.id_for_label }}"
-                                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-200 ease-in-out"
-                                        {% if field.field.required %}required{% endif %}
-                                        {% if field.field.widget.attrs.rows %}rows="{{ field.field.widget.attrs.rows }}"{% endif %}
-                                        {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>{{ field.value|default:'' }}</textarea>
+                                      id="{{ field.id_for_label }}"
+                                      class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out"
+                                      {% if field.field.required %}required{% endif %}
+                                      rows="{{ field.field.widget.attrs.rows|default:8 }}"
+                                      placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
+                                      >{{ field.value|default:'' }}</textarea>
                         {% elif "Select" in field.field.widget|stringformat:"s" %}
-                             {# Render select directly with full Tailwind classes #}
-                             <select name="{{ field.name }}"
-                                        id="{{ field.id_for_label }}"
-                                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-primary-light focus:ring-0 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:focus:border-primary-dark sm:text-sm appearance-none transition duration-200 ease-in-out"
-                                        {% if field.field.required %}required{% endif %}>
-                                    {% for value, text in field.field.choices %}
-                                        <option value="{{ value }}" {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
-                                    {% endfor %}
-                             </select>
+                            <select name="{{ field.name }}"
+                                    id="{{ field.id_for_label }}"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-primary-light focus:ring-0 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:focus:border-primary-dark sm:text-sm appearance-none transition duration-150 ease-in-out"
+                                    {% if field.field.required %}required{% endif %}>
+                                {% for value, text in field.field.choices %}
+                                    <option value="{{ value }}" {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                                {% endfor %}
+                            </select>
                         {% else %}
-                            {# Render other standard input types (text, number, etc.) with full Tailwind classes #}
-                            <input type="{{ field.field.widget.input_type }}"
+                            <input type="{{ field.field.widget.input_type|default:'text' }}"
                                    name="{{ field.name }}"
                                    id="{{ field.id_for_label }}"
                                    value="{{ field.value|default:'' }}"
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-200 ease-in-out"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out"
                                    {% if field.field.required %}required{% endif %}
                                    {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
-                                   {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
-                                   {# Add other common input attributes as needed, excluding class which we set manually #}
+                                   placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
                                    {% for attr, val in field.field.widget.attrs.items %}
-                                        {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' and attr != 'maxlength' and attr != 'placeholder' %}
-                                            {{ attr }}="{{ val }}"
-                                        {% endif %}
-                                   {% endfor %}
-                                   >
+                                       {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' and attr != 'maxlength' and attr != 'placeholder' and attr != 'rows' %}
+                                           {{ attr }}="{{ val }}"
+                                       {% endif %}
+                                   {% endfor %}>
                         {% endif %}
-
-                        {# Help text and errors #}
                         {% if field.help_text %}
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
                         {% endif %}
                         {% for error in field.errors %}
                             <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
                         {% endfor %}
                     </div>
-
-                {% endif %} {# End if condition #}
-            {% endfor %} {# End for loop #}
+                {% endif %}
+            {% endfor %}
 
 
             {# --- Attachment Formset --- #}
-            {# Render the formset for attachments #}
-            <div class="mb-4 border-t border-border-light dark:border-border-dark pt-4 mt-4">
-                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{% trans "Attachments" %}:</h3>
+            <div class="mb-6 border-t border-border-light dark:border-border-dark pt-6 mt-6">
+                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">{% trans "Attachments" %}:</h3>
 
-                {# Management form is required for formsets #}
                 {{ attachment_formset.management_form }}
 
-                {# Display non-form errors for the formset #}
                 {% if attachment_formset.non_form_errors %}
-                    <div class="mb-4">
+                    <div class="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 rounded-md">
                         {% for error in attachment_formset.non_form_errors %}
-                            <p class="text-sm text-red-600 dark:text-red-400">{% trans "Formset Error" %}: {{ error }}</p>
+                            <p class="text-sm text-red-700 dark:text-red-300">{% trans "Attachment Error" %}: {{ error }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
 
-                {# Loop through each form in the formset #}
-                {# This loop includes existing attachments and the empty extra form #}
-                <div id="attachments-container" class="space-y-3">
+                <div id="attachments-container" class="space-y-6">
                     {% for formset_form in attachment_formset %}
-                        {# Display form-specific errors #}
-                        {% if formset_form.errors %}
-                             <div class="mb-2">
-                                 {% for field in formset_form %}
-                                     {% for error in field.errors %}
-                                         <p class="text-sm text-red-600 dark:text-red-400">{% trans "Attachment Error" %} ({{ field.name }}): {{ error }}</p>
-                                     {% endfor %}
-                                 {% endfor %}
-                                 {% for error in formset_form.non_field_errors %}
-                                     <p class="text-sm text-red-600 dark:text-red-400">{% trans "Attachment Error" %}: {{ error }}</p>
-                                 {% endfor %}
-                             </div>
-                         {% endif %}
+                        <div class="attachment-item p-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm 
+                                    {% if formset_form.instance.pk and formset_form.instance.file %}bg-gray-50 dark:bg-gray-800{% else %}bg-white dark:bg-gray-700{% endif %}">
+                            {# ^-- Updated dark mode backgrounds here --^ #}
+                            
+                            {{ formset_form.id }} {# Hidden ID field for existing forms, crucial for formset #}
 
-                        {# Render the form fields for each attachment manually #}
-                        {# Each formset_form represents one attachment or an empty slot #}
-                        <div class="flex items-center space-x-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+                            {% if formset_form.instance and formset_form.instance.pk and formset_form.instance.file %}
+                                {# --- Displaying an EXISTING attachment --- #}
+                                <div class="existing-attachment-info mb-3">
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {% trans "Current file" %}:
+                                    </p>
+                                    <div class="flex items-center space-x-3">
+                                        <svg class="h-6 w-6 text-gray-500 dark:text-gray-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                        </svg>
+                                        <a href="{{ formset_form.instance.file.url }}" target="_blank"
+                                           class="text-primary-light dark:text-primary-dark hover:underline break-all">
+                                            {{ formset_form.instance.file.name|slice:"20:"|default:formset_form.instance.file.name }}
+                                        </a>
+                                    </div>
 
-                            {# Render the file field #}
-                            {# The custom-file-input class is applied via the widget in forms.py #}
-                            {{ formset_form.file }}
+                                    {% with file_url=formset_form.instance.file.url|lower %}
+                                        {% if ".jpg" in file_url or ".jpeg" in file_url or ".png" in file_url or ".gif" in file_url or ".webp" in file_url %}
+                                            <img src="{{ formset_form.instance.file.url }}" alt="{% trans 'Preview' %}"
+                                                 class="mt-2 max-w-full sm:max-w-xs max-h-32 rounded-md border dark:border-gray-500 object-contain bg-gray-100 dark:bg-gray-600 p-1">
+                                                 {# ^-- Updated dark mode background for image preview --^ #}
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
 
-                            {# Render the ID field (hidden) - required for existing objects #}
-                            {{ formset_form.id }}
+                                <div class="mb-3">
+                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                                        {% trans "Change file (optional)" %}:
+                                    </label>
+                                    {{ formset_form.file }} {# File input for changing the existing file #}
+                                    {% for error in formset_form.file.errors %}
+                                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
 
-                            {# Render the DELETE checkbox if can_delete=True is set on the formset #}
-                            {% if attachment_formset.can_delete %}
-                                <div class="flex items-center">
-                                    {# Render the DELETE checkbox #}
+                                {% if attachment_formset.can_delete and formset_form.instance.pk %}
+                                <div class="flex items-center mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                                     {{ formset_form.DELETE }}
-                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "Delete" %}</label>
+                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
+                                        {% trans "Mark for deletion" %}
+                                    </label>
+                                </div>
+                                {% endif %}
+
+                            {% else %}
+                                {# --- Displaying a form for a NEW attachment --- #}
+                                <div class="mb-2">
+                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                                        {% trans "Add new attachment" %}:
+                                    </label>
+                                    {{ formset_form.file }} {# File input for new file #}
+                                    {% for error in formset_form.file.errors %}
+                                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                                    {% endfor %}
                                 </div>
                             {% endif %}
+                            
+                            {% for error in formset_form.non_field_errors %}
+                                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                            {% endfor %}
                         </div>
                     {% endfor %}
                 </div>
-
-                {# Optional: Add a button to add more forms dynamically with JavaScript #}
-                {# This requires JS to clone the empty form and add it to the container #}
-                {# For simplicity, we'll rely on the 'extra' form provided by the formset for now #}
-                {# <button type="button" id="add-attachment-form" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm">Add Another File</button> #}
-
             </div>
             {# --- End Attachment Formset --- #}
 
 
-            {# Render the is_favorite checkbox at the end #}
             {% with is_favorite_field=form.is_favorite %}
-                <div class="mb-4 flex items-center mt-4"> {# Use flex to align checkbox and label horizontally #}
-                    {# Render checkbox input manually #}
+                <div class="mb-6 mt-6 pt-6 border-t border-border-light dark:border-border-dark flex items-center">
                     <input type="checkbox"
                            name="{{ is_favorite_field.name }}"
                            id="{{ is_favorite_field.id_for_label }}"
-                           value="{{ is_favorite_field.value|default:'on' }}"
                            class="h-4 w-4 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-primary-light dark:focus:ring-primary-dark"
                            {% if is_favorite_field.value %}checked{% endif %}>
-                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-2 block text-sm font-medium text-text-light dark:text-text-dark"> {# Add ml-2 for spacing #}
+                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-2 block text-sm font-medium text-text-light dark:text-text-dark">
                         {{ is_favorite_field.label }}
                     </label>
-                    {# Help text and errors for is_favorite field #}
                     {% if is_favorite_field.help_text %}
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                        <p class="ml-2 mt-1 text-xs text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
                     {% endif %}
                     {% for error in is_favorite_field.errors %}
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                        <p class="ml-2 mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
                     {% endfor %}
                 </div>
             {% endwith %}
 
-
-            <button type="submit" class="w-full px-4 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 font-semibold mt-6 shadow-md">
+            <button type="submit" class="w-full px-6 py-3 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out font-semibold mt-6 shadow-md">
                 {% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Save Entry" %}{% endif %}
             </button>
         </form>
 
-        {# Link back to the journal list or detail page #}
         <div class="mt-6 text-center">
-             {% if form.instance.pk %}
-                 <a href="{% url 'journal:journal_detail' pk=form.instance.pk %}" class="text-primary-light dark:text-primary-dark hover:underline">{% trans "Cancel" %}</a>
-             {% else %}
-                 <a href="{% url 'journal:journal_list' %}" class="text-primary-light dark:text-primary-dark hover:underline">{% trans "Cancel" %}</a>
-             {% endif %}
+            {% if form.instance.pk %}
+                <a href="{% url 'journal:journal_detail' pk=form.instance.pk %}" class="text-sm text-primary-light dark:text-primary-dark hover:underline">{% trans "Cancel" %}</a>
+            {% else %}
+                <a href="{% url 'journal:journal_list' %}" class="text-sm text-primary-light dark:text-primary-dark hover:underline">{% trans "Cancel" %}</a>
+            {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
-
-{# Note: Tailwind classes for form inputs are now applied directly in this template. #}
-{# A <style> block is added to forcefully ensure consistent focus styles across different input types. #}
