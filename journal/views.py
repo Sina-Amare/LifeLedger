@@ -1,289 +1,372 @@
 # journal/views.py
 
-from django.shortcuts import render, get_object_or_404, redirect # Import redirect
-from django.urls import reverse_lazy, reverse # Import reverse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse_lazy
 from django.views.generic import (
     ListView,
     DetailView,
     CreateView,
     UpdateView,
+    DeleteView,
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseForbidden
-from django.views import View
-from django.db.models import Q # Import Q object for complex lookups
-from django.utils import timezone # Import timezone for date filtering
-from datetime import timedelta # Import timedelta for date calculations
-
-
+from django.http import JsonResponse, Http404
+from django.core.exceptions import PermissionDenied
+from django.forms import inlineformset_factory
+from django.db import transaction
+from .forms import JournalEntryForm, JournalAttachmentForm
 from .models import JournalEntry, JournalAttachment
-from .forms import JournalEntryForm
+from django.db.models import Q
+from django.utils import timezone
+import logging
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
+# Use inlineformset_factory to create a formset linked to JournalEntry
+# This is used in the Create/Update views to manage attachments related to an entry.
+JournalAttachmentInlineFormSet = inlineformset_factory(
+    JournalEntry,  # Parent model: JournalEntry
+    JournalAttachment,  # Child model: JournalAttachment
+    form=JournalAttachmentForm,  # Use the form defined in forms.py for individual attachments
+    extra=1,  # Start with one empty form for adding new attachments
+    can_delete=True,  # Allow deleting existing attachments
+    fields=['file'],  # Specify the fields to include from JournalAttachment model
+    # max_num=5  # Optional: Limit the maximum number of attachments
+)
+
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
     """
-    Displays a list of all journal entries for the currently logged-in user.
-    Supports filtering by mood, time period, and favorite status.
-    Requires user to be logged in.
+    Displays a list of journal entries for the logged-in user.
+    Supports pagination, filtering, and searching.
     """
     model = JournalEntry
     template_name = 'journal/journal_list.html'
-    context_object_name = 'journal_entries'
-    paginate_by = 10 # Optional: Add pagination later if needed
+    context_object_name = 'entries'  # Name of the variable in the template
+    paginate_by = 10  # Number of entries per page
 
     def get_queryset(self):
         """
-        Returns the queryset of journal entries filtered by the logged-in user
-        and applies additional filters based on GET parameters.
+        Return only the journal entries for the current logged-in user.
+        Applies filtering and searching based on GET parameters.
         """
-        queryset = JournalEntry.objects.filter(user=self.request.user).order_by('-created_at')
+        queryset = JournalEntry.objects.filter(user=self.request.user)
 
-        # Get filter parameters from GET request
+        # Get filter parameters from the request
         mood = self.request.GET.get('mood')
         time_period = self.request.GET.get('time_period')
-        is_favorite = self.request.GET.get('is_favorite') # 'on' or 'true' for checked
+        is_favorite = self.request.GET.get('is_favorite')
+        search_query = self.request.GET.get('q')
 
         # Apply mood filter
-        if mood and mood != 'all': # Assuming 'all' is a value to show all moods
-            queryset = queryset.filter(mood__iexact=mood) # Case-insensitive match
+        if mood and mood != 'all': # 'all' or empty string means no mood filter
+            queryset = queryset.filter(mood=mood)
 
         # Apply time period filter
-        if time_period:
+        if time_period and time_period != 'all':
             now = timezone.now()
             if time_period == 'today':
                 queryset = queryset.filter(created_at__date=now.date())
             elif time_period == 'this_week':
-                start_of_week = now - timedelta(days=now.weekday()) # Monday as start of week
-                queryset = queryset.filter(created_at__date__gte=start_of_week.date())
+                # Start of the week (Monday)
+                start_of_week = now.date() - timezone.timedelta(days=now.weekday())
+                queryset = queryset.filter(created_at__date__gte=start_of_week)
             elif time_period == 'this_month':
                 queryset = queryset.filter(created_at__year=now.year, created_at__month=now.month)
             elif time_period == 'this_year':
                 queryset = queryset.filter(created_at__year=now.year)
-            # Add more time periods as needed (e.g., 'last_7_days', 'last_30_days')
-            elif time_period == 'last_7_days':
-                 start_date = now - timedelta(days=7)
-                 queryset = queryset.filter(created_at__date__gte=start_date.date())
-            elif time_period == 'last_30_days':
-                 start_date = now - timedelta(days=30)
-                 queryset = queryset.filter(created_at__date__gte=start_date.date())
+            # Add more time periods as needed
 
+        # Apply favorite filter
+        if is_favorite == 'on':  # Checkbox value is 'on' when checked
+            queryset = queryset.filter(is_favorite=True)
 
-        # TODO: Add search functionality later (filtering by title or content)
-        # search_query = self.request.GET.get('q')
-        # if search_query:
-        #     queryset = queryset.filter(Q(title__icontains=search_query) | Q(content__icontains=search_query))
-
-
-        return queryset
+        # Apply search query
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) | Q(content__icontains=search_query)
+            )
+        
+        return queryset.order_by('-created_at') # Ensure consistent ordering
 
     def get_context_data(self, **kwargs):
         """
-        Adds filter options and current filter values to the context.
+        Add filter options and current filter values to the context
+        for use in the template.
         """
         context = super().get_context_data(**kwargs)
-
-        # Add filter options for the template
-        # These could be fetched dynamically from the database for moods used
-        # or defined as constants. For now, hardcode some examples.
-        context['mood_options'] = [
-            ('all', 'All Moods'),
-            ('happy', 'Happy'),
-            ('sad', 'Sad'),
-            ('reflective', 'Reflective'),
-            # Add more moods as needed
-        ]
-
+        from .forms import JournalEntryForm # Import to get mood choices
+        
+        # Prepare mood options for the filter dropdown
+        mood_options = [('', 'All Moods')] # Default "All Moods" option
+        for value, label in JournalEntryForm.MOOD_CHOICES:
+            if value != '': # Avoid adding the form's default 'Select Mood' if its value is empty
+                mood_options.append((value,label))
+        context['mood_options'] = mood_options
+        
+        # Time period options for the filter dropdown
         context['time_period_options'] = [
             ('all', 'All Time'),
             ('today', 'Today'),
             ('this_week', 'This Week'),
             ('this_month', 'This Month'),
             ('this_year', 'This Year'),
-            ('last_7_days', 'Last 7 Days'),
-            ('last_30_days', 'Last 30 Days'),
         ]
 
-        # Pass the current filter values back to the template to maintain state
-        context['current_mood'] = self.request.GET.get('mood', 'all') # Default to 'all'
-        context['current_time_period'] = self.request.GET.get('time_period', 'all') # Default to 'all'
-        context['current_is_favorite'] = self.request.GET.get('is_favorite') # No default, check if present
-
+        # Pass current filter values to the template to pre-select options
+        context['current_mood'] = self.request.GET.get('mood', '') # Default to empty to match 'All Moods'
+        context['current_time_period'] = self.request.GET.get('time_period', 'all')
+        context['current_is_favorite'] = self.request.GET.get('is_favorite') == 'on'
+        context['current_search_query'] = self.request.GET.get('q', '')
         return context
 
 
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     """
     Displays the details of a single journal entry.
-    Requires user to be logged in and to be the owner of the entry.
+    Ensures only the owner can view the entry using UserPassesTestMixin.
     """
     model = JournalEntry
     template_name = 'journal/journal_detail.html'
-    context_object_name = 'journal_entry'
+    context_object_name = 'entry'
 
     def test_func(self):
         """
-        Checks if the logged-in user is the owner of the journal entry.
-        Required by UserPassesTestMixin.
+        Check if the logged-in user is the owner of the journal entry.
+        Called by UserPassesTestMixin.
         """
-        journal_entry = self.get_object()
-        return journal_entry.user == self.request.user
+        entry = self.get_object()
+        return entry.user == self.request.user
 
-    def get_context_data(self, **kwargs):
+    def get_queryset(self):
         """
-        Adds the list of attachments for the journal entry to the context.
+        Override get_queryset to ensure that the DetailView only operates
+        on entries belonging to the current user. This is an additional
+        layer of security, complementing test_func.
         """
-        context = super().get_context_data(**kwargs)
-        context['attachments'] = self.object.attachments.all() # Fetch all attachments related to this entry
-        return context
+        return JournalEntry.objects.filter(user=self.request.user)
 
 
 class JournalEntryCreateView(LoginRequiredMixin, CreateView):
     """
-    Provides a form to create a new journal entry.
-    Requires user to be logged in.
-    Uses the custom JournalEntryForm.
-    Handles file uploads.
+    Handles the creation of a new journal entry and its attachments.
     """
     model = JournalEntry
     form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
+    # success_url is set dynamically in form_valid via get_absolute_url
+
+    def get_context_data(self, **kwargs):
+        """
+        Add the attachment formset to the context.
+        """
+        data = super().get_context_data(**kwargs)
+        if self.request.POST:
+            # If it's a POST request, bind the formset with the POST data and files
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(self.request.POST, self.request.FILES, prefix='attachments')
+        else:
+            # If it's a GET request, create an empty formset
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(prefix='attachments')
+        return data
 
     def form_valid(self, form):
         """
-        Sets the user of the journal entry to the currently logged-in user
-        before saving the form. Handles file upload.
+        Save the journal entry and its associated attachments.
+        Uses a transaction to ensure atomicity (all or nothing).
         """
-        # Save the journal entry first
-        form.instance.user = self.request.user
-        response = super().form_valid(form) # Saves the JournalEntry instance
+        context = self.get_context_data()
+        attachment_formset = context['attachment_formset']
 
-        # Handle file upload after the journal entry is saved
-        uploaded_file = form.cleaned_data.get('file')
-        if uploaded_file:
-            try:
-                # Create a new JournalAttachment instance
-                JournalAttachment.objects.create(
-                    journal_entry=self.object, # Link to the newly created journal entry
-                    file=uploaded_file
-                )
-                print(f"Successfully uploaded file: {uploaded_file.name} for entry {self.object.pk}")
-            except Exception as e:
-                # Log the error and potentially add a non-field error to the form
-                # or show a message to the user on the next page.
-                print(f"Error uploading file {uploaded_file.name}: {e}")
-                # For simplicity now, just print the error.
-                # In a real application, you might want more robust error handling.
+        if form.is_valid() and attachment_formset.is_valid():
+            with transaction.atomic():
+                # Assign the current user to the journal entry before saving
+                form.instance.user = self.request.user
+                # Save the main journal entry first
+                self.object = form.save()
 
+                # Associate the formset with the saved journal entry instance
+                attachment_formset.instance = self.object
+                attachment_formset.save()
+                
+                return redirect(self.object.get_absolute_url())
+        else:
+            # If either the main form or the formset is invalid, re-render the form with errors
+            return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
-        # TODO: Trigger Celery tasks for AI processing after saving
-
-        return response # Redirects to get_success_url
-
-
-    def get_success_url(self):
+    def form_invalid(self, form):
         """
-        Redirects to the detail view of the newly created journal entry
-        upon successful creation.
+        Handle invalid form submission, ensuring formset is also passed back with errors.
         """
-        return reverse_lazy('journal:journal_detail', kwargs={'pk': self.object.pk})
+        # Re-initialize formset with POST data if available, and current instance if it's an update (though this is CreateView)
+        attachment_formset = JournalAttachmentInlineFormSet(
+            self.request.POST or None, 
+            self.request.FILES or None, 
+            prefix='attachments',
+            instance=self.object if hasattr(self, 'object') and self.object else None # Should be None for CreateView
+        )
+        return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
 
 class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """
-    Provides a form to edit an existing journal entry.
-    Requires user to be logged in and to be the owner of the entry.
-    Uses the custom JournalEntryForm.
-    Handles file uploads.
+    Handles the updating of an existing journal entry and its attachments.
+    Ensures only the owner can update the entry.
     """
     model = JournalEntry
     form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
+    context_object_name = 'entry'
+    # success_url is set dynamically in form_valid via get_absolute_url
 
     def test_func(self):
         """
-        Checks if the logged-in user is the owner of the journal entry.
-        Required by UserPassesTestMixin.
+        Check if the logged-in user is the owner of the journal entry being updated.
         """
-        journal_entry = self.get_object()
-        return journal_entry.user == self.request.user
+        entry = self.get_object()
+        return entry.user == self.request.user
+
+    def get_queryset(self):
+        """
+        Ensure only the user's entries can be fetched for update.
+        """
+        return JournalEntry.objects.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        """
+        Add the attachment formset to the context, populated with existing attachments.
+        """
+        data = super().get_context_data(**kwargs)
+        if self.request.POST:
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(
+                self.request.POST,
+                self.request.FILES,
+                instance=self.object, # Pass the current journal entry instance
+                prefix='attachments'
+            )
+        else:
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(instance=self.object, prefix='attachments')
+        return data
 
     def form_valid(self, form):
         """
-        Handles saving the updated journal entry and file upload.
+        Save the updated journal entry and its associated attachments.
+        Handles adding new attachments and deleting marked attachments.
+        Uses a transaction to ensure atomicity.
         """
-        response = super().form_valid(form) # Saves the updated JournalEntry instance
+        context = self.get_context_data()
+        attachment_formset = context['attachment_formset']
 
-        # Handle file upload for update view
-        uploaded_file = form.cleaned_data.get('file')
-        if uploaded_file:
-            try:
-                # Create a new JournalAttachment instance for the existing journal entry
-                JournalAttachment.objects.create(
-                    journal_entry=self.object, # Link to the existing journal entry
-                    file=uploaded_file
-                )
-                print(f"Successfully uploaded file: {uploaded_file.name} for entry {self.object.pk}")
-            except Exception as e:
-                print(f"Error uploading file {uploaded_file.name}: {e}")
-                # Handle error
+        if form.is_valid() and attachment_formset.is_valid():
+            with transaction.atomic():
+                self.object = form.save() # User is already set, no need to set it again for update
+                attachment_formset.instance = self.object
+                attachment_formset.save()
+                return redirect(self.object.get_absolute_url())
+        else:
+            return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
-
-        # TODO: Re-trigger Celery tasks for AI processing if content changes? (Decision needed)
-        # TODO: Handle deletion of existing attachments (requires more form logic or separate view)
-
-        return response # Redirects to get_success_url
-
-
-    def get_success_url(self):
+    def form_invalid(self, form):
         """
-        Redirects to the detail view of the updated journal entry
-        upon successful update.
+        Handle invalid form submission for the update view, ensuring formset is also passed back with errors.
         """
-        return reverse_lazy('journal:journal_detail', kwargs={'pk': self.object.pk})
+        attachment_formset = JournalAttachmentInlineFormSet(
+            self.request.POST or None, 
+            self.request.FILES or None, 
+            instance=self.object, # Crucial for update view
+            prefix='attachments'
+        )
+        return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
 
-# Custom View for handling Ajax Delete
-class JournalEntryAjaxDeleteView(LoginRequiredMixin, View):
+class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     """
-    Handles deletion of a journal entry via Ajax POST request.
-    Requires user to be logged in and to be the owner of the entry.
-    GET requests to this URL are not allowed and will return 405 Method Not Allowed.
+    Handles the standard (non-Ajax) deletion of a journal entry.
+    Ensures only the owner can delete the entry.
     """
-    def post(self, request, pk, *args, **kwargs):
+    model = JournalEntry
+    template_name = 'journal/journal_confirm_delete.html'
+    success_url = reverse_lazy('journal:journal_list') # Redirect to the list view after deletion
+    context_object_name = 'entry'
+
+    def test_func(self):
         """
-        Handles the POST request for deletion (expected to be Ajax).
-        Finds the object, checks permissions, deletes it, and returns JSON response.
+        Check if the logged-in user is the owner of the journal entry being deleted.
         """
-        # Ensure the request is Ajax (optional but good practice)
-        # if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        #     return HttpResponseNotAllowed(['POST'], "Only Ajax POST requests are allowed.")
+        entry = self.get_object()
+        return entry.user == self.request.user
 
-        # Get the journal entry object or return 404 if not found
-        journal_entry = get_object_or_404(JournalEntry, pk=pk)
+    def get_queryset(self):
+        """
+        Ensure only the user's entries can be targeted for deletion.
+        """
+        return JournalEntry.objects.filter(user=self.request.user)
 
-        # Check if the logged-in user is the owner of the entry
-        if journal_entry.user != request.user:
-            # Return 403 Forbidden if the user is not the owner
-            return JsonResponse({'success': False, 'message': 'You do not have permission to delete this entry.'}, status=403) # Use JsonResponse for Ajax errors
 
-        # If user is the owner, delete the entry
+class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """
+    Handles the deletion of a journal entry via Ajax POST requests.
+    Returns a JSON response indicating success or failure.
+    Ensures only the owner can delete the entry.
+    The actual deletion logic is handled by overriding the post() method.
+    """
+    model = JournalEntry
+    http_method_names = ['post'] # This view should only accept POST requests
+
+    def test_func(self):
+        """
+        Check if the logged-in user is the owner of the journal entry.
+        This is called by UserPassesTestMixin during the dispatch cycle.
+        self.object is set by get_object() before this method is called.
+        """
+        entry = self.get_object() # self.get_object() fetches based on pk from URL and get_queryset()
+        return entry.user == self.request.user
+
+    def get_queryset(self):
+        """
+        Ensure get_object() only operates on entries belonging to the current user.
+        """
+        return JournalEntry.objects.filter(user=self.request.user)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Override post method to handle deletion and return JsonResponse directly.
+        The UserPassesTestMixin and object retrieval (get_object)
+        are handled by the parent classes' dispatch methods before this point.
+        """
         try:
-            # Deleting the JournalEntry will also delete related JournalAttachment instances
-            # due to the ForeignKey's default ON DELETE CASCADE behavior.
-            # However, the actual files on the filesystem might remain.
-            # TODO: Implement logic to delete associated files from storage.
-            journal_entry.delete()
+            # self.object should have been set by the time test_func was called,
+            # or by DeleteView's dispatch mechanism.
+            # If for some reason it's not (e.g., custom dispatch), ensure it's fetched.
+            if not hasattr(self, 'object') or not self.object:
+                 self.object = self.get_object() # This will raise Http404 if not found by pk in user's entries
+
+            entry_pk = self.object.pk  # Store pk before deleting the object
+            
+            # Perform the deletion of the model instance
+            self.object.delete()
+            
             # Return a JSON response indicating success
-            return JsonResponse({'success': True, 'entry_id': pk})
+            return JsonResponse({'status': 'success', 'message': 'Entry deleted successfully.', 'entry_id': entry_pk})
+        
+        except Http404:
+            logger.warning(
+                f"Ajax delete attempt for non-existent entry (pk={self.kwargs.get('pk')}) by user {request.user.id}.",
+                exc_info=True # Include traceback in log
+            )
+            return JsonResponse({'status': 'error', 'message': 'Entry not found.'}, status=404)
+        except PermissionDenied: # Should be caught by UserPassesTestMixin's dispatch
+            logger.warning(
+                f"Permission denied for Ajax delete by user {request.user.id} for entry pk={self.kwargs.get('pk')}.",
+                exc_info=True
+            )
+            return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
         except Exception as e:
-            # Handle potential errors during deletion
-            return JsonResponse({'success': False, 'message': f'Error deleting entry: {e}'}, status=500)
+            logger.error(
+                f"Unexpected error in JournalEntryAjaxDeleteView for user {request.user.id}, entry pk={self.kwargs.get('pk')}: {e}",
+                exc_info=True
+            )
+            return JsonResponse({'status': 'error', 'message': 'An unexpected server error occurred.'}, status=500)
 
-
-    def get(self, request, *args, **kwargs):
-        """
-        Handles GET requests. Returns 405 Method Not Allowed as GET delete is not supported.
-        """
-        return HttpResponseNotAllowed(['POST']) # Only POST is allowed for deletion
-
-    # TODO: Handle deletion of associated files when deleting the entry
-
+    # Since we override post() to return JsonResponse,
+    # success_url and get_success_url are not used by this view's Ajax response path.

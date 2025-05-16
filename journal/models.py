@@ -5,7 +5,9 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
+from django.urls import reverse # Import reverse for get_absolute_url
 import json
+import os # Import os module
 
 class JournalEntry(models.Model):
     """
@@ -83,6 +85,16 @@ class JournalEntry(models.Model):
         else:
             return f"Entry for {self.user.username}: (No content)"
 
+    def get_absolute_url(self):
+        """
+        Returns the URL to display the details of the journal entry.
+        Used for redirects after creation/update.
+        """
+        # Assumes you have a URL pattern named 'journal:journal_detail'
+        # that takes a primary key (pk) as an argument.
+        return reverse('journal:journal_detail', kwargs={'pk': self.pk})
+
+
     def is_ai_accessible(self):
         """Checks if the entry is accessible by AI for analysis."""
         return self.privacy_level in ['ai_only', 'public']
@@ -138,7 +150,20 @@ class JournalAttachment(models.Model):
         String representation of the attachment.
         Shows the file name and the related journal entry ID.
         """
-        return f"Attachment for Entry {self.journal_entry.id}: {self.file.name}"
+        # Use os.path.basename to get just the file name
+        return f"Attachment for Entry {self.journal_entry.id}: {os.path.basename(self.file.name)}"
+
+    def delete(self, *args, **kwargs):
+        """
+        Override the delete method to delete the file from storage
+        when the JournalAttachment object is deleted.
+        """
+        # Delete the file from storage
+        if self.file:
+            self.file.delete(save=False) # Use save=False to avoid saving the model again
+
+        # Call the parent class's delete method to delete the model instance
+        super().delete(*args, **kwargs)
 
     # Optional: Add methods here, e.g., to get file URL, thumbnail URL, etc.
     # def get_file_url(self):

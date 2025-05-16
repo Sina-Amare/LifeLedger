@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const cookies = document.cookie.split(";");
       for (let i = 0; i < cookies.length; i++) {
         const cookie = cookies[i].trim();
+        // Does this cookie string begin with the name we want?
         if (cookie.startsWith(name + "=")) {
           cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
           break;
@@ -35,10 +36,14 @@ document.addEventListener("DOMContentLoaded", function () {
       modalEntryTitle.textContent = entryTitle; // Set the title in the modal
 
       // Store the entry ID and element ID on the confirm button
-      confirmDeleteButton.setAttribute("data-entry-id", entryId);
-      confirmDeleteButton.setAttribute("data-entry-element-id", entryElementId);
-
-      deleteModal.classList.remove("hidden");
+      confirmDeleteButton.dataset.entryId = entryId;
+      confirmDeleteButton.dataset.entryElementId = entryElementId;
+      // Optionally, you could also store the delete URL here if read from the trigger button
+      // const deleteButton = document.querySelector(`.delete-entry-button[data-entry-id='${entryId}']`);
+      // if (deleteButton && deleteButton.dataset.deleteUrl) {
+      //     confirmDeleteButton.dataset.deleteUrl = deleteButton.dataset.deleteUrl;
+      // }
+      deleteModal.classList.remove("hidden"); // Show the modal
       console.log(`Modal shown for entry ID: ${entryId}, Title: ${entryTitle}`);
     } else {
       console.error("Error: Delete modal elements not found in the DOM.");
@@ -52,40 +57,38 @@ document.addEventListener("DOMContentLoaded", function () {
       // Clear data attributes from confirm button when modal is hidden
       confirmDeleteButton.removeAttribute("data-entry-id");
       confirmDeleteButton.removeAttribute("data-entry-element-id");
+      // confirmDeleteButton.removeAttribute("data-delete-url"); // Clear if you stored it
       console.log("Modal hidden.");
     }
   }
 
   // Add click event listener to all delete buttons with the class 'delete-entry-button'
-  // This function will be called in each template where this script is included.
+  // This function should be called once, or use event delegation for dynamically added buttons.
   function initializeDeleteButtons() {
     const deleteButtons = document.querySelectorAll(".delete-entry-button");
     deleteButtons.forEach((button) => {
-      // Remove existing listeners to prevent duplicates if called multiple times
-      // This is a simple approach; for more complex apps, consider event delegation
-      const old_element = button;
-      const new_element = old_element.cloneNode(true);
-      old_element.parentNode.replaceChild(new_element, old_element);
+      // To prevent attaching multiple listeners if this function is called multiple times,
+      // clone the node and replace it. A better approach for dynamic content is event delegation.
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
 
-      new_element.addEventListener("click", function () {
-        // Get data from the clicked button
-        const entryId = this.getAttribute("data-entry-id");
-        const entryTitle = this.getAttribute("data-entry-title");
-        // The element to remove might be the parent card, not the button itself
-        // We need a way to identify the main container element for the entry
-        // Let's assume the main container has an ID like 'entry-{{ entry.pk }}'
-        const entryElementId = `entry-${entryId}`; // Construct the element ID
+      newButton.addEventListener("click", function () {
+        // Get data from the clicked button using dataset
+        const entryId = this.dataset.entryId;
+        const entryTitle = this.dataset.entryTitle;
+        // Construct the element ID to be potentially removed from the DOM
+        const entryElementId = `entry-${entryId}`;
 
         console.log("Delete button clicked.");
         console.log("Read entry ID from data attribute:", entryId);
         console.log("Read entry title from data attribute:", entryTitle);
         console.log("Constructed entry element ID:", entryElementId);
 
-        // Check if entryId is valid before showing modal
         if (entryId) {
           showModal(entryTitle, entryId, entryElementId);
         } else {
           console.error("Error: Could not get entry ID from delete button.");
+          // TODO: Replace alert with a more user-friendly notification
           alert("An error occurred. Could not get journal entry ID.");
         }
       });
@@ -93,27 +96,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Add event listener to the Confirm Delete button in the modal
-  // This listener is added once when the script loads
   if (confirmDeleteButton) {
     confirmDeleteButton.addEventListener("click", function () {
-      // Get data from the confirm button's data attributes
-      const entryId = this.getAttribute("data-entry-id");
-      const entryElementId = this.getAttribute("data-entry-element-id");
-      const entryElement = document.getElementById(entryElementId);
+      const entryId = this.dataset.entryId;
+      const entryElementId = this.dataset.entryElementId;
+      // Construct the delete URL dynamically using the entry ID
+      // Alternative: const deleteUrl = this.dataset.deleteUrl; (if stored from trigger button)
+      const deleteUrl = `/journal/${entryId}/delete/`;
 
-      if (entryId && entryElement) {
-        // Hide the modal immediately after confirmation
-        hideModal();
+      console.log("Confirm delete clicked.");
+      console.log("Entry ID:", entryId);
+      console.log("Element ID to remove/check:", entryElementId);
+      console.log("Sending POST request to:", deleteUrl);
 
-        // Construct the delete URL dynamically using the entry ID
-        const deleteUrl = `/journal/${entryId}/delete/`; // Construct URL here
+      if (entryId) {
+        hideModal(); // Hide the modal immediately after confirmation
 
-        console.log("Confirm delete clicked.");
-        console.log("Sending POST request to:", deleteUrl); // Method is POST
-
-        // Send the Ajax request using the constructed URL
         fetch(deleteUrl, {
-          method: "POST", // Send as POST request to match Django view
+          method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest", // Identify as Ajax request
             "X-CSRFToken": csrftoken, // Include CSRF token
@@ -123,99 +123,112 @@ document.addEventListener("DOMContentLoaded", function () {
           .then((response) => {
             console.log("Fetch response status:", response.status);
             console.log("Fetch response status text:", response.statusText);
-
             if (response.ok) {
-              // Try to parse JSON, but handle cases where it might not be JSON
-              return response.text().then((text) => {
-                try {
-                  return JSON.parse(text);
-                } catch (e) {
-                  console.warn(
-                    "Received non-JSON response, but status is OK:",
-                    text
-                  );
-                  // If status is OK but not JSON, assume success if needed, or log a warning
-                  // For deletion, we expect a JSON response, so throwing an error is safer
-                  throw new Error(
-                    "Expected JSON response, but received non-JSON."
-                  );
-                }
-              });
+              return response.json(); // We expect a JSON response from our view
             } else {
-              // If response is not ok, read the response body and throw an error
+              // If response is not ok, try to read error text and throw an error
               return response.text().then((text) => {
                 console.error(
                   "Server returned non-OK status:",
                   response.status,
                   response.statusText
                 );
-                console.error("Server response body:", text);
-                throw new Error(
-                  `Server error: ${response.status} ${response.statusText}`
-                );
+                console.error("Server response body (if any):", text);
+                let errorMsg = `Server error: ${response.status} ${response.statusText}`;
+                try {
+                  // Try to parse as JSON in case the server sends a JSON error
+                  const errorData = JSON.parse(text);
+                  if (errorData && errorData.message) {
+                    errorMsg = errorData.message;
+                  }
+                } catch (e) {
+                  // If not JSON, use the raw text if it's short
+                  if (text && text.length < 200 && text.indexOf("<") === -1) {
+                    // Avoid showing long HTML in alert
+                    errorMsg = text;
+                  }
+                }
+                throw new Error(errorMsg); // This will be caught by the .catch() block
               });
             }
           })
           .then((data) => {
-            // Handle the JSON response from the server
-            if (data.success) {
+            // data should be the parsed JSON response from the server
+            // Check for 'status' field with value 'success'
+            if (data && data.status === "success") {
               console.log(
-                `Journal entry ${data.entry_id} deleted successfully.`
+                `Journal entry ${
+                  data.entry_id || entryId
+                } deleted successfully. Message: ${data.message}`
               );
 
-              // --- Start: Logic to handle redirect on detail page vs removing element on list page ---
-              // Check if the deleted element's parent is the list container
+              const entryElement = document.getElementById(entryElementId);
               const listContainer = document.getElementById(
                 "journal-entries-list"
               );
-              if (
-                listContainer &&
-                entryElement.parentElement === listContainer
-              ) {
-                // If on the list page, remove the element from the DOM
-                entryElement.remove();
-                console.log(
-                  `Removed element with ID ${entryElementId} from the list.`
-                );
 
-                // Optional: Check if the list is now empty and show "no entries" message
-                const noEntriesMessage =
-                  document.getElementById("no-entries-message");
-                if (listContainer.children.length === 0 && noEntriesMessage) {
-                  noEntriesMessage.classList.remove("hidden");
+              if (entryElement) {
+                // Check if we are on the list page by seeing if the element's parent is the list container
+                if (
+                  listContainer &&
+                  entryElement.parentElement === listContainer
+                ) {
+                  // If on the list page, remove the element from the DOM
+                  entryElement.remove();
+                  console.log(
+                    `Removed element with ID ${entryElementId} from the list.`
+                  );
+
+                  // Optional: Check if the list is now empty and show "no entries" message
+                  const noEntriesMessage =
+                    document.getElementById("no-entries-message");
+                  if (listContainer.children.length === 0 && noEntriesMessage) {
+                    noEntriesMessage.classList.remove("hidden");
+                  }
+                  // TODO: showNotification(data.message || "Entry deleted!", "success");
+                } else {
+                  // If not on the list page (e.g., on detail page), redirect to the list page
+                  console.log(
+                    `Not on list page or element structure changed. Redirecting to /journal/`
+                  );
+                  window.location.replace("/journal/"); // Or use a redirect_url from server if provided
                 }
               } else {
-                // If not on the list page (likely detail page), redirect to the list page
-                console.log(`Not on list page. Redirecting to /journal/`);
-                // Use window.location.replace to prevent going back to the deleted entry page
-                window.location.replace("/journal/"); // Redirect to the journal list page
+                // If the element was not found (e.g. already removed or on detail page where full redirect is expected)
+                console.log(
+                  `Element with ID ${entryElementId} not found, but deletion successful. Redirecting.`
+                );
+                window.location.replace("/journal/");
               }
-              // --- End: Logic to handle redirect ---
-
-              // TODO: Add a success message notification (optional, maybe a temporary div)
             } else {
-              // Deletion failed based on server-side logic
+              // If data.status is not 'success' or data is not as expected
               console.error(
-                "Deletion failed:",
-                data.message || "Server reported failure"
+                "Deletion failed based on server response:",
+                data ? data.message : "Unknown server response format"
               );
+              // TODO: showNotification(data && data.message ? data.message : "Failed to delete entry.", "error");
               alert(
                 "Failed to delete journal entry: " +
-                  (data.message || "Unknown server error")
+                  (data && data.message
+                    ? data.message
+                    : "Server reported an issue.")
               );
             }
           })
           .catch((error) => {
-            // Handle any network errors or errors thrown in the .then block
-            console.error("Error during deletion:", error);
+            // Handle network errors or errors thrown in the .then() blocks
+            console.error("Error during deletion process:", error);
+            // TODO: showNotification(error.message || "An error occurred. Please try again.", "error");
             alert(
-              "An error occurred while trying to delete the journal entry. Check console for details."
+              "An error occurred while trying to delete the journal entry: " +
+                error.message
             );
           });
       } else {
         console.error(
-          "Error: Confirm delete button clicked but entry ID or element not found."
+          "Error: Confirm delete button clicked but entry ID not found."
         );
+        // TODO: showNotification("An error occurred. Could not find journal entry data for deletion.", "error");
         alert(
           "An error occurred. Could not find journal entry data for deletion."
         );
@@ -228,7 +241,7 @@ document.addEventListener("DOMContentLoaded", function () {
     cancelDeleteButton.addEventListener("click", hideModal);
   }
 
-  // Optional: Hide modal if user clicks outside of it
+  // Optional: Hide modal if user clicks outside of it (on the overlay)
   // window.addEventListener('click', function(event) {
   //     if (event.target === deleteModal) {
   //         hideModal();
@@ -237,4 +250,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize the delete buttons when the script loads
   initializeDeleteButtons();
+
+  // TODO: Implement a user-friendly notification system (e.g., a toast message)
+  // function showNotification(message, type = 'info') {
+  //     console.log(`Notification (${type}): ${message}`);
+  //     // Example: Create a div, style it, append to body, then remove after a few seconds
+  //     // For now, alert is used as a placeholder if you don't have one
+  //     // alert(`${type.toUpperCase()}: ${message}`);
+  // }
 });
