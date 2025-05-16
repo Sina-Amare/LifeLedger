@@ -10,6 +10,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -43,8 +44,18 @@ INSTALLED_APPS = [
     'django.contrib.sites', # Add django.contrib.sites for email activation domain
     'accounts',
     'journal',
-    'widget_tweaks'
+    'widget_tweaks',
+    # 'tailwind', # Assuming you are not using Tailwind app based on your INSTALLED_APPS
+    # 'theme',    # Assuming you are not using a separate theme app
 ]
+
+# Assuming you are managing Tailwind directly without the Django Tailwind app
+# If you are using the Django Tailwind app, uncomment the lines above and configure accordingly.
+# TAILWIND_APP_NAME = 'theme' # Or your theme app name
+# INTERNAL_IPS = [
+#     "127.0.0.1",
+# ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -54,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'django_browser_reload.middleware.BrowserReloadMiddleware', # For live reloading - uncomment if using
 ]
 
 ROOT_URLCONF = 'LifeLedger.urls'
@@ -113,11 +125,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'UTC' # Consider changing to your local timezone, e.g., 'Asia/Tehran'
 
 USE_I18N = True
 
 USE_TZ = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -132,16 +145,12 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- Authentication Settings ---
+# Custom user model
+AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# URL to redirect to after a user has successfully logged in.
-LOGIN_REDIRECT_URL = '/'
-
-# URL to redirect to when a user logs out.
-LOGOUT_REDIRECT_URL = '/' # Redirect to homepage after logout
-
-# URL for the login page.
-LOGIN_URL = '/accounts/login/' # URL of the login page
+# Redirect URLs
+LOGIN_REDIRECT_URL = '/' # Redirect to home page after login
+LOGOUT_REDIRECT_URL = '/' # Redirect to homepage after logout (Changed from 'accounts:login')
 
 # AUTHENTICATION_BACKENDS: Specifies the authentication backend(s) to use.
 AUTHENTICATION_BACKENDS = [
@@ -173,3 +182,8 @@ SITE_ID = int(os.getenv('SITE_ID', 1)) # Default site ID is 1
 # if DEBUG:
 #     import logging
 #     logging.basicConfig(level=logging.DEBUG)
+
+# Settings for media files (user-uploaded files)
+MEDIA_ROOT = BASE_DIR / 'media' # Files will be stored in a 'media' directory at the project root
+MEDIA_URL = '/media/' # URL prefix for accessing media files
+

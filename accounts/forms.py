@@ -60,61 +60,51 @@ class UsernameEmailAuthenticationForm(AuthenticationForm):
         Cleans the form data and validates credentials.
         Provides a specific error message if the user is inactive.
         """
-        # --- Step 1: Call the parent's clean method first ---
-        # This performs the basic validation and attempts authentication
-        # using the configured backends. If successful and user is active,
-        # it sets self.user. If not, it adds standard non-field errors.
-        super().clean()
-        # Now self.cleaned_data is populated and self.user might be set
-
-
-        # --- Step 2: Check if authentication was successful AND the user is inactive ---
-        # self.user will be set by the parent's clean method ONLY if authentication
-        # was successful AND the user is active (due to the check in UsernameEmailBackend).
-        # However, we need to find the user regardless of active status to provide
-        # a specific message if they are inactive.
-
-        # Get the username/email entered by the user from cleaned_data
+        # Get the username/email and password from cleaned_data
         username_or_email = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
 
+        # --- Step 1: Find the user by username or email (case-insensitive) ---
+        # Do this BEFORE calling super().clean() to check active status first.
+        user = None
         if username_or_email:
             try:
-                # Find the user by username or email (case-insensitive), regardless of active status
                 user = User.objects.get(
                     Q(username__iexact=username_or_email) | Q(email__iexact=username_or_email)
                 )
-
-                # If the user is found BUT is inactive, add a specific non-field error.
-                # This error will override or appear alongside the parent's generic error
-                # if the parent's clean method failed because the user was inactive.
-                if not user.is_active:
-                    # Use add_error to add a non-field error
-                    self.add_error(
-                        None, # None indicates a non-field error
-                        ValidationError(
-                            "Your account is not active. Please check your email for the activation link or use the 'Resend Activation Email' option.",
-                            code='inactive',
-                        )
-                    )
-                    # IMPORTANT: If we add a specific error for inactive user,
-                    # we should clear the generic error added by the parent if it exists,
-                    # to avoid showing two conflicting messages.
-                    # However, directly manipulating self._errors can be tricky.
-                    # A simpler approach is to ensure our specific message is clear
-                    # and the user understands it. The parent's error might still show,
-                    # but our specific one should be more prominent/helpful.
-                    # Let's rely on the specific message being clear enough for now.
-
-
+                print(f"UsernameEmailAuthenticationForm: User '{user.username}' found during clean.") # Debug print
             except User.DoesNotExist:
-                # User not found. The parent's clean method already handled this
-                # by adding a standard invalid login error. No need to do anything here.
-                pass
+                print(f"UsernameEmailAuthenticationForm: User with username/email '{username_or_email}' not found during clean.") # Debug print
+                # User not found. Let the parent's clean handle the generic error.
+                pass # Keep user as None
 
+        # --- Step 2: Check if the user is inactive ---
+        if user is not None and not user.is_active:
+            # If user is found and is inactive, add a specific non-field error.
+            # This error will be displayed to the user.
+            print(f"UsernameEmailAuthenticationForm: User '{user.username}' is inactive.") # Debug print
+            self.add_error(
+                None, # None indicates a non-field error
+                ValidationError(
+                    "Your account is not active. Please check your email for the activation link or use the 'Resend Activation Email' option.",
+                    code='inactive',
+                )
+            )
+            # IMPORTANT: If we add a specific error for inactive user,
+            # we should NOT proceed with the parent's clean method
+            # as it will add a conflicting generic error.
+            # We can return the cleaned_data here with the error added.
+            # The form will be invalid due to the added error.
+            return self.cleaned_data # Return early with error
 
-        # --- Step 3: Return the cleaned data ---
-        # Any errors (from parent or our inactive check) are now collected in self.errors
-        return self.cleaned_data
+        # --- Step 3: If user is active or not found, proceed with standard authentication ---
+        # Call the parent's clean method to perform the actual authentication
+        # using the configured backends (including UsernameEmailBackend).
+        # This will check the password and set self.user if authentication is successful
+        # for an ACTIVE user. If authentication fails (e.g., wrong password),
+        # the parent's clean method will add standard non-field errors.
+        print("UsernameEmailAuthenticationForm: Calling super().clean() for authentication.") # Debug print
+        return super().clean() # Proceed with standard authentication check
 
 
 class ResendActivationEmailForm(forms.Form):
@@ -149,8 +139,7 @@ class ResendActivationEmailForm(forms.Form):
                     "This account is already active. Please try logging in."
                 )
 
-            self.user = user
+            self.user = user # Attach the user object to the form
             return value
 
         raise ValidationError("Please enter your username or email address.")
-

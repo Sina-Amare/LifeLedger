@@ -1,7 +1,41 @@
 {% extends 'base.html' %}
+{# Removed {% load i18n %} to avoid translate filter error #}
 
 {% block title %}
     {% if form.instance.pk %}Edit Journal Entry{% else %}Write New Journal Entry{% endif %}
+{% endblock %}
+
+{% block extra_head %} {# Assuming base.html has an extra_head block in the <head> #}
+<style>
+    /* Force consistent focus styles for text inputs, textareas, and selects */
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+        outline: none !important; /* Remove default outline */
+        /* Apply a consistent box-shadow for the ring effect */
+        /* Using a light blue color (similar to Tailwind blue-400) with transparency */
+        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important;
+        /* Apply a consistent border color */
+        border-color: #60a5fa !important; /* Tailwind blue-400 */
+    }
+
+    /* Adjust focus styles for dark mode */
+    .dark input[type="text"]:focus,
+    .dark textarea:focus,
+    .dark select:focus {
+         /* Using a slightly lighter blue for dark mode (similar to Tailwind blue-300) with transparency */
+         box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
+         /* Apply a consistent border color for dark mode */
+         border-color: #93c5fd !important; /* Tailwind blue-300 */
+    }
+
+    /* Optional: Adjust file input focus if needed, though they often behave differently */
+    /* input[type="file"]:focus {
+        outline: 2px solid #60a5fa !important;
+        outline-offset: 2px;
+    } */
+
+</style>
 {% endblock %}
 
 {% block content %}
@@ -23,76 +57,136 @@
                 </div>
             {% endif %}
 
-            {# Loop through form fields and manually render with Tailwind classes #}
+            {# Loop through standard form fields and manually render with Tailwind classes #}
+            {# Exclude 'shared_details', 'is_favorite' and 'file' as they are handled separately #}
             {% for field in form %}
-                <div class="mb-4">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                        {{ field.label }}
-                    </label>
+                {# Removed Debug prints #}
 
-                    {# Manually render field based on widget type name and apply classes #}
-                    {# Using the custom 'widget_type_name' attribute added in forms.py #}
-                    {% if field.widget_type_name == 'CheckboxInput' %}
-                        <div class="flex items-center">
-                            {# Render checkbox input directly #}
-                            <input type="checkbox"
+                {# Only render fields that are NOT 'shared_details', 'is_favorite', or 'file' in this loop #}
+                {% if field.name != 'shared_details' and field.name != 'is_favorite' and field.name != 'file' %}
+
+                    <div class="mb-4">
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                            {{ field.label }}
+                        </label>
+
+                        {# Manually render field based on string representation of the widget #}
+                        {# Apply the base Tailwind classes. Focus styles are handled by the <style> block. #}
+                        {% if "Textarea" in field.field.widget|stringformat:"s" %}
+                            {# Render textarea directly with base Tailwind classes #}
+                            <textarea name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-200 ease-in-out"
+                                        {% if field.field.required %}required{% endif %}
+                                        {% if field.field.widget.attrs.rows %}rows="{{ field.field.widget.attrs.rows }}"{% endif %}
+                                        {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>{{ field.value|default:'' }}</textarea>
+                        {% elif "Select" in field.field.widget|stringformat:"s" %}
+                             {# Render select directly with base Tailwind classes #}
+                             <select name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-200 ease-in-out"
+                                        {% if field.field.required %}required{% endif %}>
+                                    {% for value, text in field.field.choices %}
+                                        <option value="{{ value }}" {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                             </select>
+                        {% else %}
+                            {# Render other standard input types (text, number, etc.) with base Tailwind classes #}
+                            <input type="{{ field.field.widget.input_type }}"
                                    name="{{ field.name }}"
                                    id="{{ field.id_for_label }}"
-                                   value="{{ field.value|default:'on' }}"
-                                   class="h-4 w-4 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-primary-light dark:focus:ring-primary-dark"
-                                   {% if field.value %}checked{% endif %}>
-                            <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-text-light dark:text-text-dark">
-                                {{ field.label }}
-                            </label>
-                        </div>
-                    {% elif field.widget_type_name == 'Textarea' %}
-                        {# Render textarea directly #}
-                        <textarea name="{{ field.name }}"
-                                  id="{{ field.id_for_label }}"
-                                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
-                                  {% if field.field.required %}required{% endif %}
-                                  {% if field.field.widget.attrs.rows %}rows="{{ field.field.widget.attrs.rows }}"{% endif %}
-                                  {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>{{ field.value|default:'' }}</textarea>
-                    {% elif field.widget_type_name == 'Select' %}
-                         {# Render select directly #}
-                         <select name="{{ field.name }}"
-                                 id="{{ field.id_for_label }}"
-                                 class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm appearance-none transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
-                                 {% if field.field.required %}required{% endif %}>
-                             {% for value, text in field.field.choices %}
-                                 <option value="{{ value }}" {% if field.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ text }}</option>
-                             {% endfor %}
-                         </select>
-                    {% else %}
-                        {# Render other input types (text, email, password, etc.) directly #}
-                        <input type="{{ field.field.widget.input_type }}"
-                               name="{{ field.name }}"
-                               id="{{ field.id_for_label }}"
-                               value="{{ field.value|default:'' }}"
-                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:ring-2 dark:focus:ring-primary-dark dark:focus:border-transparent sm:text-sm transition duration-200 ease-in-out focus:ring-offset-2 focus:ring-offset-card-light dark:focus:ring-offset-card-dark"
-                               {% if field.field.required %}required{% endif %}
-                               {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
-                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
-                               {# Add other common input attributes as needed #}
-                               {% for attr, val in field.field.widget.attrs.items %}
-                                   {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' and attr != 'maxlength' and attr != 'placeholder' %}
-                                       {{ attr }}="{{ val }}"
-                                   {% endif %}
-                               {% endfor %}
-                               >
-                    {% endif %}
+                                   value="{{ field.value|default:'' }}"
+                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 sm:text-sm transition duration-200 ease-in-out"
+                                   {% if field.field.required %}required{% endif %}
+                                   {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+                                   {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
+                                   {# Add other common input attributes as needed, excluding class which we set manually #}
+                                   {% for attr, val in field.field.widget.attrs.items %}
+                                        {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' and attr != 'maxlength' and attr != 'placeholder' %}
+                                            {{ attr }}="{{ val }}"
+                                        {% endif %}
+                                   {% endfor %}
+                                   >
+                        {% endif %}
 
-                    {# Help text and errors #}
-                    {% if field.help_text %}
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                        {# Help text and errors #}
+                        {% if field.help_text %}
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+
+                {% endif %} {# End if condition #}
+            {% endfor %} {# End for loop #}
+
+            {# Render the file upload field separately #}
+            {% with file_field=form.file %}
+                 {# Removed Debug prints #}
+                <div class="mb-4">
+                     <label for="{{ file_field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                         {{ file_field.label }}
+                     </label>
+                     {# Render file input directly - Tailwind classes might need adjustment for file inputs #}
+                     <input type="file"
+                            name="{{ file_field.name }}"
+                            id="{{ file_field.id_for_label }}"
+                            class="block w-full text-sm text-text-light dark:text-text-dark
+                                   file:mr-4 file:py-2 file:px-4
+                                   file:rounded-full file:border-0
+                                   file:text-sm file:font-semibold
+                                   file:bg-primary-light file:text-white
+                                   hover:file:bg-primary-dark"
+                            {% if file_field.field.required %}required{% endif %}
+                            {# Add other common input attributes as needed #}
+                            {% for attr, val in file_field.field.widget.attrs.items %}
+                                 {% if attr != 'class' and attr != 'id' and attr != 'name' and attr != 'type' and attr != 'value' and attr != 'required' %}
+                                     {{ attr }}="{{ val }}"
+                                 {% endif %}
+                            {% endfor %}
+                            >
+                     {# Display current file if editing #}
+                     {% if file_field.initial %}
+                         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Current file: <a href="{{ file_field.initial.url }}" class="text-primary-light dark:text-primary-dark hover:underline">{{ file_field.initial.name }}</a></p>
+                     {% endif %}
+                     {# Help text and errors for file field #}
+                     {% if file_field.help_text %}
+                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ file_field.help_text|safe }}</p>
+                     {% endif %}
+                     {% for error in file_field.errors %}
+                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                     {% endfor %}
+                </div>
+            {% endwith %}
+
+
+            {# Render the is_favorite checkbox at the end #}
+            {% with is_favorite_field=form.is_favorite %}
+                 {# Removed Debug prints #}
+                <div class="mb-4 flex items-center"> {# Use flex to align checkbox and label horizontally #}
+                    {# Render checkbox input directly #}
+                    <input type="checkbox"
+                           name="{{ is_favorite_field.name }}"
+                           id="{{ is_favorite_field.id_for_label }}"
+                           value="{{ is_favorite_field.value|default:'on' }}"
+                           class="h-4 w-4 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-primary-light dark:focus:ring-primary-dark"
+                           {% if is_favorite_field.value %}checked{% endif %}>
+                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-2 block text-sm font-medium text-text-light dark:text-text-dark"> {# Add ml-2 for spacing #}
+                        {{ is_favorite_field.label }}
+                    </label>
+                    {# Help text and errors for is_favorite field #}
+                    {% if is_favorite_field.help_text %}
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
                     {% endif %}
-                    {% for error in field.errors %}
+                    {% for error in is_favorite_field.errors %}
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
                     {% endfor %}
                 </div>
-            {% endfor %}
+            {% endwith %}
 
-            {# TODO: Add formset for attachments here later #}
+
+            {# TODO: Add formset for multiple attachments here later #}
             {# Example (will require a formset in views and forms.py): #}
             {# <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4 mt-6">Attachments</h3> #}
             {# {{ attachment_formset.management_form }} #}
@@ -118,5 +212,5 @@
 </div>
 {% endblock %}
 
-{# Note: Tailwind classes for form inputs are now applied directly in this template #}
-{# by manually rendering the HTML tags based on widget type name. #}
+{# Note: Tailwind classes for form inputs are now applied directly in this template. #}
+{# A <style> block is added to forcefully ensure consistent focus styles across different input types. #}

@@ -15,8 +15,45 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
-     {# Add extra CSS block for page-specific styles #}
+
+    {# Global custom CSS - Arrow animation CSS placed here to ensure it's always included #}
+    <style>
+        /* Arrow animation */
+        .arrow-indicator {
+            animation: pulse-arrow 2s infinite; /* Apply the animation */
+        }
+
+        @keyframes pulse-arrow {
+            0%, 100% {
+                opacity: 1; /* Fully visible */
+                transform: translateX(0); /* Normal position */
+            }
+            50% {
+                opacity: 0.5; /* Half visible */
+                transform: translateX(4px); /* Move slightly to the right */
+            }
+        }
+
+        /* Example: Custom scrollbar styling (optional) */
+        /* ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        } */
+
+    </style>
+
+    {# Extra CSS block for page-specific styles - Child templates can add styles here #}
     {% block extra_css %}{% endblock %}
+
   </head>
 
   {# Apply flexbox to the body to push footer to the bottom #}
@@ -28,7 +65,7 @@
         class="container mx-auto flex justify-between items-center p-4 md:px-6"
       >
         <a
-          href="/" {# Link logo to homepage #}
+          href="{% url 'accounts:home' %}" {# Link logo to homepage - Use namespaced URL #}
           class="text-2xl font-bold text-primary-light dark:text-primary-dark"
           >LifeLedger</a
         >

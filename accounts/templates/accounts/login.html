@@ -47,23 +47,24 @@
                 Don't have an account? <a href="{% url 'accounts:signup' %}" class="text-primary-light dark:text-primary-dark hover:underline">Sign Up</a>
             </p>
             <p class="text-center text-sm mt-2">
-                {# Link to forgot password page #}
+                 {# Link to forgot password page #}
                  <a href="{% url 'accounts:password_reset' %}" class="text-primary-light dark:text-primary-dark hover:underline">Forgot Password?</a>
             </p>
             <p class="text-center text-sm mt-2 flex items-center justify-center"> {# Use flex to align items #}
-                {# Link to resend activation email page with arrow indicator #}
-                <a href="{% url 'accounts:resend_activation_email' %}" class="text-primary-light dark:text-primary-dark hover:underline flex items-center"> {# Use flex to align items #}
-                    Resend Activation Email
-                    {# Arrow icon - using Font Awesome #}
-                    <i class="fas fa-arrow-right ml-1 arrow-indicator"></i> {# Add arrow-indicator class for styling/animation #}
-                </a>
+                 {# Link to resend activation email page with arrow indicator #}
+                 <a href="{% url 'accounts:resend_activation_email' %}" class="text-primary-light dark:text-primary-dark hover:underline flex items-center"> {# Use flex to align items #}
+                     Resend Activation Email
+                     {# Arrow icon - using Font Awesome #}
+                     <i class="fas fa-arrow-right ml-1 arrow-indicator"></i> {# Add arrow-indicator class for styling/animation #}
+                 </a>
             </p>
         </div>
     </div>
 </section>
 {% endblock %}
 
-{# Add basic Tailwind form styling for input fields and arrow animation #}
+{# Add basic Tailwind form styling for input fields #}
+{# Arrow animation CSS is moved to base.html or a shared CSS file #}
 {% block extra_css %}
 <style>
     /* Basic styling for form inputs */
@@ -88,24 +89,10 @@
         box-shadow: 0 0 0 1px #2563EB; /* focus:ring-blue-500 */
     }
      .dark #id_username:focus, .dark #id_password:focus {
-        border-color: #60A5FA; /* dark:focus:border-blue-400 */
-        box-shadow: 0 0 0 1px #60A5FA; /* dark:focus:ring-blue-400 */
+         border-color: #60A5FA; /* dark:focus:border-blue-400 */
+         box-shadow: 0 0 0 1px #60A5FA; /* dark:focus:ring-blue-400 */
      }
 
-    /* Arrow animation */
-    .arrow-indicator {
-        animation: pulse-arrow 2s infinite; /* Apply the animation */
-    }
-
-    @keyframes pulse-arrow {
-        0%, 100% {
-            opacity: 1; /* Fully visible */
-            transform: translateX(0); /* Normal position */
-        }
-        50% {
-            opacity: 0.5; /* Half visible */
-            transform: translateX(4px); /* Move slightly to the right */
-        }
-    }
+    /* Arrow animation CSS is now in base.html or a shared file */
 </style>
 {% endblock %}
