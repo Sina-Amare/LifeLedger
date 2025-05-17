@@ -35,7 +35,7 @@
                 </span>
                 {% endif %}
             </div>
-             {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %} {# Show only if updated significantly after creation #}
+             {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
                     <em>({% blocktrans with time_diff=entry.updated_at|timesince:entry.created_at %}Last updated {{ time_diff }} ago{% endblocktrans %})</em>
                 </p>
@@ -107,14 +107,14 @@
 
     {# Delete Confirmation Modal #}
     <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
-        {# ADD class "modal-dialog-box" to the div below #}
+        {# ADDED class "modal-dialog-box" to the div below #}
         <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0" 
-             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-detail"> {# Changed ID for aria-labelledby for uniqueness if needed #}
+             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-detail-page">
             <div class="text-center">
                 <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
                     <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
                 </div>
-                <h3 id="modal-title-detail" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
+                <h3 id="modal-title-detail-page" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
                 <div class="mt-3 px-4 py-3">
                     <p class="text-md text-gray-600 dark:text-gray-400">
                         {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?

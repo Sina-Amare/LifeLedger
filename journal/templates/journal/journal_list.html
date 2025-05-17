@@ -6,7 +6,7 @@
 
 {% block extra_head %}
 <style>
-    /* Custom styles for select arrow */
+    /* Custom styles for select arrow, if needed, beyond Tailwind's appearance-none */
     .custom-select-arrow {
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
         background-position: right 0.5rem center;
@@ -18,17 +18,17 @@
        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     }
 
-    /* Consistent focus styles for form elements */
+    /* Ensure consistent focus styles for form elements */
     select:focus, input[type="text"]:focus, input[type="checkbox"]:focus {
         outline: none !important;
-        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important; /* Tailwind blue-400 equivalent */
-        border-color: #60a5fa !important; /* Tailwind blue-400 */
+        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important;
+        border-color: #60a5fa !important;
     }
     .dark select:focus, .dark input[type="text"]:focus, .dark input[type="checkbox"]:focus {
-        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important; /* Tailwind blue-300 equivalent */
-        border-color: #93c5fd !important; /* Tailwind blue-300 */
+        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
+        border-color: #93c5fd !important;
     }
-    input[type="checkbox"]:focus { /* Specific focus for checkbox to ensure ring is visible */
+    input[type="checkbox"]:focus {
          box-shadow: 0 0 0 0.2rem var(--tw-ring-color, rgba(96, 165, 250, 0.25)) !important;
          border-color: var(--tw-ring-color, #60a5fa) !important;
     }
@@ -36,9 +36,6 @@
          box-shadow: 0 0 0 0.2rem var(--tw-ring-color, rgba(147, 197, 253, 0.25)) !important;
          border-color: var(--tw-ring-color, #93c5fd) !important;
     }
-
-
-    /* Styling for entry cards */
     .entry-card {
         transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     }
@@ -64,7 +61,6 @@
         </a>
     </header>
 
-    {# Filter and Search Form #}
     <form method="get" class="mb-12 p-6 sm:p-8 bg-card-light dark:bg-card-dark rounded-2xl shadow-custom-light dark:shadow-custom-dark">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5 items-end">
             <div>
@@ -125,7 +121,7 @@
                     </header>
 
                     <div class="text-sm text-text-light dark:text-text-dark mb-5 flex-grow prose prose-sm dark:prose-invert max-w-none">
-                        <p>{{ entry.content|striptags|truncatewords_html:28|safe }}</p>
+                        <p>{{ entry.content|striptags|truncatewords_html:25|safe }}</p>
                     </div>
 
                     <footer class="mt-auto pt-4 border-t border-border-light dark:border-border-dark">
@@ -252,8 +248,9 @@
         </div>
     {% endif %}
 
-    {# Delete Confirmation Modal - Ensure it has the 'modal-dialog-box' class on the inner div #}
+    {# Delete Confirmation Modal #}
     <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
+        {# Ensure this inner div has the class 'modal-dialog-box' #}
         <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0"
              role="alertdialog" aria-modal="true" aria-labelledby="modal-title-list-page">
             <div class="text-center">
@@ -285,6 +282,4 @@
 
 {% block extra_js %}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
-{# Note: The example JS for modal animation from previous journal_list.html was for demonstration #}
-{# The actual animation logic is now handled within ajax_delete.js #}
 {% endblock %}

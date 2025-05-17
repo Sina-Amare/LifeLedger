@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %} {# ADDED THIS LINE #}
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -20,23 +21,15 @@
             0%, 100% { opacity: 1; transform: translateX(0); }
             50% { opacity: 0.5; transform: translateX(4px); }
         }
-        ::selection {
-            background-color: var(--selection-bg, #3B82F6);
-            color: var(--selection-text, #FFFFFF);
-        }
-        ::-moz-selection {
-            background-color: var(--selection-bg, #3B82F6);
-            color: var(--selection-text, #FFFFFF);
-        }
+        /* Using Tailwind's selection utility classes on body tag now */
     </style>
 
     {% block extra_head %}{% endblock %}
 
 </head>
-<body class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans antialiased"
-      style="--selection-bg: {% static 'theme.primaryLight' %}; --selection-text: white;">
+<body class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans antialiased selection:bg-primary-light selection:text-white">
 
-    <nav class="bg-card-light dark:bg-card-dark shadow-lg sticky top-0 z-50 transition-colors duration-300 ease-in-out">
+    <nav class="bg-card-light dark:bg-card-dark shadow-lg sticky top-0 z-40 transition-colors duration-300 ease-in-out">
         <div class="container mx-auto flex justify-between items-center p-4 md:px-6">
             <a href="{% url 'accounts:home' %}" class="text-3xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity">
                 LifeLedger
@@ -44,52 +37,49 @@
             <div class="flex items-center space-x-3 sm:space-x-4">
                 {% if user.is_authenticated %}
                     <span class="text-text-light dark:text-text-dark text-sm font-medium hidden md:inline">
-                        Hello, <strong class="font-semibold">{{ user.username }}</strong>
+                        {% trans "Hello" %}, <strong class="font-semibold">{{ user.username }}</strong>
                     </span>
-                    {# Profile link removed as per user request, will be added later #}
-                    <a href="#" class="text-xl text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200" title="Profile">
+                    <a href="#" class="text-xl text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200" title="{% trans 'Profile' %}">
                         <i class="fas fa-user-circle"></i>
                     </a>
                     <a href="{% url 'accounts:logout_confirm' %}"
                        class="px-3 py-2 sm:px-4 sm:py-2 bg-button-red text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
-                        <i class="fas fa-sign-out-alt mr-1 hidden sm:inline"></i>Logout
+                        <i class="fas fa-sign-out-alt mr-1 hidden sm:inline"></i>{% trans "Logout" %}
                     </a>
                 {% else %}
                     <a href="{% url 'accounts:login' %}"
                        class="px-3 py-2 sm:px-4 sm:py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-dark focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
-                       Login
+                       {% trans "Login" %}
                     </a>
                     <a href="{% url 'accounts:signup' %}"
                        class="px-3 py-2 sm:px-4 sm:py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-secondary-dark focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
-                       Sign Up
+                       {% trans "Sign Up" %}
                     </a>
                 {% endif %}
                 <button id="theme-toggle"
                         class="text-xl p-2 rounded-full text-text-light dark:text-text-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-300"
-                        title="Toggle theme">
+                        title="{% trans 'Toggle theme' %}">
                     <i class="fas fa-sun"></i>
                 </button>
             </div>
         </div>
     </nav>
 
-    {# Main content area - flex-grow to take up available space. Container class removed. #}
     <main class="flex-grow w-full">
         {% block content %}
         {% endblock %}
     </main>
 
     <footer class="bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark mt-auto shadow-top-lg transition-colors duration-300 ease-in-out">
-        {# mt-auto will push footer to bottom if content is short #}
         <div class="container mx-auto py-10 px-4 text-center text-text-light dark:text-text-dark">
             <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity mb-2 inline-block">
                 LifeLedger
             </a>
             <p class="text-sm text-gray-600 dark:text-gray-400">
-                &copy; {% now "Y" %} LifeLedger. All rights reserved.
+                &copy; {% now "Y" %} LifeLedger. {% trans "All rights reserved." %}
             </p>
             <p class="text-sm mt-2 text-gray-500 dark:text-gray-500">
-                Cherish your memories, discover your emotions.
+                {% trans "Cherish your memories, discover your emotions." %}
             </p>
             <div class="mt-4 space-x-4">
                 <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-github"></i></a>
@@ -98,6 +88,35 @@
             </div>
         </div>
     </footer>
+
+    {# Centralized Delete Modal (from journal app) #}
+    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
+        <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0"
+             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-global">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
+                </div>
+                <h3 id="modal-title-global" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
+                <div class="mt-3 px-4 py-3">
+                    <p class="text-md text-gray-600 dark:text-gray-400">
+                        {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
+                </div>
+                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3 px-4">
+                    <button id="confirm-delete-button"
+                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-3 bg-button-red text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                        {% trans "Yes, Delete" %}
+                    </button>
+                    <button id="cancel-delete-button" type="button"
+                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-3 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                        {% trans "Cancel" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="{% static 'js/theme.js' %}"></script>
     <script src="{% static 'js/scroll.js' %}"></script>
