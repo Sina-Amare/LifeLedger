@@ -1,8 +1,153 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
+{% load journal_tags %} 
 
 {% block title %}{{ entry.title|default:_("Untitled Entry") }} - {% trans "Journal" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .tag-pill-detail {
+        display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; 
+        margin-right: 0.5rem; margin-bottom: 0.5rem; border-radius: 9999px; 
+        font-size: 0.875rem; font-weight: 500; border-width: 1px;
+        border-style: solid; transition: background-color 0.2s;
+    }
+    .tag-default-style {
+        background-color: #e5e7eb; color: #374151; border-color: #d1d5db; 
+    }
+    .dark .tag-default-style {
+        background-color: #4b5563; color: #d1d5db; border-color: #6b7280; 
+    }
+
+    /* Attachment Card Styling */
+    .attachment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Responsive grid */
+        gap: 1.5rem; /* gap-6 */
+    }
+    .attachment-card {
+        background-color: #f9fafb; /* bg-gray-50 */
+        border-radius: 0.75rem; /* rounded-xl */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); /* shadow-lg */
+        overflow: hidden;
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column; /* Stack content vertically */
+    }
+    .dark .attachment-card {
+        background-color: #374151; /* dark:bg-gray-700 */
+         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.4); /* Darker shadow */
+    }
+    .attachment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); /* shadow-xl */
+    }
+    .dark .attachment-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.6), 0 4px 6px -4px rgba(0,0,0,0.5);
+    }
+
+    .attachment-thumbnail-link {
+        display: block;
+        position: relative; /* For overlay positioning */
+        width: 100%;
+        padding-top: 66.66%; /* Aspect ratio 3:2, adjust as needed (e.g., 75% for 4:3, 56.25% for 16:9) */
+        background-color: #e5e7eb; /* bg-gray-200 for placeholder */
+        border-bottom: 1px solid #d1d5db; /* border-gray-300 */
+    }
+    .dark .attachment-thumbnail-link {
+        background-color: #4b5563; /* dark:bg-gray-600 */
+        border-bottom-color: #374151; /* dark:border-gray-700 */
+    }
+    .attachment-thumbnail-link img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Cover the area, might crop */
+        transition: transform 0.3s ease-in-out;
+    }
+    .attachment-thumbnail-link:hover img {
+        transform: scale(1.05); /* Slight zoom on hover */
+    }
+    .attachment-thumbnail-link .overlay-icon { /* For Fancybox indication */
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        pointer-events: none; /* Allow click to pass through to the link */
+    }
+    .attachment-thumbnail-link:hover .overlay-icon {
+        opacity: 1;
+    }
+    .attachment-thumbnail-link .overlay-icon i {
+        font-size: 2.25rem; /* text-4xl */
+        color: white;
+    }
+    
+    .attachment-content { /* For non-image attachments */
+        padding: 1rem; /* p-4 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px; /* Ensure some height for non-image cards */
+    }
+    .attachment-icon-lg {
+        font-size: 3rem; /* text-5xl */
+        margin-bottom: 0.75rem; /* mb-3 */
+    }
+
+    .attachment-info {
+        padding: 0.75rem 1rem 1rem; /* p-3 on sides, p-4 bottom */
+        margin-top: auto; /* Push to bottom if card content is short */
+    }
+    .attachment-filename {
+        font-weight: 500; /* font-medium */
+        color: #1f2937; /* text-gray-800 */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.25rem; /* mb-1 */
+    }
+    .dark .attachment-filename {
+        color: #f3f4f6; /* dark:text-gray-100 */
+    }
+    .attachment-meta {
+        font-size: 0.75rem; /* text-xs */
+        color: #6b7280; /* text-gray-500 */
+    }
+    .dark .attachment-meta {
+        color: #9ca3af; /* dark:text-gray-400 */
+    }
+    .attachment-download-link {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.75rem; /* text-xs */
+        color: #3b82f6; /* text-primary-light */
+        transition: color 0.2s ease-in-out;
+    }
+    .dark .attachment-download-link {
+        color: #60a5fa; /* dark:text-primary-dark */
+    }
+    .attachment-download-link:hover {
+        text-decoration: underline;
+        color: #2563eb; /* darker on hover */
+    }
+    .dark .attachment-download-link:hover {
+        color: #3b82f6;
+    }
+
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -12,29 +157,41 @@
             <h1 class="text-3xl sm:text-4xl font-bold text-primary-light dark:text-primary-dark mb-3 leading-tight">
                 {{ entry.title|default:_("Untitled Entry") }}
             </h1>
-            <div class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span class="flex items-center">
-                    <i class="far fa-calendar-alt mr-2"></i>
+                    <i class="far fa-calendar-alt mr-2 opacity-75"></i>
                     {{ entry.created_at|date:"F j, Y" }} {% trans "at" %} {{ entry.created_at|date:"P" }}
                 </span>
                 {% if entry.mood %}
                 <span class="flex items-center">
-                    <i class="far fa-smile mr-2"></i>
-                    {{ entry.get_mood_display|default:entry.mood }}
+                    {% with current_mood_visual=mood_visuals|get_item:entry.mood %}
+                        {% if current_mood_visual.emoji %}<span class="mr-1.5 text-base">{{ current_mood_visual.emoji }}</span>{% endif %}
+                        <span class="{{ current_mood_visual.text_color|default:'' }}">{{ entry.get_mood_display }}</span>
+                    {% endwith %}
                 </span>
                 {% endif %}
                 {% if entry.location %}
                 <span class="flex items-center truncate" title="{{ entry.location }}">
-                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    <i class="fas fa-map-marker-alt mr-2 opacity-75"></i>
                     <span class="truncate">{{ entry.location|truncatechars:30 }}</span>
                 </span>
                 {% endif %}
                 {% if entry.is_favorite %}
-                <span class="flex items-center text-yellow-500 dark:text-yellow-400">
-                    <i class="fas fa-star mr-2"></i>{% trans "Favorite" %}
+                <span class="flex items-center text-yellow-500 dark:text-yellow-400 font-semibold">
+                    <i class="fas fa-star mr-1.5"></i>{% trans "Favorite" %}
                 </span>
                 {% endif %}
             </div>
+            {% if entry.tags.all %}
+                <div class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                    <span class="text-sm text-gray-600 dark:text-gray-400 font-medium mr-2">{% trans "Tags" %}:</span>
+                    {% for tag in entry.tags.all %}
+                        <a href="{% url 'journal:journal_list' %}?tag_filter={{ tag.name|urlencode }}" class="tag-pill-detail tag-default-style hover:opacity-80">
+                           {{ tag }} {# This will use Tag.__str__ which includes emoji #}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
              {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
                     <em>({% blocktrans with time_diff=entry.updated_at|timesince:entry.created_at %}Last updated {{ time_diff }} ago{% endblocktrans %})</em>
@@ -56,29 +213,56 @@
         {% if entry.attachments.all %}
             <section class="mt-10 pt-6 border-t border-border-light dark:border-border-dark">
                 <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Attachments" %}</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <div class="attachment-grid">
                     {% for attachment in entry.attachments.all %}
-                        <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                            {% with file_url=attachment.file.url|lower file_name=attachment.get_file_name %}
-                                {% if ".jpg" in file_url or ".jpeg" in file_url or ".png" in file_url or ".gif" in file_url or ".webp" in file_url %}
-                                    <a href="{{ attachment.file.url }}" data-fancybox="gallery" data-caption="{{ file_name }}">
-                                        <img src="{{ attachment.file.url }}" alt="{{ file_name }}" class="w-full h-40 object-cover rounded-md mb-3 cursor-pointer transform hover:scale-105 transition-transform duration-300">
+                        <div class="attachment-card">
+                            {% with file_name=attachment.get_file_name %}
+                                {% if attachment.file_type == 'image' %}
+                                    <a href="{{ attachment.file.url }}" data-fancybox="gallery" data-caption="{{ file_name }}" class="attachment-thumbnail-link group">
+                                        <img src="{{ attachment.file.url }}" alt="{{ file_name }}" 
+                                             onerror="this.onerror=null; this.src='https://placehold.co/300x225/E2E8F0/4A5568?text=Image+Not+Found'; this.classList.add('object-contain');">
+                                        <div class="overlay-icon">
+                                            <i class="fas fa-search-plus"></i>
+                                        </div>
                                     </a>
-                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mb-1" title="{{ file_name }}">{{ file_name }}</p>
+                                    <div class="attachment-info">
+                                        <p class="attachment-filename" title="{{ file_name }}">{{ file_name }}</p>
+                                    </div>
                                 {% else %}
-                                     <div class="flex items-center mb-2">
-                                        <i class="fas fa-paperclip fa-lg text-gray-500 dark:text-gray-400 mr-3"></i>
-                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" title="{{ file_name }}">{{ file_name }}</p>
-                                     </div>
+                                    <div class="attachment-content">
+                                        {% if attachment.file_type == 'audio' %}
+                                            <i class="fas fa-file-audio attachment-icon-lg text-blue-500 dark:text-blue-400"></i>
+                                        {% elif attachment.file_type == 'video' %}
+                                            <i class="fas fa-file-video attachment-icon-lg text-purple-500 dark:text-purple-400"></i>
+                                        {% else %}
+                                            <i class="fas fa-paperclip attachment-icon-lg text-gray-500 dark:text-gray-400"></i>
+                                        {% endif %}
+                                        <p class="attachment-filename mt-2" title="{{ file_name }}">{{ file_name }}</p>
+                                    </div>
+                                    {% if attachment.file_type == 'audio' %}
+                                        <audio controls class="w-full px-3 pb-2">
+                                            <source src="{{ attachment.file.url }}">
+                                            {% trans "Your browser does not support the audio element." %}
+                                        </audio>
+                                    {% elif attachment.file_type == 'video' %}
+                                        <video controls class="w-full rounded-b-lg max-h-48 bg-black">
+                                            <source src="{{ attachment.file.url }}">
+                                            {% trans "Your browser does not support the video tag." %}
+                                        </video>
+                                    {% endif %}
+                                    <div class="attachment-info"></div> {# Placeholder for consistent structure #}
                                 {% endif %}
-                                <a href="{{ attachment.file.url }}"
-                                   class="inline-flex items-center text-xs text-primary-light dark:text-primary-dark hover:underline"
-                                   download>
-                                    <i class="fas fa-download mr-1"></i> {% trans "Download" %}
-                                </a>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {% trans "Type" %}: {{ attachment.get_file_type_display|default:attachment.file_type|upper }} | {% trans "Uploaded" %}: {{ attachment.uploaded_at|date:"M d, Y" }}
-                                </p>
+                                
+                                <div class="px-3 pb-3 pt-2 flex justify-between items-center border-t border-gray-200 dark:border-gray-600">
+                                     <a href="{{ attachment.file.url }}"
+                                       class="attachment-download-link"
+                                       download="{{ file_name }}">
+                                        <i class="fas fa-download mr-1.5"></i> {% trans "Download" %}
+                                    </a>
+                                    <p class="attachment-meta">
+                                        {{ attachment.get_file_type_display|capfirst }}
+                                    </p>
+                                </div>
                             {% endwith %}
                         </div>
                     {% endfor %}
@@ -104,39 +288,10 @@
             </div>
         </footer>
     </article>
-
-    {# Delete Confirmation Modal #}
-    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
-        {# ADDED class "modal-dialog-box" to the div below #}
-        <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0" 
-             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-detail-page">
-            <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
-                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
-                </div>
-                <h3 id="modal-title-detail-page" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
-                <div class="mt-3 px-4 py-3">
-                    <p class="text-md text-gray-600 dark:text-gray-400">
-                        {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
-                </div>
-                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3 px-4">
-                    <button id="confirm-delete-button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-3 bg-button-red text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
-                        {% trans "Yes, Delete" %}
-                    </button>
-                    <button id="cancel-delete-button" type="button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-3 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
-                        {% trans "Cancel" %}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
+{# Fancybox is now initialized in base.html #}
 {% endblock %}

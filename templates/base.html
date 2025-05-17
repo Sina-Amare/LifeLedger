@@ -1,33 +1,49 @@
 {% load static %}
-{% load i18n %} {# ADDED THIS LINE #}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}LifeLedger{% endblock %}</title>
+    {# Tailwind CSS #}
     <link href="{% static 'css/output.css' %}" rel="stylesheet" />
+    {# Google Fonts #}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    {# Font Awesome #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    {# Fancybox CSS - For image and content popups #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
 
     <style>
+        /* Base body styles */
         html { scroll-behavior: smooth; }
         body {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+        /* Arrow animation for scroll indicators or similar */
         .arrow-indicator { animation: pulse-arrow 2s infinite; }
         @keyframes pulse-arrow {
             0%, 100% { opacity: 1; transform: translateX(0); }
             50% { opacity: 0.5; transform: translateX(4px); }
         }
-        /* Using Tailwind's selection utility classes on body tag now */
+        /* Ensure focus styles are consistent if not fully handled by Tailwind focus-visible utilities */
+        input:focus, textarea:focus, select:focus, button:focus-visible {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-color: theme('colors.primary-light'); /* Or your primary color */
+            box-shadow: 0 0 0 3px var(--tw-ring-color);
+        }
+        .dark input:focus, .dark textarea:focus, .dark select:focus, .dark button:focus-visible {
+            --tw-ring-color: theme('colors.primary-dark');
+             box-shadow: 0 0 0 3px var(--tw-ring-color);
+        }
     </style>
-
     {% block extra_head %}{% endblock %}
-
 </head>
-<body class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans antialiased selection:bg-primary-light selection:text-white">
+<body class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-gray-900">
 
     <nav class="bg-card-light dark:bg-card-dark shadow-lg sticky top-0 z-40 transition-colors duration-300 ease-in-out">
         <div class="container mx-auto flex justify-between items-center p-4 md:px-6">
@@ -39,6 +55,7 @@
                     <span class="text-text-light dark:text-text-dark text-sm font-medium hidden md:inline">
                         {% trans "Hello" %}, <strong class="font-semibold">{{ user.username }}</strong>
                     </span>
+                    {# Placeholder for profile link - implement when profile page is ready #}
                     <a href="#" class="text-xl text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200" title="{% trans 'Profile' %}">
                         <i class="fas fa-user-circle"></i>
                     </a>
@@ -59,7 +76,7 @@
                 <button id="theme-toggle"
                         class="text-xl p-2 rounded-full text-text-light dark:text-text-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-300"
                         title="{% trans 'Toggle theme' %}">
-                    <i class="fas fa-sun"></i>
+                    <i class="fas fa-sun"></i> {# Icon will be changed by theme.js #}
                 </button>
             </div>
         </div>
@@ -82,6 +99,7 @@
                 {% trans "Cherish your memories, discover your emotions." %}
             </p>
             <div class="mt-4 space-x-4">
+                {# Replace # with actual links if you have them #}
                 <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-github"></i></a>
                 <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-twitter"></i></a>
                 <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-linkedin"></i></a>
@@ -89,7 +107,7 @@
         </div>
     </footer>
 
-    {# Centralized Delete Modal (from journal app) #}
+    {# Centralized Delete Modal #}
     <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
         <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0"
              role="alertdialog" aria-modal="true" aria-labelledby="modal-title-global">
@@ -120,6 +138,22 @@
 
     <script src="{% static 'js/theme.js' %}"></script>
     <script src="{% static 'js/scroll.js' %}"></script>
+    
+    {# Fancybox JS - For image and content popups #}
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+    <script>
+        // Initialize Fancybox for all elements with data-fancybox attribute
+        document.addEventListener('DOMContentLoaded', function () {
+            Fancybox.bind("[data-fancybox]", {
+                // Optional: Custom options for Fancybox
+                // For example, to change animation:
+                // Carousel: { transition: "slide" }, 
+                // Thumbs: { autoStart: false }, // Don't show thumbnails panel by default
+                // Toolbar: { display: { left: ["infobar"], middle: [], right: ["close"] } } // Customize toolbar
+            });
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
