@@ -1,171 +1,142 @@
 {% extends 'base.html' %}
-{% load static %} {# Load static files #}
+{% load static %}
+{% load i18n %}
 
-{% block title %}{{ entry.title|default:"Untitled Entry" }}{% endblock %} {# Changed journal_entry to entry #}
+{% block title %}{{ entry.title|default:_("Untitled Entry") }} - {% trans "Journal" %}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    {# Main container for the detail view #}
-    {# Add an ID for potential future JS needs, though not strictly required for current delete logic #}
-    {# The delete JS targets the element with ID 'entry-{{ entry.pk }}' #} {# Changed journal_entry to entry #}
-    <div id="entry-{{ entry.pk }}" class="w-full max-w-5xl mx-auto"> {# Increased max-width for better use of space #} {# Changed journal_entry to entry #}
+    <article id="entry-{{ entry.pk }}" class="w-full max-w-4xl mx-auto bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark">
 
-        {# Use grid for two-column layout on medium screens and up #}
-        {# Adjust grid columns and gap as needed #}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-            {# Left Column: Main Content and AI Quote #}
-            <div class="md:col-span-2 bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                 {# Title #}
-                <h1 class="text-3xl font-bold text-primary-light dark:text-primary-dark mb-4">{{ entry.title|default:"Untitled Entry" }}</h1> {# Changed journal_entry to entry #}
-
-                {# AI Quote (if available) #}
-                {% if entry.ai_quote %} {# Changed journal_entry to entry #}
-                    <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md italic text-gray-800 dark:text-gray-200 mb-6 border-l-4 border-primary-light dark:border-primary-dark">
-                        <p>"{{ entry.ai_quote }}"</p> {# Changed journal_entry to entry #}
-                    </div>
+        <header class="mb-8 pb-6 border-b border-border-light dark:border-border-dark">
+            <h1 class="text-3xl sm:text-4xl font-bold text-primary-light dark:text-primary-dark mb-3 leading-tight">
+                {{ entry.title|default:_("Untitled Entry") }}
+            </h1>
+            <div class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span class="flex items-center">
+                    <i class="far fa-calendar-alt mr-2"></i>
+                    {{ entry.created_at|date:"F j, Y" }} {% trans "at" %} {{ entry.created_at|date:"P" }}
+                </span>
+                {% if entry.mood %}
+                <span class="flex items-center">
+                    <i class="far fa-smile mr-2"></i>
+                    {{ entry.get_mood_display|default:entry.mood }}
+                </span>
                 {% endif %}
+                {% if entry.location %}
+                <span class="flex items-center truncate" title="{{ entry.location }}">
+                    <i class="fas fa-map-marker-alt mr-2"></i>
+                    <span class="truncate">{{ entry.location|truncatechars:30 }}</span>
+                </span>
+                {% endif %}
+                {% if entry.is_favorite %}
+                <span class="flex items-center text-yellow-500 dark:text-yellow-400">
+                    <i class="fas fa-star mr-2"></i>{% trans "Favorite" %}
+                </span>
+                {% endif %}
+            </div>
+             {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    <em>({% blocktrans with time_diff=entry.updated_at|timesince:entry.created_at %}Last updated {{ time_diff }} ago{% endblocktrans %})</em>
+                </p>
+            {% endif %}
+        </header>
 
-                {# Main Content #}
-                <div class="prose dark:prose-invert max-w-none text-text-light dark:text-text-dark">
-                    {{ entry.content|linebreaksbr }} {# Display content with line breaks #} {# Changed journal_entry to entry #}
-                </div>
+        {% if entry.ai_quote %}
+            <blockquote class="mb-8 p-4 bg-gray-100 dark:bg-gray-800 border-l-4 border-primary-light dark:border-primary-dark rounded-r-lg italic">
+                <p class="text-gray-700 dark:text-gray-300 leading-relaxed">"{{ entry.ai_quote }}"</p>
+                <footer class="text-sm text-gray-500 dark:text-gray-400 mt-2">- {% trans "AI Reflection" %}</footer>
+            </blockquote>
+        {% endif %}
 
-                {# Attachments #}
-                {% if entry.attachments.all %} {# Changed journal_entry to entry #}
-                    <div class="mt-6 border-t border-border-light dark:border-border-dark pt-6">
-                        <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Attachments</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"> {# Grid for attachments #}
-                            {% for attachment in entry.attachments.all %} {# Changed journal_entry to entry #}
-                                <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md shadow-sm">
-                                    {# Display image if it's an image file #}
-                                    {% if attachment.file.url|lower|slice:"-4:" in ".jpg.png.gif.jpeg" or attachment.file.url|lower|slice:"-5:" in ".webp" %} {# Simple check for common image extensions #}
-                                        <img src="{{ attachment.file.url }}" alt="Attachment" class="w-full h-auto rounded-md mb-2 object-cover">
-                                    {% else %}
-                                        {# For other file types, show a link #}
-                                        {# Display the full file name for now to fix the split filter error #}
-                                        <p class="text-sm text-gray-800 dark:text-gray-200 mb-2 break-words">{{ attachment.file.name }}</p>
-                                        <a href="{{ attachment.file.url }}" class="inline-block text-primary-light dark:text-primary-dark hover:underline text-sm" download>
-                                            <i class="fas fa-download mr-1"></i> Download File
-                                        </a>
-                                    {% endif %}
-                                    {# Optional: Display file type or upload date #}
-                                    {# <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Type: {{ attachment.file_type|default:"Unknown" }}</p> #}
-                                    {# <p class="text-xs text-gray-500 dark:text-gray-400">Uploaded: {{ attachment.uploaded_at|date:"Y-m-d" }}</p> #}
-                                </div>
-                            {% endfor %}
+        <div class="prose dark:prose-invert max-w-none text-text-light dark:text-text-dark leading-relaxed text-lg">
+            {{ entry.content|linebreaksbr }}
+        </div>
+
+        {% if entry.attachments.all %}
+            <section class="mt-10 pt-6 border-t border-border-light dark:border-border-dark">
+                <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Attachments" %}</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {% for attachment in entry.attachments.all %}
+                        <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                            {% with file_url=attachment.file.url|lower file_name=attachment.get_file_name %}
+                                {% if ".jpg" in file_url or ".jpeg" in file_url or ".png" in file_url or ".gif" in file_url or ".webp" in file_url %}
+                                    <a href="{{ attachment.file.url }}" data-fancybox="gallery" data-caption="{{ file_name }}">
+                                        <img src="{{ attachment.file.url }}" alt="{{ file_name }}" class="w-full h-40 object-cover rounded-md mb-3 cursor-pointer transform hover:scale-105 transition-transform duration-300">
+                                    </a>
+                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mb-1" title="{{ file_name }}">{{ file_name }}</p>
+                                {% else %}
+                                     <div class="flex items-center mb-2">
+                                        <i class="fas fa-paperclip fa-lg text-gray-500 dark:text-gray-400 mr-3"></i>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" title="{{ file_name }}">{{ file_name }}</p>
+                                     </div>
+                                {% endif %}
+                                <a href="{{ attachment.file.url }}"
+                                   class="inline-flex items-center text-xs text-primary-light dark:text-primary-dark hover:underline"
+                                   download>
+                                    <i class="fas fa-download mr-1"></i> {% trans "Download" %}
+                                </a>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {% trans "Type" %}: {{ attachment.get_file_type_display|default:attachment.file_type|upper }} | {% trans "Uploaded" %}: {{ attachment.uploaded_at|date:"M d, Y" }}
+                                </p>
+                            {% endwith %}
                         </div>
-                    </div>
-                {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <footer class="mt-10 pt-6 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-center gap-4">
+            <a href="{% url 'journal:journal_list' %}"
+               class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-text-light dark:text-text-dark rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 font-medium text-sm shadow hover:shadow-md">
+                <i class="fas fa-arrow-left mr-2"></i>{% trans "Back to List" %}
+            </a>
+            <div class="flex space-x-3">
+                <a href="{% url 'journal:journal_update' pk=entry.pk %}"
+                   class="inline-flex items-center px-6 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-secondary-dark focus:ring-opacity-50 transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg">
+                    <i class="fas fa-edit mr-2"></i>{% trans "Edit Entry" %}
+                </a>
+                <button class="delete-entry-button inline-flex items-center px-6 py-2 bg-button-red text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:ring-opacity-50 transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg"
+                        data-entry-id="{{ entry.pk }}"
+                        data-entry-title="{{ entry.title|default:_('Untitled Entry') }}">
+                    <i class="fas fa-trash-alt mr-2"></i>{% trans "Delete Entry" %}
+                </button>
             </div>
+        </footer>
+    </article>
 
-            {# Right Column: Metadata and Actions #}
-            <div class="md:col-span-1 flex flex-col space-y-6"> {# Use flex-col and space-y for vertical layout #}
-
-                {# Metadata Block #}
-                <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                     <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Details</h3>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                        <p class="mb-2">
-                            <i class="far fa-calendar-alt mr-1"></i> {# Calendar icon #}
-                            {# Wrap date/time text in span for consistent font #}
-                            <span>Created: {{ entry.created_at|date:"F j, Y" }} at {{ entry.created_at|date:"P" }}</span> {# Changed journal_entry to entry #}
-                        </p>
-                        {% if entry.created_at != entry.updated_at %} {# Changed journal_entry to entry #}
-                            <p class="mb-2">
-                                <i class="fas fa-edit mr-1"></i> {# Edit icon #}
-                                <span>Last updated: {{ entry.updated_at|date:"F j, Y" }} at {{ entry.updated_at|date:"P" }}</span> {# Changed journal_entry to entry #}
-                            </p>
-                        {% endif %}
-                        {% if entry.mood %} {# Changed journal_entry to entry #}
-                            <p class="mb-2">
-                                <i class="far fa-smile mr-1"></i> {# Smile icon #}
-                                {# Wrap mood text in span for consistent font #}
-                                <span>Mood: {{ entry.mood }}</span> {# Changed journal_entry to entry #}
-                            </p>
-                        {% endif %}
-                        {% if entry.location %} {# Changed journal_entry to entry #}
-                            <p class="mb-2">
-                                <i class="fas fa-map-marker-alt mr-1"></i> {# Map marker icon #}
-                                {# Wrap location text in span for consistent font #}
-                                <span>Location: {{ entry.location }}</span> {# Changed journal_entry to entry #}
-                            </p>
-                        {% endif %}
-                         {% if entry.is_favorite %} {# Changed journal_entry to entry #}
-                             <p class="text-yellow-500 mt-2"><i class="fas fa-star mr-1"></i> <span>Favorite</span></p> {# Star icon #}
-                         {% endif %}
-                         <p class="mb-2">
-                              <i class="fas fa-lock mr-1"></i> {# Lock icon #}
-                              <span>Privacy: {{ entry.get_privacy_level_display }}</span> {# Use get_FOO_display for choice fields #} {# Changed journal_entry to entry #}
-                         </p>
-                    </div>
+    {# Delete Confirmation Modal #}
+    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
+        {# ADDED class "modal-dialog-box" to the div below #}
+        <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0" 
+             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-detail-page">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
                 </div>
-
-                {# Actions Block #}
-                <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                     <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Actions</h3>
-                     <div class="flex flex-col space-y-4"> {# Use flex-col for vertical buttons #}
-                         <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="w-full text-center px-4 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300 font-semibold shadow-md"> {# Changed journal_entry to entry #}
-                             Edit Entry
-                         </a>
-                         {# Delete button - Use a button with class and data attributes for shared JS #}
-                          <button class="delete-entry-button w-full text-center px-4 py-2 bg-button-red text-white rounded-md hover:bg-red-700 transition duration-300 font-semibold shadow-md"
-                                  data-entry-id="{{ entry.pk }}" {# Store the ID #} {# Changed journal_entry to entry #}
-                                  data-entry-title="{{ entry.title|default:'Untitled Entry' }}"> {# Store title for modal #} {# Changed journal_entry to entry #}
-                              Delete Entry
-                          </button>
-                          {# Back to list button #}
-                          <a href="{% url 'journal:journal_list' %}" class="w-full text-center px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-300 font-semibold shadow-md">
-                              Back to List
-                          </a>
-                     </div>
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    {# Custom Delete Confirmation Modal #}
-    {# This HTML structure is needed for the shared ajax_delete.js script #}
-    {# It's better to place this in base.html if it's used across multiple pages #}
-    {# For now, keep it here to ensure it's present for the JS #}
-    <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-card-light dark:bg-card-dark">
-            <div class="mt-3 text-center">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-800">
-                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i> {# Warning icon #}
-                </div>
-                <h3 class="text-lg leading-6 font-medium text-text-light dark:text-text-dark mt-4">Confirm Deletion</h3>
-                <div class="mt-2 px-7 py-3">
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                        Are you sure you want to delete the journal entry titled: "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark"></strong>"?
-                        This action cannot be undone.
+                <h3 id="modal-title-detail-page" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
+                <div class="mt-3 px-4 py-3">
+                    <p class="text-md text-gray-600 dark:text-gray-400">
+                        {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?
                     </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
                 </div>
-                <div class="items-center px-4 py-3">
-                    {# Data attributes will be set by the delete button click handler #}
+                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3 px-4">
                     <button id="confirm-delete-button"
-                            class="px-4 py-2 bg-button-red text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-300 ease-in-out"
-                            data-entry-id="" {# Placeholder #}
-                            data-entry-element-id="" {# Placeholder #}
-                        >
-                        Yes, Delete
+                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-3 bg-button-red text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                        {% trans "Yes, Delete" %}
                     </button>
-                    <button id="cancel-delete-button" class="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition duration-300 ease-in-out">
-                        Cancel
+                    <button id="cancel-delete-button" type="button"
+                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-3 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                        {% trans "Cancel" %}
                     </button>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 {% endblock %}
 
-{# Link to the shared Ajax Delete JavaScript file #}
 {% block extra_js %}
-{# Ensure you have created static/js/ajax_delete.js with the shared JS code #}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
 {% endblock %}

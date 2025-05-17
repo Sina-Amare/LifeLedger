@@ -3,16 +3,39 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator
-from django.urls import reverse # Import reverse for get_absolute_url
-import json
-import os # Import os module
+from django.urls import reverse
+import os
+import logging
+from uuid import uuid4 # For generating unique filenames
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
+
+def user_directory_path(instance, filename):
+    """
+    File will be uploaded to MEDIA_ROOT/user_<id>/journal_attachments/<year>/<month>/<day>/<filename>
+    A unique filename is generated using UUID to prevent overwrites and keep original extension.
+    """
+    # instance is the JournalAttachment instance.
+    # We need to get the user from the related JournalEntry instance.
+    user_id = instance.journal_entry.user.id
+    
+    # Get current date for path
+    now = timezone.now()
+    year = now.strftime('%Y')
+    month = now.strftime('%m')
+    day = now.strftime('%d')
+    
+    # Generate a unique filename using UUID and preserve the original extension
+    ext = filename.split('.')[-1]
+    unique_filename = f"{uuid4().hex}.{ext}"
+    
+    return f'user_{user_id}/journal_attachments/{year}/{month}/{day}/{unique_filename}'
+
 
 class JournalEntry(models.Model):
     """
     Represents a single journal entry for a user.
-    Includes fields for content, metadata, privacy, and AI-generated info.
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -20,23 +43,15 @@ class JournalEntry(models.Model):
         related_name='journal_entries',
         verbose_name="User"
     )
-
     title = models.CharField(max_length=255, blank=True, verbose_name="Title")
-
     content = models.TextField(verbose_name="Content")
-
-    # Optional field for the user to manually select their mood.
-    # AI can fill this if left blank.
     mood = models.CharField(max_length=50, blank=True, null=True, verbose_name="Mood")
-
-    # Optional field for the user to add a location.
     location = models.CharField(max_length=255, blank=True, null=True, verbose_name="Location")
 
-    # Privacy settings for the journal entry.
     PRIVACY_CHOICES = [
         ('private', 'Private (Only You)'),
-        ('ai_only', 'AI Analysis Only'), # AI can access for analysis, but not public
-        ('public', 'Public (Shared)'), # Can be shared publicly (details controlled by shared_details)
+        ('ai_only', 'AI Analysis Only'),
+        ('public', 'Public (Shared)'),
     ]
     privacy_level = models.CharField(
         max_length=10,
@@ -44,87 +59,68 @@ class JournalEntry(models.Model):
         default='private',
         verbose_name="Privacy Level"
     )
-
-    # Details to be shared if privacy_level is 'public'. Stored as JSON.
-    # Example: {'include_date': True, 'include_location': False}
     shared_details = models.JSONField(
-        default=dict, # Use dict as the callable default
+        default=dict,
         blank=True,
-        null=True, # Allow null for simplicity if no specific details are set
+        null=True,
         verbose_name="Shared Details"
     )
-
-    # AI-generated quote based on the journal content/mood.
     ai_quote = models.TextField(blank=True, null=True, verbose_name="AI Quote")
-
-    # Flag to mark the entry as a favorite.
     is_favorite = models.BooleanField(default=False, verbose_name="Is Favorite")
-
-    # Automatically set the date and time when the entry is first created.
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
-
-    # Automatically update the date and time whenever the entry is saved.
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     class Meta:
-        # Order journal entries by creation date in descending order by default.
         ordering = ['-created_at']
         verbose_name = "Journal Entry"
         verbose_name_plural = "Journal Entries"
 
     def __str__(self):
-        """
-        String representation of the journal entry.
-        Shows the title or the beginning of the content if no title.
-        """
         if self.title:
             return f"Entry for {self.user.username}: {self.title}"
         elif self.content:
-            # Return first 50 characters of content if no title
             return f"Entry for {self.user.username}: {self.content[:50]}..."
         else:
             return f"Entry for {self.user.username}: (No content)"
 
     def get_absolute_url(self):
-        """
-        Returns the URL to display the details of the journal entry.
-        Used for redirects after creation/update.
-        """
-        # Assumes you have a URL pattern named 'journal:journal_detail'
-        # that takes a primary key (pk) as an argument.
         return reverse('journal:journal_detail', kwargs={'pk': self.pk})
 
-
     def is_ai_accessible(self):
-        """Checks if the entry is accessible by AI for analysis."""
         return self.privacy_level in ['ai_only', 'public']
 
     def is_public(self):
-        """Checks if the entry is publicly shareable."""
         return self.privacy_level == 'public'
+
+    def delete(self, *args, **kwargs):
+        entry_pk = self.pk
+        logger.info(f"Attempting to delete JournalEntry with ID: {entry_pk}")
+        try:
+            for attachment in self.attachments.all():
+                logger.info(f"  - Deleting associated attachment ID: {attachment.pk} for JournalEntry ID: {entry_pk}")
+                attachment.delete()
+        except Exception as e:
+            logger.error(f"Error while deleting associated attachments for JournalEntry ID {entry_pk}: {e}", exc_info=True)
+        super().delete(*args, **kwargs)
+        logger.info(f"JournalEntry (original ID: {entry_pk}) deleted from database.")
 
 
 class JournalAttachment(models.Model):
     """
-    Represents a file attachment for a journal entry (e.g., image, audio).
+    Represents a file attachment for a journal entry.
+    Files are stored in a user-specific directory structure.
     """
     journal_entry = models.ForeignKey(
         JournalEntry,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE, 
         related_name='attachments',
         verbose_name="Journal Entry"
     )
-
-    # The file itself. Uploaded files will be stored here.
-    # upload_to specifies the subdirectory within MEDIA_ROOT.
+    # Use the custom function for upload_to
     file = models.FileField(
-        upload_to='journal_attachments/%Y/%m/%d/',
+        upload_to=user_directory_path, # <--- CUSTOM UPLOAD PATH FUNCTION
         verbose_name="File",
-        # Optional: Add validators for allowed file types
-        # validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'mp3', 'wav', 'mp4'])]
     )
-
-    # Type of the file (e.g., 'image', 'audio', 'video', 'other').
     FILE_TYPE_CHOICES = [
         ('image', 'Image'),
         ('audio', 'Audio'),
@@ -137,8 +133,6 @@ class JournalAttachment(models.Model):
         default='other',
         verbose_name="File Type"
     )
-
-    # Automatically set the date and time when the file was uploaded.
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Uploaded At")
 
     class Meta:
@@ -146,28 +140,42 @@ class JournalAttachment(models.Model):
         verbose_name_plural = "Journal Attachments"
 
     def __str__(self):
-        """
-        String representation of the attachment.
-        Shows the file name and the related journal entry ID.
-        """
-        # Use os.path.basename to get just the file name
-        return f"Attachment for Entry {self.journal_entry.id}: {os.path.basename(self.file.name)}"
+        file_name_display = os.path.basename(self.file.name) if self.file and self.file.name else 'N/A'
+        entry_id_display = self.journal_entry_id if hasattr(self, 'journal_entry_id') else 'Unknown'
+        return f"Attachment for Entry {entry_id_display}: {file_name_display}"
+
+    def get_file_name(self):
+        if self.file and self.file.name:
+            return os.path.basename(self.file.name)
+        return ""
 
     def delete(self, *args, **kwargs):
-        """
-        Override the delete method to delete the file from storage
-        when the JournalAttachment object is deleted.
-        """
-        # Delete the file from storage
-        if self.file:
-            self.file.delete(save=False) # Use save=False to avoid saving the model again
+        attachment_pk = self.pk 
+        original_file_name = None
+        original_file_path = None
 
-        # Call the parent class's delete method to delete the model instance
-        super().delete(*args, **kwargs)
+        if self.file and self.file.name:
+            original_file_name = self.file.name
+            if hasattr(self.file, 'path'):
+                original_file_path = self.file.path
+            else: 
+                logger.warning(f"JournalAttachment ID {attachment_pk}: self.file exists but has no 'path' attribute.")
+        
+        logger.info(f"Attempting to delete JournalAttachment instance with ID: {attachment_pk}")
+        logger.info(f"  - Associated file (if any): {original_file_name}")
 
-    # Optional: Add methods here, e.g., to get file URL, thumbnail URL, etc.
-    # def get_file_url(self):
-    #     """Returns the URL for the uploaded file."""
-    #     if self.file:
-    #         return self.file.url
-    #     return None
+        if original_file_name and original_file_path: 
+            try:
+                logger.debug(f"  - Calling self.file.delete(save=False) for {original_file_name}")
+                self.file.delete(save=False)
+                logger.info(f"  - Physical file for '{original_file_name}' (Attachment ID: {attachment_pk}) deletion initiated from storage.")
+            except Exception as e:
+                logger.error(f"  - Error during self.file.delete() for {original_file_name} (Attachment ID: {attachment_pk}): {e}", exc_info=True)
+        elif self.file and not original_file_path: 
+             logger.warning(f"  - File object exists for JournalAttachment ID {attachment_pk} but could not determine its physical path.")
+        else:
+            logger.warning(f"  - No file was associated with JournalAttachment ID: {attachment_pk} at deletion time.")
+
+        super().delete(*args, **kwargs) 
+        logger.info(f"JournalAttachment instance (original ID: {attachment_pk}) deleted from database.")
+

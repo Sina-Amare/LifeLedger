@@ -1,44 +1,94 @@
 {% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
 
 {% block content %}
-<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer">
-    <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-8">
-            Welcome to Your Dashboard, {{ user.username }}!
-        </h2>
-        <p class="text-lg text-gray-600 dark:text-gray-400">
-            This is your personal space. Here you will find quick access to your journal, analytics, and other features.
-        </p>
+<section class="py-12 md:py-20 bg-background-light dark:bg-background-dark">
+    <div class="container mx-auto px-4">
+        <header class="text-center mb-12 md:mb-16">
+            <h1 class="text-4xl sm:text-5xl font-bold text-text-light dark:text-text-dark mb-4">
+                {% blocktrans with username=user.username %}Welcome, <span class="text-primary-light dark:text-primary-dark">{{ username }}</span>!{% endblocktrans %}
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                {% trans "This is your personal space. Here you'll find quick access to your journal, insights, and more features as they arrive." %}
+            </p>
+        </header>
 
-        {# Future: Add cards or links to different sections like Journal, Analytics, Timeline, etc. #}
-        <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {# My Journal Card #}
-            <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">My Journal</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-4">Write a new entry or view your past memories.</p>
-                {# Link to the journal list page #}
-                <a href="{% url 'journal:journal_list' %}" class="inline-block px-6 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300">Go to Journal</a>
+            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
+                <div class="flex items-center text-primary-light dark:text-primary-dark mb-4">
+                    <i class="fas fa-book-open fa-2x mr-4"></i>
+                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "My Journal" %}</h3>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
+                    {% trans "Write new entries, revisit your past memories, and reflect on your journey." %}
+                </p>
+                <a href="{% url 'journal:journal_list' %}"
+                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
+                    {% trans "Go to Journal" %} <i class="fas fa-arrow-right ml-2"></i>
+                </a>
             </div>
 
             {# Analytics Card (Placeholder) #}
-            <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Analytics</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-4">Discover insights about your emotions and activities.</p>
-                {# Placeholder link - replace with actual URL later #}
-                <a href="#" class="inline-block px-6 py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark transition duration-300">View Analytics</a>
+            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
+                <div class="flex items-center text-secondary-light dark:text-secondary-dark mb-4">
+                    <i class="fas fa-chart-line fa-2x mr-4"></i>
+                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "AI Insights" %}</h3>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
+                    {% trans "Discover patterns and insights about your emotions and activities with upcoming AI analysis." %}
+                </p>
+                <a href="#" {# Replace with actual URL when ready #}
+                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-secondary-light text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-secondary-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg opacity-50 cursor-not-allowed"
+                   aria-disabled="true" title="{% trans 'Coming Soon' %}">
+                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2"></i>
+                </a>
             </div>
 
-            {# Public Timeline Card (Placeholder) #}
-            <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-custom-light dark:shadow-custom-dark">
-                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-4">Public Timeline</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-4">Explore shared stories from the community.</p>
-                {# Placeholder link - replace with actual URL later #}
-                <a href="#" class="inline-block px-6 py-2 bg-accent-light text-white rounded-md hover:bg-accent-dark transition duration-300">See Timeline</a>
+            {# Settings/Profile Card (More useful than Public Timeline for a personal dashboard) #}
+            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
+                <div class="flex items-center text-accent-light dark:text-accent-dark mb-4">
+                    <i class="fas fa-user-cog fa-2x mr-4"></i>
+                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "Profile & Settings" %}</h3>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
+                    {% trans "Manage your account details, preferences, and application settings." %}
+                </p>
+                <a href="{}" {# Assuming you have a profile URL #}
+                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-accent-light text-white rounded-md hover:bg-yellow-500 dark:hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-accent-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
+                    {% trans "Manage Account" %} <i class="fas fa-sliders-h ml-2"></i>
+                </a>
             </div>
-
         </div>
+
+        {# Quick Actions / Recent Activity (Future Enhancement) #}
+        <div class="mt-16 md:mt-20 text-left">
+            <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Quick Actions" %}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                 <a href="{% url 'journal:journal_create' %}" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <div class="flex items-center">
+                        <i class="fas fa-pencil-alt text-primary-light dark:text-primary-dark text-xl mr-3"></i>
+                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Write New Entry" %}</span>
+                    </div>
+                </a>
+                 <a href="#" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors opacity-50 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}">
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar-check text-secondary-light dark:text-secondary-dark text-xl mr-3"></i>
+                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Review Today's Entry" %}</span>
+                    </div>
+                </a>
+                 <a href="#" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors opacity-50 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}">
+                    <div class="flex items-center">
+                        <i class="fas fa-lightbulb text-accent-light dark:text-accent-dark text-xl mr-3"></i>
+                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Get a Writing Prompt" %}</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
     </div>
 </section>
 {% endblock %}
