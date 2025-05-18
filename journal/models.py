@@ -7,7 +7,6 @@ from django.urls import reverse
 import os
 import logging
 from uuid import uuid4
-# from django.utils.text import slugify # Uncomment if you plan to use slugs for Tags
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class Tag(models.Model):
         help_text="The name of the tag (e.g., Work, Personal, Ideas)."
     )
     emoji = models.CharField(
-        max_length=20,  # << INCREASED MAX_LENGTH FOR EMOJI (e.g., to 20 for safety)
+        max_length=20, 
         blank=True,
         null=True,
         help_text="An optional emoji to represent the tag visually (e.g., 📚, 😊, 👨‍👩‍👧‍👦)."
@@ -79,7 +78,7 @@ class JournalEntry(models.Model):
 
     PRIVACY_CHOICES = [
         ('private', 'Private (Only You)'),
-        ('ai_only', 'AI Analysis Only'),
+        ('ai_only', 'AI Analysis Only'), # If AI analysis is stored separately
         ('public', 'Public (Shared)'),
     ]
     privacy_level = models.CharField(
@@ -102,6 +101,16 @@ class JournalEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
+    # --- Fields for AI Task Progress Tracking ---
+    ai_quote_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI quote generation.")
+    ai_mood_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI mood detection.")
+    ai_tags_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI tag suggestion.")
+
+    ai_quote_processed = models.BooleanField(default=False, help_text="True if AI quote generation has been processed for this version.")
+    ai_mood_processed = models.BooleanField(default=False, help_text="True if AI mood detection has been processed for this version.")
+    ai_tags_processed = models.BooleanField(default=False, help_text="True if AI tag suggestion has been processed for this version.")
+    # --- End AI Task Progress Tracking Fields ---
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Journal Entry"
@@ -116,6 +125,7 @@ class JournalEntry(models.Model):
         return reverse('journal:journal_detail', kwargs={'pk': self.pk})
 
     def delete(self, *args, **kwargs):
+        # ... (delete method remains the same) ...
         entry_pk = self.pk
         logger.info(f"Attempting to delete JournalEntry with ID: {entry_pk}")
         try:
@@ -129,6 +139,7 @@ class JournalEntry(models.Model):
 
 
 class JournalAttachment(models.Model):
+    # ... (JournalAttachment model remains the same) ...
     journal_entry = models.ForeignKey(
         JournalEntry,
         on_delete=models.CASCADE, 
@@ -160,6 +171,7 @@ class JournalAttachment(models.Model):
         return ""
 
     def delete(self, *args, **kwargs):
+        # ... (delete method remains the same) ...
         attachment_pk = self.pk 
         original_file_name = None
         original_file_path = None

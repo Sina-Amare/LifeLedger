@@ -10,7 +10,7 @@
 
 {% block extra_head %}
 <style>
-    /* ... (Your existing styles - keep them) ... */
+    /* Styles for focus, file input, select arrow, tags (as provided by you previously) */
     input[type="text"]:focus,
     textarea:focus,
     select:focus {
@@ -24,6 +24,17 @@
         box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
         border-color: #93c5fd !important;
     }
+    .custom-file-input::file-selector-button {
+        margin-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;
+        padding-left: 1rem; padding-right: 1rem; border-radius: 0.375rem;
+        border-width: 0; font-size: 0.875rem; font-weight: 600;
+        background-color: #3b82f6; color: #ffffff; cursor: pointer;
+        transition: background-color 150ms ease-in-out;
+    }
+    .custom-file-input:hover::file-selector-button { background-color: #2563eb; }
+    .dark .custom-file-input::file-selector-button { background-color: #60a5fa; }
+    .dark .custom-file-input:hover::file-selector-button { background-color: #3b82f6; }
+    
     .custom-select-arrow {
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
         background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; 
@@ -31,6 +42,7 @@
     .dark .custom-select-arrow {
        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     }
+
     .tag-suggestion-btn {
         cursor: pointer;
         transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -39,6 +51,7 @@
     .tag-suggestion-btn:hover {
         transform: translateY(-1px);
     }
+    
     .selected-tag-pill {
         display: inline-flex; align-items: center; margin-right: 0.375rem; 
         margin-bottom: 0.375rem; padding-left: 0.75rem; padding-right: 0.25rem; 
@@ -52,6 +65,43 @@
         padding: 0.1rem; line-height: 1; font-size: 1.1em;
     }
     .selected-tag-pill .remove-tag-btn:hover { opacity: 1; }
+    .attachment-item { transition: box-shadow 0.3s ease-in-out; }
+    .attachment-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .dark .attachment-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+    /* Styles for AI Progress Modal */
+    #ai-progress-modal {
+        background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent backdrop */
+        transition: opacity 0.3s ease-in-out;
+    }
+    #ai-progress-modal .modal-content {
+        transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    }
+    #ai-progress-bar-container {
+        height: 0.75rem; /* h-3 */
+        background-color: #e5e7eb; /* bg-gray-200 */
+        border-radius: 9999px; /* rounded-full */
+        overflow: hidden;
+    }
+    .dark #ai-progress-bar-container {
+        background-color: #4b5563; /* dark:bg-gray-600 */
+    }
+    #ai-progress-bar {
+        height: 100%;
+        background-color: #3b82f6; /* bg-primary-light */
+        transition: width 0.3s ease-in-out; /* Smoother progress update */
+        border-radius: 9999px;
+    }
+    .spinner {
+        border-top-color: #3b82f6; /* primary-light */
+        animation: spin 1s linear infinite;
+    }
+    .dark .spinner {
+        border-top-color: #60a5fa; /* primary-dark */
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -67,50 +117,16 @@
             </p>
         </header>
 
-        <form method="post" enctype="multipart/form-data" class="space-y-6" id="journal-entry-form">
+        <form method="post" enctype="multipart/form-data" class="space-y-6" id="journal-entry-form" 
+              action="{% if form.instance.pk %}{% url 'journal:journal_update' pk=form.instance.pk %}{% else %}{% url 'journal:journal_create' %}{% endif %}">
             {% csrf_token %}
 
-            {% if form.errors or attachment_formset.errors %}
-                 <div class="p-4 mb-6 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md">
-                    <h4 class="font-semibold text-red-700 dark:text-red-300">{% trans "Please correct the errors below:" %}</h4>
-                    <ul class="list-disc list-inside text-sm text-red-600 dark:text-red-400 mt-2">
-                        {% for field_name, field_errors in form.errors.items %}
-                            {% for error in field_errors %}
-                                <li>
-                                    {% with field_object=form|get_item:field_name %}
-                                        {% if field_name != '__all__' and field_object %}
-                                            {{ field_object.label }}: 
-                                        {% elif field_name != '__all__' %}
-                                            {{ field_name|capfirst }}:
-                                        {% endif %}
-                                    {% endwith %}
-                                    {{ error }}
-                                </li>
-                            {% endfor %}
-                        {% endfor %}
-                        {% for error in attachment_formset.non_form_errors %}
-                            <li>{% trans "Attachment error" %}: {{ error }}</li>
-                        {% endfor %}
-                        {% for fs_form in attachment_formset %}
-                            {% for field_name, field_errors in fs_form.errors.items %}
-                                {% for error in field_errors %}
-                                    <li>
-                                        {% trans "Attachment" %} {{ forloop.parentloop.counter }}: 
-                                        {% with field_object=fs_form|get_item:field_name %}
-                                            {% if field_name != '__all__' and field_object %}
-                                                {{ field_object.label|default:field_name }}
-                                            {% else %}
-                                                {{ field_name|capfirst }}
-                                            {% endif %}
-                                        {% endwith %}:
-                                        {{ error }}
-                                    </li>
-                                {% endfor %}
-                            {% endfor %}
-                        {% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
+            {# General Form Errors (and Formset errors) Display Area #}
+            <div id="form-errors-container" class="p-4 mb-6 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md hidden">
+                <h4 class="font-semibold text-red-700 dark:text-red-300">{% trans "Please correct the errors below:" %}</h4>
+                <ul id="form-error-list" class="list-disc list-inside text-sm text-red-600 dark:text-red-400 mt-2">
+                </ul>
+            </div>
             
             {% for field in form %}
                 {% if field.name != 'shared_details' and field.name != 'is_favorite' %}
@@ -120,11 +136,8 @@
                         </label>
                         
                         {% if field.name == "tags" %}
-                            {# Use the initial_tags_str from context for the hidden input's value when editing #}
-                            {# Otherwise, use the field's current value (e.g., from POST if form is invalid, or empty for new form) #}
                             <input type="hidden" name="{{ field.html_name }}" id="{{ field.id_for_label }}" 
                                    value="{% if form.instance.pk %}{{ initial_tags_str|default_if_none:'' }}{% else %}{{ field.value|default_if_none:'' }}{% endif %}">
-                            
                             <input type="text" id="tags-display-input"
                                    class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light mb-2"
                                    placeholder="{{ field.field.widget.attrs.placeholder|default:_('Type tags, separated by commas or Enter...') }}"
@@ -148,12 +161,14 @@
                                 </div>
                             {% endif %}
                             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400" id="{{ field.id_for_label }}-helptext">{{ field.help_text|safe }}</p>
-                            {% for error in field.errors %}
-                                <p class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                            {% endfor %}
-
+                            <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
                         {% elif "Textarea" in field.field.widget|stringformat:"s" %}
                             {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light" rows=field.field.widget.attrs.rows placeholder=field.field.widget.attrs.placeholder %}
+                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
                         {% elif "Select" in field.field.widget|stringformat:"s" and field.name == "mood" %}
                             <div class="relative">
                                 {% render_field field class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-150 ease-in-out focus:ring-primary-light focus:border-primary-light custom-select-arrow" %}
@@ -161,17 +176,18 @@
                                     <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                                 </div>
                             </div>
+                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
                         {% else %}
                              {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light" placeholder=field.field.widget.attrs.placeholder %}
+                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
                         {% endif %}
 
                         {% if field.name != "tags" and field.help_text %}
                             <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
-                        {% endif %}
-                        {% if field.name != "tags" %}
-                            {% for error in field.errors %}
-                                <p class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                            {% endfor %}
                         {% endif %}
                     </div>
                 {% endif %}
@@ -180,24 +196,38 @@
             {# --- Attachment Formset --- #}
             <div class="pt-6 border-t border-border-light dark:border-border-dark">
                 <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{% trans "Attachments" %}</h3>
-                {{ attachment_formset.management_form }}
-                {% if attachment_formset.non_form_errors %}
-                    <div class="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700" role="alert">
-                        {% for error in attachment_formset.non_form_errors %}
-                            <p>{% trans "Attachment Error" %}: {{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+                {{ attachment_formset.management_form }} 
+                
+                <div id="formset-non-form-errors" class="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700 {% if not attachment_formset.non_form_errors %}hidden{% endif %}" role="alert">
+                    {% for error in attachment_formset.non_form_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+
                 <div id="attachments-container" class="space-y-5">
                     {% for formset_form in attachment_formset %}
                         <div class="attachment-item p-4 border border-gray-300 dark:border-gray-600 rounded-lg 
                                     {% if formset_form.instance.pk and formset_form.instance.file %}bg-gray-50 dark:bg-gray-800{% else %}bg-white dark:bg-gray-700 shadow-sm{% endif %}">
-                            {% for hidden_field in formset_form.hidden_fields %}
-                                {{ hidden_field }}
+                            {% for hidden_field in formset_form.hidden_fields %} {{ hidden_field }} {% endfor %}
+                            
+                            {% for visible_field in formset_form.visible_fields %}
+                                <div class="mb-2">
+                                    <label for="{{ visible_field.id_for_label }}" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        {{ visible_field.label }}
+                                        {% if formset_form.instance.pk and formset_form.instance.file and visible_field.name == 'file' %}
+                                            <span class="text-gray-500 dark:text-gray-400"> ({% trans "Replace current" %})</span>
+                                        {% endif %}
+                                    </label>
+                                    {% render_field visible_field class="custom-file-input text-sm" %}
+                                    <div id="errors-{{ visible_field.auto_id }}" class="mt-1 text-xs text-red-600 dark:text-red-400">
+                                        {% for error in visible_field.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                </div>
                             {% endfor %}
-                            {% if formset_form.instance and formset_form.instance.pk and formset_form.instance.file %}
-                                <div class="existing-attachment-info mb-3">
-                                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">{% trans "Current file" %}</p>
+
+                            {% if formset_form.instance.pk and formset_form.instance.file %}
+                                <div class="existing-attachment-info mt-2 mb-3">
+                                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{% trans "Current file" %}:</p>
                                     <div class="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
                                         <i class="fas fa-paperclip text-gray-500 dark:text-gray-400"></i>
                                         <a href="{{ formset_form.instance.file.url }}" target="_blank" class="text-sm text-primary-light dark:text-primary-dark hover:underline break-all" title="{{ formset_form.instance.file.name }}">
@@ -210,32 +240,19 @@
                                         {% endif %}
                                     {% endwith %}
                                 </div>
-                                <div class="mb-2">
-                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{% trans "Replace file (optional)" %}:</label>
-                                    {% render_field formset_form.file class="custom-file-input text-sm" %}
-                                </div>
-                                {% if attachment_formset.can_delete and formset_form.instance.pk %}
+                            {% endif %}
+                                
+                            {% if attachment_formset.can_delete and formset_form.instance.pk %}
                                 <div class="flex items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                                     {% render_field formset_form.DELETE class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-600 dark:border-gray-500 dark:checked:bg-red-500" %}
                                     <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
                                         {% trans "Mark for deletion" %}
                                     </label>
                                 </div>
-                                {% endif %}
-                            {% else %} 
-                                <div>
-                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">{% trans "Add new attachment" %}:</label>
-                                    {% render_field formset_form.file class="custom-file-input text-sm" %}
-                                </div>
                             {% endif %}
-                            {% for error_field_loop_var in formset_form %} 
-                                {% for error in error_field_loop_var.errors %}
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error_field_loop_var.label }}: {{ error }}</p>
-                                {% endfor %}
-                            {% endfor %}
-                            {% for error in formset_form.non_field_errors %}
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error }}</p>
-                            {% endfor %}
+                            <div id="formset-form-{{ forloop.counter0 }}-non-field-errors" class="mt-1 text-xs text-red-600 dark:text-red-400">
+                                {% for error in formset_form.non_field_errors %}{{ error }}{% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -251,9 +268,9 @@
                 {% if is_favorite_field.help_text %}
                     <p class="ml-7 text-xs text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
                 {% endif %}
-                {% for error in is_favorite_field.errors %}
-                    <p class="ml-7 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                {% endfor %}
+                 <div id="errors-{{ is_favorite_field.auto_id }}" class="ml-7 text-sm text-red-600 dark:text-red-400">
+                    {% for error in is_favorite_field.errors %}{{ error }}{% endfor %}
+                </div>
             {% endwith %}
 
             <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 mt-8">
@@ -261,7 +278,7 @@
                    class="w-full sm:w-auto order-2 sm:order-1 px-6 py-2.5 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-offset-gray-800 transition-colors">
                     {% trans "Cancel" %}
                 </a>
-                <button type="submit"
+                <button type="submit" id="save-entry-button"
                         class="w-full sm:w-auto order-1 sm:order-2 px-6 py-2.5 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark dark:focus:ring-offset-gray-800 transition-all duration-150 ease-in-out font-semibold shadow-md hover:shadow-lg">
                     <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Save Entry" %}{% endif %}
                 </button>
@@ -270,135 +287,152 @@
     </div>
 </div>
 
+{# AI Processing Progress Modal #}
+<div id="ai-progress-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4 py-6 sm:px-0">
+    <div class="fixed inset-0 bg-gray-800 bg-opacity-50 backdrop-blur-sm"></div>
+    <div id="ai-progress-modal-content" class="modal-content bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 w-full max-w-md mx-auto transform opacity-0 scale-95">
+        <div class="text-center">
+            <div id="ai-spinner" class="spinner w-12 h-12 border-4 border-t-primary-light dark:border-t-primary-dark rounded-full mx-auto mb-4"></div>
+            <h3 id="ai-progress-title" class="text-lg leading-6 font-medium text-text-light dark:text-text-dark mb-2">
+                {% trans "Crafting your insights..." %}
+            </h3>
+            <p id="ai-progress-message" class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                {% trans "Please wait a moment while we enhance your journal entry." %}
+            </p>
+            <div id="ai-progress-bar-container" class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mb-2">
+                <div id="ai-progress-bar" class="bg-primary-light dark:bg-primary-dark h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <p id="ai-progress-percentage" class="text-xs text-gray-500 dark:text-gray-400 mb-1">0%</p>
+            <ul id="ai-task-status-list" class="text-xs text-left text-gray-500 dark:text-gray-400 space-y-1 mt-3 list-none p-0">
+                {# Task statuses will be populated here by JavaScript #}
+            </ul>
+            <div id="ai-success-message" class="hidden mt-4 p-3 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 rounded-md">
+                <i class="fas fa-check-circle mr-2"></i><span>{% trans "Your entry has been beautifully enhanced!" %}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const journalForm = document.getElementById('journal-entry-form'); 
-        const hiddenTagsInput = document.getElementById('{{ form.tags.id_for_label }}'); 
-        const displayTagsInput = document.getElementById('tags-display-input');
-        const suggestionButtons = document.querySelectorAll('.tag-suggestion-btn');
-        const selectedTagsContainer = document.getElementById('selected-tags-container');
-    
-        // Use the initial_tags_str passed from the view context for reliable initialization
-        const initialTagsFromDjango = "{{ initial_tags_str|escapejs|default_if_none:'' }}";
-        let currentSelectedTags = new Set();
-    
-        console.log("Raw initial_tags_str from Django context:", initialTagsFromDjango);
-    
-        function normalizeTagName(name) {
-            if (typeof name !== 'string') return '';
-            return name.trim().toLowerCase();
-        }
-        
-        function capitalizeTagName(name) {
-            if (typeof name !== 'string') return '';
-            return name.trim().split(' ')
-                       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                       .join(' ');
-        }
-    
-        function updatePillsAndHiddenInput() {
-            const capitalizedTagsForSubmit = Array.from(currentSelectedTags).map(t_norm => capitalizeTagName(t_norm));
-            if (hiddenTagsInput) {
-                hiddenTagsInput.value = capitalizedTagsForSubmit.join(', ');
+{% block extra_js %}
+    <script>
+        // --- Tag Management JavaScript ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const journalFormForTags = document.getElementById('journal-entry-form'); 
+            const hiddenTagsInput = document.getElementById('{{ form.tags.id_for_label }}'); 
+            const displayTagsInput = document.getElementById('tags-display-input');
+            const suggestionButtons = document.querySelectorAll('.tag-suggestion-btn');
+            const selectedTagsContainer = document.getElementById('selected-tags-container');
+            
+            let currentSelectedTags = new Set();
+
+            function normalizeTagName(name) {
+                if (typeof name !== 'string') return '';
+                return name.trim().toLowerCase();
             }
             
-            if (selectedTagsContainer) {
-                selectedTagsContainer.innerHTML = '';
-                capitalizedTagsForSubmit.forEach(displayTagName => {
-                    if (!displayTagName) return;
-                    const normalizedTagName = normalizeTagName(displayTagName);
-                    const pill = document.createElement('span');
-                    let emojiPrefix = '';
-                    
-                    const predefinedTagButton = Array.from(suggestionButtons).find(btn => normalizeTagName(btn.dataset.tagName) === normalizedTagName);
-                    if (predefinedTagButton && predefinedTagButton.dataset.tagEmoji) {
-                        emojiPrefix = predefinedTagButton.dataset.tagEmoji + ' ';
+            function capitalizeTagName(name) {
+                if (typeof name !== 'string') return '';
+                return name.trim().split(' ')
+                           .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                           .join(' ');
+            }
+
+            window.updatePillsAndHiddenInput = function() { // Make it globally accessible for AI script
+                const capitalizedTagsForSubmit = Array.from(currentSelectedTags).map(t_norm => capitalizeTagName(t_norm));
+                if (hiddenTagsInput) {
+                    hiddenTagsInput.value = capitalizedTagsForSubmit.join(', ');
+                }
+                
+                if (selectedTagsContainer) {
+                    selectedTagsContainer.innerHTML = '';
+                    capitalizedTagsForSubmit.forEach(displayTagName => {
+                        if (!displayTagName) return;
+                        const normalizedTagName = normalizeTagName(displayTagName);
+                        const pill = document.createElement('span');
+                        let emojiPrefix = '';
+                        
+                        const predefinedTagButton = Array.from(suggestionButtons).find(btn => normalizeTagName(btn.dataset.tagName) === normalizedTagName);
+                        if (predefinedTagButton && predefinedTagButton.dataset.tagEmoji) {
+                            emojiPrefix = predefinedTagButton.dataset.tagEmoji + ' ';
+                        }
+                        
+                        pill.className = 'selected-tag-pill bg-indigo-100 text-indigo-700 dark:bg-indigo-700 dark:text-indigo-200 border-indigo-300 dark:border-indigo-600';
+                        pill.textContent = emojiPrefix + displayTagName;
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.innerHTML = '&times;';
+                        removeBtn.className = 'remove-tag-btn text-indigo-700 dark:text-indigo-200';
+                        removeBtn.setAttribute('aria-label', `Remove ${displayTagName}`);
+                        removeBtn.onclick = function(event) {
+                            event.stopPropagation(); 
+                            currentSelectedTags.delete(normalizedTagName);
+                            updatePillsAndHiddenInput();
+                        };
+                        pill.appendChild(removeBtn);
+                        selectedTagsContainer.appendChild(pill);
+                    });
+                }
+            }
+
+            const initialTagsFromDjango = "{{ initial_tags_str|escapejs|default_if_none:'' }}"; 
+            if (initialTagsFromDjango) {
+                initialTagsFromDjango.split(',')
+                    .map(t => t.trim())
+                    .filter(t => t.length > 0) 
+                    .forEach(t => currentSelectedTags.add(normalizeTagName(t)));
+                updatePillsAndHiddenInput(); 
+            }
+
+            suggestionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tagNameFromButton = this.dataset.tagName;
+                    const normalizedName = normalizeTagName(tagNameFromButton);
+
+                    if (currentSelectedTags.has(normalizedName)) {
+                        currentSelectedTags.delete(normalizedName);
+                    } else {
+                        currentSelectedTags.add(normalizedName);
                     }
-                    
-                    pill.className = 'selected-tag-pill bg-indigo-100 text-indigo-700 dark:bg-indigo-700 dark:text-indigo-200 border-indigo-300 dark:border-indigo-600';
-                    pill.textContent = emojiPrefix + displayTagName;
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.innerHTML = '&times;';
-                    removeBtn.className = 'remove-tag-btn text-indigo-700 dark:text-indigo-200';
-                    removeBtn.setAttribute('aria-label', `Remove ${displayTagName}`);
-                    removeBtn.onclick = function(event) {
-                        event.stopPropagation(); 
-                        currentSelectedTags.delete(normalizedTagName);
-                        updatePillsAndHiddenInput();
-                    };
-                    pill.appendChild(removeBtn);
-                    selectedTagsContainer.appendChild(pill);
+                    updatePillsAndHiddenInput();
+                    if (displayTagsInput) {
+                         displayTagsInput.value = ''; 
+                         displayTagsInput.focus(); 
+                    }
+                });
+            });
+
+            if (displayTagsInput) {
+                displayTagsInput.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' || event.key === ',') {
+                        event.preventDefault(); 
+                        const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
+                        if (newTagNameRaw) {
+                            const normalizedNewTag = normalizeTagName(newTagNameRaw);
+                            currentSelectedTags.add(normalizedNewTag); 
+                            updatePillsAndHiddenInput();
+                        }
+                        this.value = ''; 
+                    }
+                });
+                displayTagsInput.addEventListener('blur', function() {
+                    setTimeout(() => { 
+                        const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
+                        if (newTagNameRaw) {
+                            const normalizedNewTag = normalizeTagName(newTagNameRaw);
+                            if (!currentSelectedTags.has(normalizedNewTag)) {
+                                 currentSelectedTags.add(normalizedNewTag);
+                                 updatePillsAndHiddenInput();
+                            }
+                            if (document.activeElement !== this && !Array.from(suggestionButtons).some(btn => btn === document.activeElement)) {
+                                this.value = ''; 
+                            }
+                        }
+                    }, 100); 
                 });
             }
-        }
-    
-        // Initialize from the explicit initial_tags_str from Django context
-        if (initialTagsFromDjango) {
-            initialTagsFromDjango.split(',')
-                .map(t => t.trim())
-                .filter(t => t.length > 0) // Basic filter, clean_tags in form handles more
-                .forEach(t => currentSelectedTags.add(normalizeTagName(t)));
-            updatePillsAndHiddenInput(); // Render initial pills
-        }
-    
-    
-        suggestionButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tagNameFromButton = this.dataset.tagName;
-                const normalizedName = normalizeTagName(tagNameFromButton);
-    
-                if (currentSelectedTags.has(normalizedName)) {
-                    currentSelectedTags.delete(normalizedName);
-                } else {
-                    currentSelectedTags.add(normalizedName);
-                }
-                updatePillsAndHiddenInput();
-                if (displayTagsInput) {
-                     displayTagsInput.value = ''; 
-                     displayTagsInput.focus(); 
-                }
-            });
         });
-    
-        if (displayTagsInput) {
-            displayTagsInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter' || event.key === ',') {
-                    event.preventDefault(); 
-                    const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
-                    if (newTagNameRaw) {
-                        const normalizedNewTag = normalizeTagName(newTagNameRaw);
-                        currentSelectedTags.add(normalizedNewTag); 
-                        updatePillsAndHiddenInput();
-                    }
-                    this.value = ''; 
-                }
-            });
-            displayTagsInput.addEventListener('blur', function() {
-                setTimeout(() => { 
-                    const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
-                    if (newTagNameRaw) {
-                        const normalizedNewTag = normalizeTagName(newTagNameRaw);
-                        if (!currentSelectedTags.has(normalizedNewTag)) {
-                             currentSelectedTags.add(normalizedNewTag);
-                             updatePillsAndHiddenInput();
-                        }
-                        if (document.activeElement !== this && !Array.from(suggestionButtons).some(btn => btn === document.activeElement)) {
-                            this.value = ''; 
-                        }
-                    }
-                }, 100); 
-            });
-        }
-        
-        if(journalForm) {
-            journalForm.addEventListener('submit', function() {
-                updatePillsAndHiddenInput(); 
-                console.log('Submitting tags:', hiddenTagsInput ? hiddenTagsInput.value : 'Hidden input not found');
-            });
-        }
-    });
     </script>
+    <script src="{% static 'js/journal_form_ai_progress.js' %}"></script>
 {% endblock %}
