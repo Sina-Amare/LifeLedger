@@ -16,9 +16,17 @@ from django.forms import inlineformset_factory
 from django.db import transaction
 from .forms import JournalEntryForm, JournalAttachmentForm, MOOD_CHOICES_FORM_DISPLAY 
 from .models import JournalEntry, JournalAttachment, Tag
-from django.db.models import Q, Count
+from django.db.models import Q
 from django.utils import timezone
 import logging
+
+# Import the Celery tasks
+from ai_services.tasks import (
+    generate_quote_for_entry_task,
+    detect_mood_for_entry_task,
+    suggest_tags_for_entry_task
+)
+from LifeLedger.celery import debug_task # Import the debug_task
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +49,6 @@ MOOD_VISUALS = {
 }
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
-    # ... (کد این ویو بدون تغییر باقی می‌ماند) ...
     model = JournalEntry
     template_name = 'journal/journal_list.html'
     context_object_name = 'entries'
@@ -100,7 +107,6 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         return context
 
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
-    # ... (کد این ویو بدون تغییر باقی می‌ماند) ...
     model = JournalEntry
     template_name = 'journal/journal_detail.html'
     context_object_name = 'entry'
@@ -124,67 +130,86 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        if 'attachment_formset' not in kwargs:
-            if self.request.method == 'POST':
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(
-                    self.request.POST, self.request.FILES, prefix='attachments'
-                )
-            else:
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(prefix='attachments')
-        else:
-            data['attachment_formset'] = kwargs['attachment_formset']
+        if self.request.method == 'POST':
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(
+                self.request.POST, self.request.FILES, prefix='attachments'
+            )
+        else: 
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(prefix='attachments')
         
         data['predefined_tags'] = Tag.objects.all().order_by('name')
-        # For new entries, initial_tags_str is empty
         data['initial_tags_str'] = '' 
         return data
 
     def post(self, request, *args, **kwargs):
-        # ... (بخش post مانند قبل، با لاگ‌ها) ...
-        self.object = None
+        self.object = None 
         form = self.get_form()
         attachment_formset = JournalAttachmentInlineFormSet(
             request.POST, request.FILES, prefix='attachments' 
         )
         if form.is_valid() and attachment_formset.is_valid():
+            logger.info("Main form and attachment formset are valid for create.")
             return self.form_valid(form, attachment_formset)
         else:
-            if not form.is_valid(): logger.error(f"Main form is invalid: {form.errors.as_json()}")
-            if not attachment_formset.is_valid():
-                logger.error(f"Attachment formset is invalid: {attachment_formset.errors}")
-                logger.error(f"Attachment formset non-form errors: {attachment_formset.non_form_errors()}")
+            logger.error(f"Form or Formset invalid on POST. Form errors: {form.errors.as_json()}. Formset errors: {attachment_formset.errors} {attachment_formset.non_form_errors()}")
             return self.form_invalid(form, attachment_formset)
 
     def form_valid(self, form, attachment_formset):
-        # ... (بخش form_valid مانند قبل) ...
-        with transaction.atomic():
+        with transaction.atomic(): 
             form.instance.user = self.request.user
             self.object = form.save(commit=False) 
             self.object.save() 
             
             tag_names_list = form.cleaned_data.get('tags', []) 
-            
             current_tags_for_entry = []
-            for tag_name in tag_names_list:
-                tag, created = Tag.objects.get_or_create(
-                    name__iexact=tag_name.strip(), 
-                    defaults={'name': tag_name.strip().capitalize()} 
-                )
-                current_tags_for_entry.append(tag)
+            if tag_names_list:
+                for tag_name in tag_names_list:
+                    tag_name_stripped = tag_name.strip()
+                    if tag_name_stripped:
+                        tag, created = Tag.objects.get_or_create(
+                            name__iexact=tag_name_stripped, 
+                            defaults={'name': tag_name_stripped.capitalize()} 
+                        )
+                        current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
             
             attachment_formset.instance = self.object
             attachment_formset.save()
-            logger.info(f"JournalEntry {self.object.pk} created and attachments/tags saved.")
+            logger.info(f"JournalEntry {self.object.pk} created with attachments and tags.")
+
+            entry_id = self.object.id
+            # --- Dispatch AI Tasks ---
+            logger.info(f"Attempting to dispatch AI tasks for entry ID: {entry_id}")
+            try:
+                debug_task.delay() # Call the simple debug task
+                logger.info(f"Dispatched LifeLedger.celery.debug_task for entry ID: {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to dispatch debug_task (entry ID {entry_id}): {e}", exc_info=True)
+
+            try:
+                generate_quote_for_entry_task.delay(entry_id)
+                logger.info(f"Dispatched generate_quote_for_entry_task for new entry ID: {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to dispatch generate_quote_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+            
+            try:
+                detect_mood_for_entry_task.delay(entry_id)
+                logger.info(f"Dispatched detect_mood_for_entry_task for new entry ID: {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to dispatch detect_mood_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+
+            try:
+                suggest_tags_for_entry_task.delay(entry_id)
+                logger.info(f"Dispatched suggest_tags_for_entry_task for new entry ID: {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to dispatch suggest_tags_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
             
         return redirect(self.object.get_absolute_url())
 
     def form_invalid(self, form, attachment_formset):
-        # ... (بخش form_invalid مانند قبل) ...
-        logger.error(f"CreateView.form_invalid called. Main form errors: {form.errors.as_json()}")
+        logger.warning(f"CreateView form_invalid. Form errors: {form.errors.as_json()}")
         if attachment_formset and not attachment_formset.is_valid():
-            logger.error(f"  Attachment formset errors: {attachment_formset.errors}")
-            logger.error(f"  Attachment formset non-form errors: {attachment_formset.non_form_errors()}")
+            logger.warning(f"  Attachment formset errors: {attachment_formset.errors} {attachment_formset.non_form_errors()}")
         return self.render_to_response(
             self.get_context_data(form=form, attachment_formset=attachment_formset)
         )
@@ -200,34 +225,29 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        if 'attachment_formset' not in kwargs:
-            if self.request.method == 'POST':
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(
-                    self.request.POST, self.request.FILES, instance=self.object, prefix='attachments'
-                )
-            else: 
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(instance=self.object, prefix='attachments')
+        if self.request.method == 'POST':
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(
+                self.request.POST, self.request.FILES, instance=self.object, prefix='attachments'
+            )
         else: 
-            data['attachment_formset'] = kwargs['attachment_formset']
+            data['attachment_formset'] = JournalAttachmentInlineFormSet(instance=self.object, prefix='attachments')
         
         data['predefined_tags'] = Tag.objects.all().order_by('name')
-        # Explicitly prepare initial tags string for the template for editing
         if self.object and hasattr(self.object, 'tags'):
             initial_tag_names = [tag.name for tag in self.object.tags.all().order_by('name')]
             data['initial_tags_str'] = ', '.join(initial_tag_names)
-            logger.info(f"UpdateView get_context_data: initial_tags_str set to: '{data['initial_tags_str']}'")
         else:
             data['initial_tags_str'] = ''
         return data
     
     def post(self, request, *args, **kwargs):
-        # ... (بخش post مانند قبل، با لاگ‌ها) ...
         self.object = self.get_object()
         form = self.get_form()
         attachment_formset = JournalAttachmentInlineFormSet(
             request.POST, request.FILES, instance=self.object, prefix='attachments'
         )
         if form.is_valid() and attachment_formset.is_valid():
+            logger.info(f"Main form and attachment formset are valid for update (entry ID: {self.object.pk}).")
             return self.form_valid(form, attachment_formset)
         else:
             if not form.is_valid(): logger.error(f"UpdateView - Main form invalid: {form.errors.as_json()}")
@@ -237,40 +257,78 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
             return self.form_invalid(form, attachment_formset)
 
     def form_valid(self, form, attachment_formset):
-        # ... (بخش form_valid مانند قبل) ...
         with transaction.atomic():
+            content_changed = False
+            if form.has_changed() and 'content' in form.changed_data:
+                content_changed = True
+            
+            mood_provided_by_user_in_this_update = 'mood' in form.changed_data and form.cleaned_data.get('mood')
+            tags_provided_by_user_in_this_update = 'tags' in form.changed_data and form.cleaned_data.get('tags')
+
             self.object = form.save(commit=False)
             self.object.save()
 
             tag_names_list = form.cleaned_data.get('tags', [])
             current_tags_for_entry = []
-            for tag_name in tag_names_list:
-                tag, created = Tag.objects.get_or_create(
-                    name__iexact=tag_name.strip(), 
-                    defaults={'name': tag_name.strip().capitalize()}
-                )
-                current_tags_for_entry.append(tag)
+            if tag_names_list:
+                for tag_name in tag_names_list:
+                    tag_name_stripped = tag_name.strip()
+                    if tag_name_stripped:
+                        tag, created = Tag.objects.get_or_create(
+                            name__iexact=tag_name_stripped, 
+                            defaults={'name': tag_name_stripped.capitalize()}
+                        )
+                        current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
 
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} and attachments updated.")
+
+            entry_id = self.object.id
+            # --- Dispatch AI Tasks for Update ---
+            logger.info(f"Attempting to dispatch AI tasks for updated entry ID: {entry_id}")
+            try:
+                debug_task.delay() # Call the simple debug task
+                logger.info(f"Dispatched LifeLedger.celery.debug_task for updated entry ID: {entry_id}")
+            except Exception as e:
+                logger.error(f"Failed to dispatch debug_task (updated entry ID {entry_id}): {e}", exc_info=True)
+
+            if content_changed or not self.object.ai_quote:
+                try:
+                    generate_quote_for_entry_task.delay(entry_id)
+                    logger.info(f"Dispatched generate_quote_for_entry_task for updated entry ID: {entry_id}")
+                except Exception as e:
+                    logger.error(f"Failed to dispatch quote task (updated entry ID {entry_id}): {e}", exc_info=True)
+            
+            if not mood_provided_by_user_in_this_update:
+                try:
+                    detect_mood_for_entry_task.delay(entry_id)
+                    logger.info(f"Dispatched detect_mood_for_entry_task for updated entry ID: {entry_id}")
+                except Exception as e:
+                    logger.error(f"Failed to dispatch mood task (updated entry ID {entry_id}): {e}", exc_info=True)
+
+            if not tags_provided_by_user_in_this_update:
+                try:
+                    suggest_tags_for_entry_task.delay(entry_id)
+                    logger.info(f"Dispatched suggest_tags_for_entry_task for updated entry ID: {entry_id}")
+                except Exception as e:
+                    logger.error(f"Failed to dispatch tag task (updated entry ID {entry_id}): {e}", exc_info=True)
+            
         return redirect(self.object.get_absolute_url())
 
     def form_invalid(self, form, attachment_formset):
-        # ... (بخش form_invalid مانند قبل) ...
         logger.error(f"UpdateView.form_invalid. Form errors: {form.errors.as_json()}")
         if attachment_formset and not attachment_formset.is_valid():
             logger.error(f"  UpdateView - Attachment formset errors: {attachment_formset.errors}")
         return self.render_to_response(
-            self.get_context_data(form=form, attachment_formset=attachment_formset) # predefined_tags will be added by get_context_data
+            self.get_context_data(form=form, attachment_formset=attachment_formset)
         )
 
     def test_func(self):
         entry = self.get_object()
         return entry.user == self.request.user
 
-# ... (DeleteView and AjaxDeleteView remain the same) ...
 class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = JournalEntry
     template_name = 'journal/journal_confirm_delete.html'

@@ -1,38 +1,22 @@
-# settings.py
+# LifeLedger/LifeLedger/settings.py
 
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-insecure-secret-key-for-dev-if-really-needed-0123456789abcdef')
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-# Load SECRET_KEY from environment variables
-SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable not set.")
-
-
-# SECURITY WARNING: don't run with debug turned on in production!
-# Load DEBUG from environment variables, default to False if not set
-DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
-
-
-# Load ALLOWED_HOSTS from environment variables
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
-if DEBUG:
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] # Allow these during development
-
-
-# Application definition
+ALLOWED_HOSTS_STRING = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STRING.split(',') if host.strip()]
+if DEBUG and '127.0.0.1' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('127.0.0.1')
+if DEBUG and 'localhost' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('localhost')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -41,21 +25,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites', # Add django.contrib.sites for email activation domain
-    'accounts',
-    'journal',
+    'django.contrib.sites', 
+    'accounts.apps.AccountsConfig', 
+    'journal.apps.JournalAppConfig', 
+    'ai_services.apps.AiServicesConfig', 
     'widget_tweaks',
-    # 'tailwind', # Assuming you are not using Tailwind app based on your INSTALLED_APPS
-    # 'theme',    # Assuming you are not using a separate theme app
 ]
-
-# Assuming you are managing Tailwind directly without the Django Tailwind app
-# If you are using the Django Tailwind app, uncomment the lines above and configure accordingly.
-# TAILWIND_APP_NAME = 'theme' # Or your theme app name
-# INTERNAL_IPS = [
-#     "127.0.0.1",
-# ]
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -65,7 +40,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'django_browser_reload.middleware.BrowserReloadMiddleware', # For live reloading - uncomment if using
 ]
 
 ROOT_URLCONF = 'LifeLedger.urls'
@@ -88,138 +62,102 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'LifeLedger.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+DB_ENGINE_ENV = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
+DB_NAME_ENV = os.getenv('DB_NAME', str(BASE_DIR / 'db.sqlite3')) 
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'), # os.getenv returns string, ensure your DB adapter handles this or cast to int
+        'ENGINE': DB_ENGINE_ENV,
+        'NAME': DB_NAME_ENV,
     }
 }
-
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
+if DB_ENGINE_ENV == 'django.db.backends.postgresql':
+    DATABASES['default'].update({
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+    })
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC' # Consider changing to your local timezone, e.g., 'Asia/Tehran'
-
+TIME_ZONE = 'UTC' 
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+STATICFILES_DIRS = [ BASE_DIR / "static", ]
+STATIC_ROOT = BASE_DIR / "staticfiles_collected" 
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
+LOGIN_REDIRECT_URL = '/' 
+LOGOUT_REDIRECT_URL = '/' 
 
-# Redirect URLs
-LOGIN_REDIRECT_URL = '/' # Redirect to home page after login
-LOGOUT_REDIRECT_URL = '/' # Redirect to homepage after logout (Changed from 'accounts:login')
-
-# AUTHENTICATION_BACKENDS: Specifies the authentication backend(s) to use.
 AUTHENTICATION_BACKENDS = [
     'accounts.views.UsernameEmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# --- Email Settings ---
-# Configure these settings to send emails.
+SITE_ID = int(os.getenv('SITE_ID', 1))
 
-# Load email backend from environment variable, default to console during development
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-
-# SMTP settings (only needed if EMAIL_BACKEND is not console or dummy)
 EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587)) # Default SMTP TLS port
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587)) 
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 't')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'webmaster@localhost') # Default sender email
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 
-# --- Site Settings (Needed for Email Activation Link Domain) ---
-# Requires 'django.contrib.sites' in INSTALLED_APPS
-SITE_ID = int(os.getenv('SITE_ID', 1)) # Default site ID is 1
-
-
-# Email Debugging (Optional)
-# if DEBUG:
-#     import logging
-#     logging.basicConfig(level=logging.DEBUG)
-
-# Settings for media files (user-uploaded files)
-MEDIA_ROOT = BASE_DIR / 'media' # Files will be stored in a 'media' directory at the project root
-MEDIA_URL = '/media/' # URL prefix for accessing media files
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'simple': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
+        'simple': {'format': '{levelname} {asctime} {module} {message}','style': '{',},
+        'verbose': {'format': '{levelname} {asctime} {name} {module} {process:d} {thread:d} {message}','style': '{',},
     },
     'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
+        'console': {'level': 'DEBUG','class': 'logging.StreamHandler','formatter': 'simple',},
     },
     'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'propagate': False,
-        },
-        'journal': { # Your app's logger
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False, # <--- CHANGE THIS TO FALSE
-        },
+        'django': {'handlers': ['console'],'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),'propagate': False,},
+        'journal': {'handlers': ['console'],'level': 'DEBUG', 'propagate': False, },
+        'accounts': {'handlers': ['console'],'level': 'DEBUG', 'propagate': False, },
+        'ai_services': {'handlers': ['console'],'level': 'DEBUG', 'propagate': False, },
+        'celery': {'handlers': ['console'],'level': 'DEBUG', 'propagate': False,}, # Changed celery log level to DEBUG
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
+    'root': {'handlers': ['console'],'level': 'INFO',},
 }
+
+# --- Celery Configuration ---
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json'] # Using only JSON for simplicity and security
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = False # Ensure this is False for actual async behavior
+
+# Define a default queue, exchange, and routing key explicitly
+CELERY_TASK_DEFAULT_QUEUE = 'lifelookup_default_queue'
+CELERY_TASK_DEFAULT_EXCHANGE = 'lifelookup_default_exchange'
+CELERY_TASK_DEFAULT_ROUTING_KEY = 'lifelookup_default_key'
+
+
+# --- OpenRouter API Configuration ---
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+YOUR_SITE_URL = os.getenv('YOUR_SITE_URL', 'http://localhost:8000') 
+YOUR_SITE_NAME = os.getenv('YOUR_SITE_NAME', 'LifeLedger') 
+
+if not OPENROUTER_API_KEY:
+    print("WARNING: OPENROUTER_API_KEY environment variable not set. AI features requiring it will not work.")
