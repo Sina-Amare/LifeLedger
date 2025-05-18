@@ -1,82 +1,130 @@
 {% load static %}
 {% load i18n %}
 <!DOCTYPE html>
+{# The 'light' class is a default; theme.js will toggle 'dark' as needed. #}
 <html lang="en" class="light">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}LifeLedger{% endblock %}</title>
+    
     {# Tailwind CSS #}
     <link href="{% static 'css/output.css' %}" rel="stylesheet" />
-    {# Google Fonts #}
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    {# Google Fonts: Inter - Added preconnect for slight performance improvement #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
     {# Font Awesome #}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     {# Fancybox CSS - For image and content popups #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
 
     <style>
-        /* Base body styles */
-        html { scroll-behavior: smooth; }
+        /* Base body styles for font smoothing and scroll behavior */
+        html { 
+            scroll-behavior: smooth; 
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
         body {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            @apply text-text-light dark:text-text-dark; /* Base text colors from Tailwind config */
         }
+
+        /* Improved global focus outline for accessibility and visual feedback */
+        *:focus-visible { /* Using focus-visible for keyboard users, more accessible */
+            outline: 2px solid theme('colors.primary-light'); /* Default to primary-light */
+            outline-offset: 2px;
+            box-shadow: 0 0 0 3px theme('colors.primary-light' / 30%); /* Softer ring */
+        }
+        .dark *:focus-visible {
+            outline: 2px solid theme('colors.primary-dark');
+            box-shadow: 0 0 0 3px theme('colors.primary-dark' / 30%);
+        }
+        
         /* Arrow animation for scroll indicators or similar */
         .arrow-indicator { animation: pulse-arrow 2s infinite; }
         @keyframes pulse-arrow {
             0%, 100% { opacity: 1; transform: translateX(0); }
             50% { opacity: 0.5; transform: translateX(4px); }
         }
-        /* Ensure focus styles are consistent if not fully handled by Tailwind focus-visible utilities */
-        input:focus, textarea:focus, select:focus, button:focus-visible {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            --tw-ring-color: theme('colors.primary-light'); /* Or your primary color */
-            box-shadow: 0 0 0 3px var(--tw-ring-color);
+
+        /* Custom scrollbar (optional, for a more polished look) */
+        /* For Webkit browsers like Chrome, Safari, Edge */
+        ::-webkit-scrollbar {
+            width: 10px; /* Width of the scrollbar */
+            height: 10px; /* Height of the scrollbar (for horizontal scrollbars) */
         }
-        .dark input:focus, .dark textarea:focus, .dark select:focus, .dark button:focus-visible {
-            --tw-ring-color: theme('colors.primary-dark');
-             box-shadow: 0 0 0 3px var(--tw-ring-color);
+        ::-webkit-scrollbar-track {
+            background: theme('colors.background-light'); /* Track color in light mode */
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: theme('colors.background-dark'); /* Track color in dark mode */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.primary-light' / 50%); /* Thumb color in light mode, slightly transparent */
+            border-radius: 10px;
+            border: 2px solid theme('colors.background-light'); /* Creates a padding effect */
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: theme('colors.primary-dark' / 50%); /* Thumb color in dark mode, slightly transparent */
+            border: 2px solid theme('colors.background-dark');
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.primary-light' / 70%); 
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.primary-dark' / 70%);
+        }
+        /* For Firefox (limited customization) */
+        html {
+            scrollbar-width: thin; /* "auto" or "thin" */
+            scrollbar-color: theme('colors.primary-light' / 50%) theme('colors.background-light'); /* thumb and track color */
+        }
+        .dark html {
+            scrollbar-color: theme('colors.primary-dark' / 50%) theme('colors.background-dark');
         }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="flex flex-col bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen font-sans antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-gray-900">
+<body class="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-sans antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-gray-900">
 
-    <nav class="bg-card-light dark:bg-card-dark shadow-lg sticky top-0 z-40 transition-colors duration-300 ease-in-out">
-        <div class="container mx-auto flex justify-between items-center p-4 md:px-6">
-            <a href="{% url 'accounts:home' %}" class="text-3xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity">
+    {# Navbar - Added subtle bottom border and improved padding/item styling #}
+    <nav class="bg-card-light dark:bg-card-dark shadow-md sticky top-0 z-50 transition-colors duration-300 ease-in-out border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto flex justify-between items-center py-3.5 px-4 sm:px-6">
+            <a href="{% url 'accounts:home' %}" class="text-2xl md:text-3xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity duration-200">
                 LifeLedger
             </a>
-            <div class="flex items-center space-x-3 sm:space-x-4">
+            <div class="flex items-center space-x-2 sm:space-x-4">
                 {% if user.is_authenticated %}
-                    <span class="text-text-light dark:text-text-dark text-sm font-medium hidden md:inline">
-                        {% trans "Hello" %}, <strong class="font-semibold">{{ user.username }}</strong>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden md:inline">
+                        {% trans "Hello" %}, <strong class="font-semibold text-text-light dark:text-text-dark">{{ user.username }}</strong>!
                     </span>
-                    {# Placeholder for profile link - implement when profile page is ready #}
-                    <a href="#" class="text-xl text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200" title="{% trans 'Profile' %}">
-                        <i class="fas fa-user-circle"></i>
+                    <a href="#" class="flex items-center justify-center h-9 w-9 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="{% trans 'Profile' %}">
+                        <i class="fas fa-user-circle text-xl"></i>
                     </a>
                     <a href="{% url 'accounts:logout_confirm' %}"
-                       class="px-3 py-2 sm:px-4 sm:py-2 bg-button-red text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
-                        <i class="fas fa-sign-out-alt mr-1 hidden sm:inline"></i>{% trans "Logout" %}
+                       class="px-3 py-2 sm:px-4 text-xs sm:text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 dark:focus-visible:ring-offset-card-dark transition-all duration-200 shadow-sm hover:shadow-md">
+                        <i class="fas fa-sign-out-alt mr-1.5 opacity-90 hidden sm:inline"></i>{% trans "Logout" %}
                     </a>
                 {% else %}
                     <a href="{% url 'accounts:login' %}"
-                       class="px-3 py-2 sm:px-4 sm:py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-dark focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
+                       class="px-3 py-2 sm:px-4 text-xs sm:text-sm font-medium text-primary-light dark:text-primary-dark hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 rounded-lg transition-colors duration-200">
                        {% trans "Login" %}
                     </a>
                     <a href="{% url 'accounts:signup' %}"
-                       class="px-3 py-2 sm:px-4 sm:py-2 bg-secondary-light text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-secondary-dark focus:ring-opacity-50 transition-all duration-300 text-sm font-medium shadow-md hover:shadow-lg">
-                       {% trans "Sign Up" %}
+                       class="px-3 py-2 sm:px-4 text-xs sm:text-sm font-medium bg-primary-light text-white rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-dark dark:focus-visible:ring-offset-card-dark transition-all duration-200">
+                       <i class="fas fa-user-plus mr-1.5 opacity-90 hidden sm:inline"></i>{% trans "Get Started" %}
                     </a>
                 {% endif %}
                 <button id="theme-toggle"
-                        class="text-xl p-2 rounded-full text-text-light dark:text-text-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-300"
+                        class="flex items-center justify-center h-9 w-9 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                         title="{% trans 'Toggle theme' %}">
-                    <i class="fas fa-sun"></i> {# Icon will be changed by theme.js #}
+                    <i class="fas fa-sun text-lg"></i> {# Icon will be changed by theme.js #}
                 </button>
             </div>
         </div>
@@ -87,48 +135,46 @@
         {% endblock %}
     </main>
 
-    <footer class="bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark mt-auto shadow-top-lg transition-colors duration-300 ease-in-out">
-        <div class="container mx-auto py-10 px-4 text-center text-text-light dark:text-text-dark">
-            <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity mb-2 inline-block">
+    <footer class="bg-card-light dark:bg-card-dark border-t border-gray-200 dark:border-gray-700 mt-auto py-8 md:py-12 transition-colors duration-300 ease-in-out">
+        <div class="container mx-auto px-4 text-center">
+            <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark hover:opacity-80 transition-opacity mb-3 inline-block">
                 LifeLedger
             </a>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 &copy; {% now "Y" %} LifeLedger. {% trans "All rights reserved." %}
             </p>
-            <p class="text-sm mt-2 text-gray-500 dark:text-gray-500">
+            <p class="text-xs text-gray-500 dark:text-gray-500">
                 {% trans "Cherish your memories, discover your emotions." %}
             </p>
-            <div class="mt-4 space-x-4">
-                {# Replace # with actual links if you have them #}
-                <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-github"></i></a>
-                <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors"><i class="fab fa-linkedin"></i></a>
+            <div class="mt-6 space-x-6">
+                <a href="#" aria-label="GitHub" class="text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl"><i class="fab fa-github"></i></a>
+                <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl"><i class="fab fa-twitter"></i></a>
+                <a href="#" aria-label="LinkedIn" class="text-gray-400 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl"><i class="fab fa-linkedin"></i></a>
             </div>
         </div>
     </footer>
 
-    {# Centralized Delete Modal #}
-    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
-        <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0"
-             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-global">
+    {# Centralized Delete Modal - Enhanced styling #}
+    <div id="delete-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-[60] flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out" aria-labelledby="modal-title-global" role="dialog" aria-modal="true">
+        <div class="modal-dialog-box relative p-6 sm:p-8 w-full max-w-md shadow-2xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-out scale-95 opacity-0">
             <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
-                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
+                <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 dark:bg-red-500/20 mb-5">
+                    <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 text-3xl"></i>
                 </div>
-                <h3 id="modal-title-global" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
-                <div class="mt-3 px-4 py-3">
-                    <p class="text-md text-gray-600 dark:text-gray-400">
+                <h3 id="modal-title-global" class="text-xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
+                <div class="mt-2 px-2 py-3">
+                    <p id="modal-message-content" class="text-sm text-gray-600 dark:text-gray-400">
                         {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?
                     </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
                 </div>
-                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3 px-4">
+                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3">
                     <button id="confirm-delete-button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-3 bg-button-red text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                            class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-2.5 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 dark:focus-visible:ring-offset-card-dark transition duration-150 ease-in-out">
                         {% trans "Yes, Delete" %}
                     </button>
                     <button id="cancel-delete-button" type="button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-3 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
+                            class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-500 shadow-sm px-6 py-2.5 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-light dark:focus-visible:ring-offset-card-dark transition duration-150 ease-in-out">
                         {% trans "Cancel" %}
                     </button>
                 </div>
@@ -137,7 +183,7 @@
     </div>
 
     <script src="{% static 'js/theme.js' %}"></script>
-    <script src="{% static 'js/scroll.js' %}"></script>
+    <script src="{% static 'js/scroll.js' %}"></script> 
     
     {# Fancybox JS - For image and content popups #}
     <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
@@ -145,11 +191,8 @@
         // Initialize Fancybox for all elements with data-fancybox attribute
         document.addEventListener('DOMContentLoaded', function () {
             Fancybox.bind("[data-fancybox]", {
-                // Optional: Custom options for Fancybox
-                // For example, to change animation:
-                // Carousel: { transition: "slide" }, 
-                // Thumbs: { autoStart: false }, // Don't show thumbnails panel by default
-                // Toolbar: { display: { left: ["infobar"], middle: [], right: ["close"] } } // Customize toolbar
+                // Optional: Custom options for Fancybox can be added here
+                // e.g., Thumbs: { autoStart: false },
             });
         });
     </script>

@@ -10,94 +10,190 @@
 
 {% block extra_head %}
 <style>
-    /* Styles for focus, file input, select arrow, tags (as provided by you previously) */
+    /* Enhanced Global Styles */
+    :root {
+        --primary-light: #4f46e5;
+        --primary-dark: #818cf8;
+        --secondary-light: #10b981;
+        --secondary-dark: #34d399;
+        --card-light: #ffffff;
+        --card-dark: #1f2937;
+        --text-light: #1f2937;
+        --text-dark: #f3f4f6;
+        --border-light: #e5e7eb;
+        --border-dark: #374151;
+    }
+
+    /* Smooth Transitions for Inputs and Focus States */
+    input, textarea, select {
+        transition: all 0.3s ease-in-out;
+    }
     input[type="text"]:focus,
     textarea:focus,
     select:focus {
-        outline: none !important;
-        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important; 
-        border-color: #60a5fa !important;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+        border-color: var(--primary-light);
+        transform: scale(1.01);
     }
     .dark input[type="text"]:focus,
     .dark textarea:focus,
     .dark select:focus {
-        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
-        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2);
+        border-color: var(--primary-dark);
     }
+
+    /* Custom File Input */
     .custom-file-input::file-selector-button {
-        margin-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;
-        padding-left: 1rem; padding-right: 1rem; border-radius: 0.375rem;
-        border-width: 0; font-size: 0.875rem; font-weight: 600;
-        background-color: #3b82f6; color: #ffffff; cursor: pointer;
-        transition: background-color 150ms ease-in-out;
+        margin-right: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: none;
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
-    .custom-file-input:hover::file-selector-button { background-color: #2563eb; }
-    .dark .custom-file-input::file-selector-button { background-color: #60a5fa; }
-    .dark .custom-file-input:hover::file-selector-button { background-color: #3b82f6; }
-    
+    .custom-file-input:hover::file-selector-button {
+        background: linear-gradient(135deg, #4338ca, #6366f1);
+        transform: translateY(-2px);
+    }
+    .dark .custom-file-input::file-selector-button {
+        background: linear-gradient(135deg, var(--primary-dark), #a5b4fc);
+    }
+    .dark .custom-file-input:hover::file-selector-button {
+        background: linear-gradient(135deg, #4f46e5, #818cf8);
+    }
+
+    /* Custom Select Arrow */
     .custom-select-arrow {
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; 
+        background-position: right 0.75rem center;
+        background-repeat: no-repeat;
+        background-size: 1.25em;
+        padding-right: 2.75rem;
+        transition: all 0.3s ease;
     }
     .dark .custom-select-arrow {
-       background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     }
 
+    /* Tag Suggestions */
     .tag-suggestion-btn {
         cursor: pointer;
-        transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
-        margin-bottom: 0.25rem;
+        transition: all 0.3s ease;
+        border-radius: 1rem;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        border: 1px solid #d1d5db;
+        font-weight: 500;
     }
     .tag-suggestion-btn:hover {
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
     }
-    
+    .dark .tag-suggestion-btn {
+        background: linear-gradient(135deg, #374151, #4b5563);
+        border-color: #6b7280;
+    }
+    .dark .tag-suggestion-btn:hover {
+        background: linear-gradient(135deg, #4b5563, #6b7280);
+    }
+
+    /* Selected Tag Pills */
     .selected-tag-pill {
-        display: inline-flex; align-items: center; margin-right: 0.375rem; 
-        margin-bottom: 0.375rem; padding-left: 0.75rem; padding-right: 0.25rem; 
-        padding-top: 0.375rem; padding-bottom: 0.375rem;
-        border-radius: 9999px; font-size: 0.875rem; font-weight: 500; 
-        border-width: 1px; border-color: transparent;
+        display: inline-flex;
+        align-items: center;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        background: linear-gradient(135deg, #818cf8, #a5b4fc);
+        color: #ffffff;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .selected-tag-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     .selected-tag-pill .remove-tag-btn {
-        margin-left: 0.5rem; background: none; border: none;
-        color: inherit; opacity: 0.6; cursor: pointer;
-        padding: 0.1rem; line-height: 1; font-size: 1.1em;
+        margin-left: 0.75rem;
+        background: none;
+        border: none;
+        color: #ffffff;
+        opacity: 0.7;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: opacity 0.3s ease;
     }
-    .selected-tag-pill .remove-tag-btn:hover { opacity: 1; }
-    .attachment-item { transition: box-shadow 0.3s ease-in-out; }
-    .attachment-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .dark .attachment-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .selected-tag-pill .remove-tag-btn:hover {
+        opacity: 1;
+    }
 
-    /* Styles for AI Progress Modal */
+    /* Attachment Items */
+    .attachment-item {
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        background: #f9fafb;
+    }
+    .attachment-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+    .dark .attachment-item {
+        background: #374151;
+    }
+    .dark .attachment-item:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    /* AI Progress Modal with Glassmorphism */
     #ai-progress-modal {
-        background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent backdrop */
-        transition: opacity 0.3s ease-in-out;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        transition: opacity 0.4s ease-in-out;
     }
     #ai-progress-modal .modal-content {
-        transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1rem;
+        transition: all 0.4s ease-in-out;
+        transform: scale(0.95);
+    }
+    #ai-progress-modal.show .modal-content {
+        transform: scale(1);
+        opacity: 1;
     }
     #ai-progress-bar-container {
-        height: 0.75rem; /* h-3 */
-        background-color: #e5e7eb; /* bg-gray-200 */
-        border-radius: 9999px; /* rounded-full */
+        height: 0.75rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
         overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     .dark #ai-progress-bar-container {
-        background-color: #4b5563; /* dark:bg-gray-600 */
+        background: rgba(255, 255, 255, 0.05);
     }
     #ai-progress-bar {
         height: 100%;
-        background-color: #3b82f6; /* bg-primary-light */
-        transition: width 0.3s ease-in-out; /* Smoother progress update */
+        background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
+        transition: width 0.4s ease-in-out;
         border-radius: 9999px;
     }
     .spinner {
-        border-top-color: #3b82f6; /* primary-light */
-        animation: spin 1s linear infinite;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        border-top-color: var(--primary-light);
+        animation: spin 0.8s linear infinite;
     }
     .dark .spinner {
-        border-top-color: #60a5fa; /* primary-dark */
+        border-top-color: var(--primary-dark);
     }
     @keyframes spin {
         to { transform: rotate(360deg); }
@@ -106,129 +202,126 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-3xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark">
+<div class="container mx-auto px-4 py-12">
+    <div class="bg-card-light dark:bg-card-dark p-8 rounded-2xl shadow-2xl dark:shadow-custom-dark w-full max-w-4xl mx-auto transform transition-all duration-300">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-text-light dark:text-text-dark tracking-tight">
                 {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Create New Entry" %}{% endif %}
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p class="text-base text-gray-500 dark:text-gray-400 mt-2 font-medium">
                 {% if form.instance.pk %}{% trans "Refine your thoughts and memories." %}{% else %}{% trans "Let your thoughts flow onto the page." %}{% endif %}
             </p>
         </header>
 
-        <form method="post" enctype="multipart/form-data" class="space-y-6" id="journal-entry-form" 
+        <form method="post" enctype="multipart/form-data" class="space-y-8" id="journal-entry-form" 
               action="{% if form.instance.pk %}{% url 'journal:journal_update' pk=form.instance.pk %}{% else %}{% url 'journal:journal_create' %}{% endif %}">
             {% csrf_token %}
 
-            {# General Form Errors (and Formset errors) Display Area #}
-            <div id="form-errors-container" class="p-4 mb-6 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-md hidden">
-                <h4 class="font-semibold text-red-700 dark:text-red-300">{% trans "Please correct the errors below:" %}</h4>
-                <ul id="form-error-list" class="list-disc list-inside text-sm text-red-600 dark:text-red-400 mt-2">
+            {# General Form Errors #}
+            <div id="form-errors-container" class="p-5 mb-6 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 rounded-xl hidden">
+                <h4 class="font-semibold text-red-700 dark:text-red-300 text-lg">{% trans "Please correct the errors below:" %}</h4>
+                <ul id="form-error-list" class="list-disc list-inside text-sm text-red-600 dark:text-red-400 mt-3">
                 </ul>
             </div>
             
             {% for field in form %}
                 {% if field.name != 'shared_details' and field.name != 'is_favorite' %}
-                    <div class="field-wrapper-{{ field.name }}">
-                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">
-                            {{ field.label }} {% if field.field.required %}<span class="text-red-500 font-semibold">*</span>{% endif %}
+                    <div class="field-wrapper-{{ field.name }} group">
+                        <label for="{{ field.id_for_label }}" class="block text-base font-semibold text-text-light dark:text-text-dark mb-2 transition-all duration-300 group-hover:text-primary-light dark:group-hover:text-primary-dark">
+                            {{ field.label }} {% if field.field.required %}<span class="text-red-500 font-bold">*</span>{% endif %}
                         </label>
                         
                         {% if field.name == "tags" %}
                             <input type="hidden" name="{{ field.html_name }}" id="{{ field.id_for_label }}" 
                                    value="{% if form.instance.pk %}{{ initial_tags_str|default_if_none:'' }}{% else %}{{ field.value|default_if_none:'' }}{% endif %}">
                             <input type="text" id="tags-display-input"
-                                   class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light mb-2"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 text-base focus:ring-0 focus:border-primary-light mb-3 transition-all duration-300"
                                    placeholder="{{ field.field.widget.attrs.placeholder|default:_('Type tags, separated by commas or Enter...') }}"
                                    aria-describedby="{{ field.id_for_label }}-helptext">
-                            <div id="selected-tags-container" class="flex flex-wrap gap-2 mb-2 empty:mb-0"></div>
+                            <div id="selected-tags-container" class="flex flex-wrap gap-2 mb-3 empty:mb-0"></div>
                             {% if predefined_tags %}
-                                <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{% trans "Suggestions (click to add/remove):" %}</p>
-                                    <div class="flex flex-wrap gap-2 items-center">
+                                <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{% trans "Suggestions (click to add/remove):" %}</p>
+                                    <div class="flex flex-wrap gap-3 items-center">
                                         {% for tag_obj in predefined_tags %}
                                             <button type="button" 
-                                                    class="tag-suggestion-btn px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
-                                                           bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 
-                                                           dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500"
+                                                    class="tag-suggestion-btn px-4 py-2 text-sm font-medium transition-all duration-300"
                                                     data-tag-name="{{ tag_obj.name }}"
                                                     data-tag-emoji="{{ tag_obj.emoji|default:'' }}">
-                                                {% if tag_obj.emoji %}<span class="mr-1.5">{{ tag_obj.emoji }}</span>{% endif %}{{ tag_obj.name }}
+                                                {% if tag_obj.emoji %}<span class="mr-2">{{ tag_obj.emoji }}</span>{% endif %}{{ tag_obj.name }}
                                             </button>
                                         {% endfor %}
                                     </div>
                                 </div>
                             {% endif %}
-                            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400" id="{{ field.id_for_label }}-helptext">{{ field.help_text|safe }}</p>
-                            <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" id="{{ field.id_for_label }}-helptext">{{ field.help_text|safe }}</p>
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 {% for error in field.errors %}{{ error }}{% endfor %}
                             </div>
                         {% elif "Textarea" in field.field.widget|stringformat:"s" %}
-                            {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light" rows=field.field.widget.attrs.rows placeholder=field.field.widget.attrs.placeholder %}
-                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                            {% render_field field class="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 text-base focus:ring-0 focus:border-primary-light transition-all duration-300" rows=field.field.widget.attrs.rows placeholder=field.field.widget.attrs.placeholder %}
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 {% for error in field.errors %}{{ error }}{% endfor %}
                             </div>
                         {% elif "Select" in field.field.widget|stringformat:"s" and field.name == "mood" %}
                             <div class="relative">
-                                {% render_field field class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-150 ease-in-out focus:ring-primary-light focus:border-primary-light custom-select-arrow" %}
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-400">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                {% render_field field class="block w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-base appearance-none transition-all duration-300 focus:ring-0 focus:border-primary-light custom-select-arrow" %}
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700 dark:text-gray-400">
+                                    <svg class="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                                 </div>
                             </div>
-                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 {% for error in field.errors %}{{ error }}{% endfor %}
                             </div>
                         {% else %}
-                             {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light" placeholder=field.field.widget.attrs.placeholder %}
-                             <div id="errors-{{ field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                            {% render_field field class="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 text-base focus:ring-0 focus:border-primary-light transition-all duration-300" placeholder=field.field.widget.attrs.placeholder %}
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 {% for error in field.errors %}{{ error }}{% endfor %}
                             </div>
                         {% endif %}
 
                         {% if field.name != "tags" and field.help_text %}
-                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
                         {% endif %}
                     </div>
                 {% endif %}
             {% endfor %}
 
-            {# --- Attachment Formset --- #}
-            <div class="pt-6 border-t border-border-light dark:border-border-dark">
-                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{% trans "Attachments" %}</h3>
+            {# Attachment Formset #}
+            <div class="pt-8 border-t border-border-light dark:border-border-dark">
+                <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-4">{% trans "Attachments" %}</h3>
                 {{ attachment_formset.management_form }} 
                 
-                <div id="formset-non-form-errors" class="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700 {% if not attachment_formset.non_form_errors %}hidden{% endif %}" role="alert">
+                <div id="formset-non-form-errors" class="p-4 mb-4 text-sm text-red-700 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 rounded-xl {% if not attachment_formset.non_form_errors %}hidden{% endif %}" role="alert">
                     {% for error in attachment_formset.non_form_errors %}
                         <p>{{ error }}</p>
                     {% endfor %}
                 </div>
 
-                <div id="attachments-container" class="space-y-5">
+                <div id="attachments-container" class="space-y-6">
                     {% for formset_form in attachment_formset %}
-                        <div class="attachment-item p-4 border border-gray-300 dark:border-gray-600 rounded-lg 
-                                    {% if formset_form.instance.pk and formset_form.instance.file %}bg-gray-50 dark:bg-gray-800{% else %}bg-white dark:bg-gray-700 shadow-sm{% endif %}">
+                        <div class="attachment-item p-6 border border-gray-300 dark:border-gray-600 rounded-xl">
                             {% for hidden_field in formset_form.hidden_fields %} {{ hidden_field }} {% endfor %}
                             
                             {% for visible_field in formset_form.visible_fields %}
-                                <div class="mb-2">
-                                    <label for="{{ visible_field.id_for_label }}" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                <div class="mb-3">
+                                    <label for="{{ visible_field.id_for_label }}" class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                                         {{ visible_field.label }}
                                         {% if formset_form.instance.pk and formset_form.instance.file and visible_field.name == 'file' %}
                                             <span class="text-gray-500 dark:text-gray-400"> ({% trans "Replace current" %})</span>
                                         {% endif %}
                                     </label>
                                     {% render_field visible_field class="custom-file-input text-sm" %}
-                                    <div id="errors-{{ visible_field.auto_id }}" class="mt-1 text-xs text-red-600 dark:text-red-400">
+                                    <div id="errors-{{ visible_field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
                                         {% for error in visible_field.errors %}{{ error }}{% endfor %}
                                     </div>
                                 </div>
                             {% endfor %}
 
                             {% if formset_form.instance.pk and formset_form.instance.file %}
-                                <div class="existing-attachment-info mt-2 mb-3">
-                                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{% trans "Current file" %}:</p>
-                                    <div class="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+                                <div class="existing-attachment-info mt-3 mb-4">
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{% trans "Current file" %}:</p>
+                                    <div class="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
                                         <i class="fas fa-paperclip text-gray-500 dark:text-gray-400"></i>
                                         <a href="{{ formset_form.instance.file.url }}" target="_blank" class="text-sm text-primary-light dark:text-primary-dark hover:underline break-all" title="{{ formset_form.instance.file.name }}">
                                             {{ formset_form.instance.get_file_name|truncatechars:40 }}
@@ -236,21 +329,21 @@
                                     </div>
                                     {% with file_url=formset_form.instance.file.url|lower %}
                                         {% if ".jpg" in file_url or ".jpeg" in file_url or ".png" in file_url or ".gif" in file_url or ".webp" in file_url %}
-                                            <img src="{{ formset_form.instance.file.url }}" alt="{% trans 'Preview' %}" class="mt-2 max-w-full sm:max-w-[150px] max-h-24 rounded-md border dark:border-gray-500 object-contain bg-gray-100 dark:bg-gray-600 p-0.5">
+                                            <img src="{{ formset_form.instance.file.url }}" alt="{% trans 'Preview' %}" class="mt-3 max-w-full sm:max-w-[200px] max-h-32 rounded-lg border dark:border-gray-600 object-contain bg-gray-100 dark:bg-gray-700 p-1">
                                         {% endif %}
                                     {% endwith %}
                                 </div>
                             {% endif %}
                                 
                             {% if attachment_formset.can_delete and formset_form.instance.pk %}
-                                <div class="flex items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                    {% render_field formset_form.DELETE class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-600 dark:border-gray-500 dark:checked:bg-red-500" %}
-                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
+                                <div class="flex items-center mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                    {% render_field formset_form.DELETE class="h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-red-500 transition-all duration-300" %}
+                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
                                         {% trans "Mark for deletion" %}
                                     </label>
                                 </div>
                             {% endif %}
-                            <div id="formset-form-{{ forloop.counter0 }}-non-field-errors" class="mt-1 text-xs text-red-600 dark:text-red-400">
+                            <div id="formset-form-{{ forloop.counter0 }}-non-field-errors" class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 {% for error in formset_form.non_field_errors %}{{ error }}{% endfor %}
                             </div>
                         </div>
@@ -259,27 +352,27 @@
             </div>
 
             {% with is_favorite_field=form.is_favorite %}
-                <div class="pt-6 border-t border-border-light dark:border-border-dark flex items-center">
-                    {% render_field is_favorite_field class="h-5 w-5 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark" %}
-                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-2.5 block text-sm font-medium text-text-light dark:text-text-dark">
+                <div class="pt-8 border-t border-border-light dark:border-border-dark flex items-center">
+                    {% render_field is_favorite_field class="h-6 w-6 text-primary-light border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-300" %}
+                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-3 block text-base font-semibold text-text-light dark:text-text-dark">
                         {{ is_favorite_field.label }}
                     </label>
                 </div>
                 {% if is_favorite_field.help_text %}
-                    <p class="ml-7 text-xs text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
+                    <p class="ml-9 text-sm text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
                 {% endif %}
-                 <div id="errors-{{ is_favorite_field.auto_id }}" class="ml-7 text-sm text-red-600 dark:text-red-400">
+                <div id="errors-{{ is_favorite_field.auto_id }}" class="ml-9 text-sm text-red-600 dark:text-red-400">
                     {% for error in is_favorite_field.errors %}{{ error }}{% endfor %}
                 </div>
             {% endwith %}
 
-            <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 mt-8">
+            <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-6 space-y-4 sm:space-y-0 mt-10">
                 <a href="{% if form.instance.pk %}{{ form.instance.get_absolute_url }}{% else %}{% url 'journal:journal_list' %}{% endif %}"
-                   class="w-full sm:w-auto order-2 sm:order-1 px-6 py-2.5 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-offset-gray-800 transition-colors">
+                   class="w-full sm:w-auto order-2 sm:order-1 px-8 py-3 text-center border border-gray-300 dark:border-gray-600 rounded-xl text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
                     {% trans "Cancel" %}
                 </a>
                 <button type="submit" id="save-entry-button"
-                        class="w-full sm:w-auto order-1 sm:order-2 px-6 py-2.5 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark dark:focus:ring-offset-gray-800 transition-all duration-150 ease-in-out font-semibold shadow-md hover:shadow-lg">
+                        class="w-full sm:w-auto order-1 sm:order-2 px-8 py-3 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
                     <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Save Entry" %}{% endif %}
                 </button>
             </div>
@@ -289,24 +382,23 @@
 
 {# AI Processing Progress Modal #}
 <div id="ai-progress-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4 py-6 sm:px-0">
-    <div class="fixed inset-0 bg-gray-800 bg-opacity-50 backdrop-blur-sm"></div>
-    <div id="ai-progress-modal-content" class="modal-content bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 w-full max-w-md mx-auto transform opacity-0 scale-95">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-md"></div>
+    <div id="ai-progress-modal-content" class="modal-content rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-auto transform opacity-0">
         <div class="text-center">
-            <div id="ai-spinner" class="spinner w-12 h-12 border-4 border-t-primary-light dark:border-t-primary-dark rounded-full mx-auto mb-4"></div>
-            <h3 id="ai-progress-title" class="text-lg leading-6 font-medium text-text-light dark:text-text-dark mb-2">
+            <div id="ai-spinner" class="spinner w-16 h-16 mx-auto mb-6"></div>
+            <h3 id="ai-progress-title" class="text-2xl font-semibold text-text-light dark:text-text-dark mb-3">
                 {% trans "Crafting your insights..." %}
             </h3>
-            <p id="ai-progress-message" class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <p id="ai-progress-message" class="text-base text-gray-500 dark:text-gray-400 mb-6">
                 {% trans "Please wait a moment while we enhance your journal entry." %}
             </p>
-            <div id="ai-progress-bar-container" class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mb-2">
-                <div id="ai-progress-bar" class="bg-primary-light dark:bg-primary-dark h-2.5 rounded-full" style="width: 0%"></div>
+            <div id="ai-progress-bar-container" class="w-full mb-3">
+                <div id="ai-progress-bar"></div>
             </div>
-            <p id="ai-progress-percentage" class="text-xs text-gray-500 dark:text-gray-400 mb-1">0%</p>
-            <ul id="ai-task-status-list" class="text-xs text-left text-gray-500 dark:text-gray-400 space-y-1 mt-3 list-none p-0">
-                {# Task statuses will be populated here by JavaScript #}
+            <p id="ai-progress-percentage" class="text-sm text-gray-500 dark:text-gray-400 mb-2">0%</p>
+            <ul id="ai-task-status-list" class="text-sm text-left text-gray-500 dark:text-gray-400 space-y-2 mt-4 list-none">
             </ul>
-            <div id="ai-success-message" class="hidden mt-4 p-3 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 rounded-md">
+            <div id="ai-success-message" class="hidden mt-6 p-4 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-xl">
                 <i class="fas fa-check-circle mr-2"></i><span>{% trans "Your entry has been beautifully enhanced!" %}</span>
             </div>
         </div>
@@ -316,7 +408,7 @@
 
 {% block extra_js %}
     <script>
-        // --- Tag Management JavaScript ---
+        // Tag Management JavaScript (unchanged functionality, minor cleanup)
         document.addEventListener('DOMContentLoaded', function() {
             const journalFormForTags = document.getElementById('journal-entry-form'); 
             const hiddenTagsInput = document.getElementById('{{ form.tags.id_for_label }}'); 
@@ -327,18 +419,17 @@
             let currentSelectedTags = new Set();
 
             function normalizeTagName(name) {
-                if (typeof name !== 'string') return '';
-                return name.trim().toLowerCase();
+                return typeof name === 'string' ? name.trim().toLowerCase() : '';
             }
             
             function capitalizeTagName(name) {
-                if (typeof name !== 'string') return '';
-                return name.trim().split(' ')
-                           .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                           .join(' ');
+                return typeof name === 'string' ? 
+                    name.trim().split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                        .join(' ') : '';
             }
 
-            window.updatePillsAndHiddenInput = function() { // Make it globally accessible for AI script
+            window.updatePillsAndHiddenInput = function() {
                 const capitalizedTagsForSubmit = Array.from(currentSelectedTags).map(t_norm => capitalizeTagName(t_norm));
                 if (hiddenTagsInput) {
                     hiddenTagsInput.value = capitalizedTagsForSubmit.join(', ');
@@ -357,16 +448,16 @@
                             emojiPrefix = predefinedTagButton.dataset.tagEmoji + ' ';
                         }
                         
-                        pill.className = 'selected-tag-pill bg-indigo-100 text-indigo-700 dark:bg-indigo-700 dark:text-indigo-200 border-indigo-300 dark:border-indigo-600';
+                        pill.className = 'selected-tag-pill';
                         pill.textContent = emojiPrefix + displayTagName;
                         
                         const removeBtn = document.createElement('button');
                         removeBtn.type = 'button';
-                        removeBtn.innerHTML = '&times;';
-                        removeBtn.className = 'remove-tag-btn text-indigo-700 dark:text-indigo-200';
+                        removeBtn.innerHTML = '×';
+                        removeBtn.className = 'remove-tag-btn';
                         removeBtn.setAttribute('aria-label', `Remove ${displayTagName}`);
                         removeBtn.onclick = function(event) {
-                            event.stopPropagation(); 
+                            event.stopPropagation();
                             currentSelectedTags.delete(normalizedTagName);
                             updatePillsAndHiddenInput();
                         };
@@ -382,7 +473,7 @@
                     .map(t => t.trim())
                     .filter(t => t.length > 0) 
                     .forEach(t => currentSelectedTags.add(normalizeTagName(t)));
-                updatePillsAndHiddenInput(); 
+                updatePillsAndHiddenInput();
             }
 
             suggestionButtons.forEach(button => {
@@ -397,8 +488,8 @@
                     }
                     updatePillsAndHiddenInput();
                     if (displayTagsInput) {
-                         displayTagsInput.value = ''; 
-                         displayTagsInput.focus(); 
+                        displayTagsInput.value = '';
+                        displayTagsInput.focus();
                     }
                 });
             });
@@ -406,30 +497,30 @@
             if (displayTagsInput) {
                 displayTagsInput.addEventListener('keydown', function(event) {
                     if (event.key === 'Enter' || event.key === ',') {
-                        event.preventDefault(); 
+                        event.preventDefault();
                         const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
                         if (newTagNameRaw) {
                             const normalizedNewTag = normalizeTagName(newTagNameRaw);
-                            currentSelectedTags.add(normalizedNewTag); 
+                            currentSelectedTags.add(normalizedNewTag);
                             updatePillsAndHiddenInput();
                         }
-                        this.value = ''; 
+                        this.value = '';
                     }
                 });
                 displayTagsInput.addEventListener('blur', function() {
-                    setTimeout(() => { 
+                    setTimeout(() => {
                         const newTagNameRaw = this.value.trim().replace(/,$/, '').trim();
                         if (newTagNameRaw) {
                             const normalizedNewTag = normalizeTagName(newTagNameRaw);
                             if (!currentSelectedTags.has(normalizedNewTag)) {
-                                 currentSelectedTags.add(normalizedNewTag);
-                                 updatePillsAndHiddenInput();
+                                currentSelectedTags.add(normalizedNewTag);
+                                updatePillsAndHiddenInput();
                             }
                             if (document.activeElement !== this && !Array.from(suggestionButtons).some(btn => btn === document.activeElement)) {
-                                this.value = ''; 
+                                this.value = '';
                             }
                         }
-                    }, 100); 
+                    }, 100);
                 });
             }
         });
