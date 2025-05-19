@@ -1,89 +1,339 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load widget_tweaks %}
 
-{% block title %}Sign Up{% endblock %}
+{% block title %}{% trans "Sign Up to LifeLedger" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Animations and specific styles for the signup page */
+    @keyframes panelSlideInLeftAuth { 
+        from { opacity: 0; transform: translateX(-80px) scale(0.95); }
+        to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes panelSlideInRightAuth { 
+        from { opacity: 0; transform: translateX(80px) scale(0.95); }
+        to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    .animate-panel-left-auth { 
+        animation: panelSlideInLeftAuth 1s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
+        opacity: 0; 
+    }
+    .animate-panel-right-auth { 
+        animation: panelSlideInRightAuth 1s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
+        opacity: 0; 
+    }
+
+    .form-element-animate { opacity: 0; }
+    @keyframes formElementFadeInUp { 
+        from { opacity: 0; transform: translateY(25px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .signup-button-enhanced {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        box-shadow: 0 6px 20px -5px var(--primary-light);
+    }
+    .dark .signup-button-enhanced {
+        box-shadow: 0 6px 20px -5px var(--primary-dark-theme);
+    }
+    .signup-button-enhanced:hover {
+        transform: translateY(-2px) scale(1.04);
+        box-shadow: 0 12px 30px -6px var(--primary-light);
+    }
+    .dark .signup-button-enhanced:hover {
+        box-shadow: 0 12px 30px -6px var(--primary-dark-theme);
+    }
+    .signup-button-enhanced::before {
+        content: ''; position: absolute; top: -10%; left: -150%;
+        width: 70%; height: 130%;
+        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+        transform: skewX(-20deg); transition: left 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+        opacity: 0;
+    }
+    .signup-button-enhanced:hover::before { left: 150%; opacity: 1; }
+    .signup-button-enhanced .icon-btn { transition: transform 0.3s ease; }
+    .signup-button-enhanced:hover .icon-btn { transform: translateX(5px) scale(1.2) rotate(8deg); }
+
+    .decorative-panel-text-shadow {
+        text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .dark .decorative-panel-text-shadow {
+        text-shadow: 0 2px 6px rgba(255,255,255,0.2);
+    }
+
+    .decorative-panel-auth .fa-feather-alt {
+        transition: all 0.3s ease;
+    }
+    .decorative-panel-auth .fa-feather-alt:hover {
+        transform: scale(1.1) rotate(5deg);
+        filter: brightness(1.2);
+    }
+
+    /* Popover styles */
+    .help-popover {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 0.5rem);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        width: 100%;
+        max-width: 260px;
+        padding: 0.75rem;
+        background-color: #F5FAFF;
+        border: 1px solid #BFDBFE;
+        border-radius: 0.75rem;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        opacity: 0;
+    }
+    .dark .help-popover {
+        background-color: #1E293B;
+        border-color: #4B6EAF;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .help-popover.active {
+        display: block;
+        opacity: 1;
+        transform: translateX(-50%) translateY(-0.5rem);
+    }
+    .help-popover::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #BFDBFE;
+    }
+    .dark .help-popover::after {
+        border-top-color: #4B6EAF;
+    }
+    .help-icon {
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    .help-icon:hover {
+        color: #2563EB;
+    }
+    .dark .help-icon:hover {
+        color: #60A5FA;
+    }
+
+    /* Eye icon styles */
+    .password-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6B7280;
+        transition: color 0.2s ease;
+    }
+    .dark .password-toggle {
+        color: #D1D5DB;
+    }
+    .password-toggle:hover {
+        color: #2563EB;
+    }
+    .dark .password-toggle:hover {
+        color: #60A5FA;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="py-16 md:py-24 bg-background-light dark:bg-background-dark min-h-screen-minus-nav-footer flex items-center justify-center">
-    <div class="container mx-auto px-4">
-        <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-md mx-auto">
-            <h2 class="text-3xl font-bold text-text-light dark:text-text-dark mb-6 text-center">Create Your Account</h2>
+<section class="min-h-screen-minus-nav-footer flex bg-background-light dark:bg-background-dark">
+    <div class="flex flex-col md:flex-row w-full">
+        <div class="decorative-panel-auth hidden md:flex md:w-1/2 lg:w-3/5 flex-col items-center justify-center p-12 animate-panel-left-auth">
+            <div class="text-center max-w-lg">
+                <a href="{% url 'accounts:home' %}" class="inline-block mb-10 form-element-animate" data-animation-delay="0.6s">
+                    <i class="fas fa-feather-alt text-7xl lg:text-8xl text-gray-700 dark:text-gray-100 hover:text-gray-800 dark:hover:text-white transition-all duration-300" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));"></i>
+                </a>
+                <h1 class="text-4xl lg:text-5xl font-extrabold mb-6 tracking-tight form-element-animate text-gray-800 dark:text-white decorative-panel-text-shadow dark:decorative-panel-text-shadow" data-animation-delay="0.8s">
+                    {% trans "Join LifeLedger Today" %}
+                </h1>
+                <p class="text-lg lg:text-xl text-gray-700 dark:text-gray-200 leading-relaxed form-element-animate decorative-panel-text-shadow dark:decorative-panel-text-shadow" data-animation-delay="1.0s">
+                    {% trans "Craft Your Story, One Page at a Time" %}
+                </p>
+            </div>
+        </div>
 
-            <form method="post">
-                {% csrf_token %}
-                {% for field in form %}
-                    <div class="mb-4">
-                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                            {{ field.label }}
-                        </label>
-                        {{ field }}
-                        {% if field.help_text %}
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>
-                        {% endif %}
-                        {% for error in field.errors %}
-                            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                        {% endfor %}
+        <div class="w-full md:w-1/2 lg:w-2/5 flex items-center justify-center p-6 sm:p-8 md:p-12 animate-panel-right-auth">
+            <div class="bg-card-light dark:bg-card-dark p-8 sm:p-10 rounded-2xl shadow-2xl dark:shadow-gray-900/60 w-full max-w-md bg-opacity-90 backdrop-blur-md">
+                <div class="form-element-animate" data-animation-delay="0.7s">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2 text-center">{% trans "Sign Up" %}</h2>
+                    <p class="text-center text-gray-500 dark:text-gray-300 mb-10 text-sm">{% trans "Create your personal journal." %}</p>
+                </div>
+
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="form-element-animate" data-form-element-index="{{ forloop.counter0 }}">
+                            <div class="relative">
+                                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 flex items-center">
+                                    {{ field.label }}
+                                    {% if field.id_for_label == 'id_username' or field.id_for_label == 'id_email' or field.id_for_label == 'id_password1' %}
+                                        <i class="fas fa-info-circle help-icon ml-2 text-gray-500 dark:text-gray-400" data-target="popover-{{ field.id_for_label }}" aria-label="Show field requirements"></i>
+                                    {% endif %}
+                                </label>
+                                <div class="relative">
+                                    {% with placeholder_text=field.field.widget.attrs.placeholder|default_if_none:'' %}
+                                        {% if field.id_for_label == 'id_password1' or field.id_for_label == 'id_password2' %}
+                                            {% render_field field class="block w-full px-4 py-3 text-sm border border-border-light dark:border-border-dark rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark-theme focus:border-transparent bg-background-light dark:bg-gray-700 text-text-light dark:text-text-dark transition-all duration-200 pr-10" placeholder=placeholder_text type="password" %}
+                                        {% else %}
+                                            {% render_field field class="block w-full px-4 py-3 text-sm border border-border-light dark:border-border-dark rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark-theme focus:border-transparent bg-background-light dark:bg-gray-700 text-text-light dark:text-text-dark transition-all duration-200" placeholder=placeholder_text %}
+                                        {% endif %}
+                                    {% endwith %}
+                                    {% if field.id_for_label == 'id_password1' or field.id_for_label == 'id_password2' %}
+                                        <i class="fas fa-eye password-toggle" data-target="{{ field.id_for_label }}" aria-label="Toggle password visibility"></i>
+                                    {% endif %}
+                                </div>
+                                {% if field.id_for_label == 'id_username' or field.id_for_label == 'id_email' or field.id_for_label == 'id_password1' %}
+                                    <div class="help-popover" id="popover-{{ field.id_for_label }}" aria-describedby="{{ field.id_for_label }}-help">
+                                        <ul class="text-xs text-gray-900 dark:text-gray-100 list-disc list-inside">
+                                            {% if field.id_for_label == 'id_username' %}
+                                                <li>{% trans "150 characters or fewer" %}</li>
+                                                <li>{% trans "Letters, digits, and @/./+/-/_ only" %}</li>
+                                            {% elif field.id_for_label == 'id_password1' %}
+                                                <li>{% trans "At least 8 characters" %}</li>
+                                                <li>{% trans "Not too similar to your other personal information" %}</li>
+                                                <li>{% trans "Not a commonly used password" %}</li>
+                                                <li>{% trans "Not entirely numeric" %}</li>
+                                            {% else %}
+                                                <li>{% trans "Enter a valid email address" %}</li>
+                                                <li>{% trans "e.g : test@gmail.com" %}</li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% for error in field.errors %}
+                                <p class="mt-1.5 text-xs text-red-500 dark:text-red-300">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    {% if form.non_field_errors %}
+                        <div class="mb-4 p-3 bg-red-100 dark:bg-red-800/40 border border-red-300 dark:border-red-700 rounded-lg form-element-animate" data-form-element-index="{{ form.fields|length }}">
+                            {% for error in form.non_field_errors %}
+                                <p class="text-sm text-red-700 dark:text-red-200">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-element-animate" data-form-element-index="{{ form.fields|length|add:1 }}">
+                        <button type="submit" class="signup-button-enhanced w-full flex items-center justify-center px-6 py-3.5 bg-gradient-to-r from-primary-light to-indigo-600 hover:from-indigo-600 hover:to-primary-light dark:from-primary-dark-theme dark:to-indigo-500 dark:hover:from-indigo-500 dark:hover:to-primary-dark-theme text-white rounded-lg font-semibold text-base transition-all duration-300">
+                            <i class="fas fa-user-plus icon-btn mr-2.5"></i>
+                            {% trans "Sign Up" %}
+                        </button>
                     </div>
-                {% endfor %}
+                </form>
 
-                {# Display non-field errors #}
-                {% if form.non_field_errors %}
-                    <div class="mb-4">
-                        {% for error in form.non_field_errors %}
-                            <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-
-                <button type="submit" class="w-full px-4 py-2 bg-primary-light text-white rounded-md hover:bg-primary-dark transition duration-300 font-semibold">
-                    Sign Up
-                </button>
-            </form>
-
-            {# Link to login page and resend activation email #}
-            <p class="text-center text-sm mt-6">
-                Already have an account? <a href="{% url 'accounts:login' %}" class="text-primary-light dark:text-primary-dark hover:underline">Login</a>
-            </p>
-             <p class="text-center text-sm mt-2 flex items-center justify-center"> {# Use flex to align items #}
-                 {# Link to resend activation email page with arrow indicator #}
-                 <a href="{% url 'accounts:resend_activation_email' %}" class="text-primary-light dark:text-primary-dark hover:underline flex items-center"> {# Use flex to align items #}
-                    Resend Activation Email
-                    {# Arrow icon - using Font Awesome #}
-                    <i class="fas fa-arrow-right ml-1 arrow-indicator"></i> {# Add arrow-indicator class for styling/animation #}
-                 </a>
-            </p>
+                <div class="mt-10 text-center text-sm space-y-3.5 form-element-animate" data-form-element-index="{{ form.fields|length|add:2 }}">
+                    <p class="text-gray-600 dark:text-gray-300">
+                        {% trans "Already have an account?" %}
+                        <a href="{% url 'accounts:login' %}" class="font-medium text-primary-light dark:text-primary-dark-theme hover:text-indigo-700 dark:hover:text-indigo-400 hover:underline transition-colors">
+                            {% trans "Login Here" %}
+                        </a>
+                    </p>
+                    <p>
+                        <a href="{% url 'accounts:resend_activation_email' %}" class="font-medium text-gray-500 dark:text-gray-200 hover:text-primary-light dark:hover:text-primary-dark-theme hover:underline transition-colors inline-flex items-center group">
+                            {% trans "Resend Activation Email" %}
+                            <i class="fas fa-arrow-right ml-1.5 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"></i>
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 {% endblock %}
 
-{# Add basic Tailwind form styling for input fields and arrow animation #}
-{% block extra_css %}
-<style>
-    /* Basic styling for form inputs */
-    #id_username, #id_password1, #id_password2, #id_email {
-        width: 100%;
-        padding: 0.75rem; /* p-3 */
-        border-radius: 0.375rem; /* rounded-md */
-        border: 1px solid #D1D5DB; /* border-gray-300 */
-        background-color: #F9FAFB; /* bg-gray-50 */
-        color: #1F2937; /* text-gray-900 */
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Form element animations
+    const formElements = document.querySelectorAll('.form-element-animate');
+    const baseDelay = 0.6;
+
+    formElements.forEach(el => {
+        let delay = el.dataset.animationDelay;
+
+        if (!delay && el.closest('form')) {
+            const formElementIndex = parseInt(el.dataset.formElementIndex || '0');
+            delay = `${baseDelay + formElementIndex * 0.07}s`;
+        } else if (!delay) {
+            delay = '0s';
+        }
+        
+        el.style.animation = `formElementFadeInUp 0.6s ${delay} cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+    });
+
+    // Scroll animations
+    const scrollAnimatedElements = document.querySelectorAll('.animate-on-scroll');
+    if (scrollAnimatedElements.length > 0 && (typeof ScrollReveal === 'undefined' && typeof window.observer === 'undefined')) {
+        const scrollObserverOptions = { threshold: 0.1 };
+        const scrollObserver = new IntersectionObserver((entries, observerInstance) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observerInstance.unobserve(entry.target);
+                }
+            });
+        }, scrollObserverOptions);
+        scrollAnimatedElements.forEach(el => scrollObserver.observe(el));
     }
 
-    .dark #id_username, .dark #id_password1, .dark #id_password2, .dark #id_email {
-         border-color: #4B5563; /* dark:border-gray-600 */
-         background-color: #1F2937; /* dark:bg-gray-700 */
-         color: #F9FAFB; /* dark:text-white */
-    }
+    // Help popover hover and click
+    const helpIcons = document.querySelectorAll('.help-icon');
+    helpIcons.forEach(icon => {
+        const popoverId = icon.dataset.target;
+        const popover = document.getElementById(popoverId);
 
-    #id_username:focus, #id_password1:focus, #id_password2:focus, #id_email:focus {
-        outline: none;
-        border-color: #2563EB; /* focus:border-blue-500 */
-        box-shadow: 0 0 0 1px #2563EB; /* focus:ring-blue-500 */
-    }
-     .dark #id_username:focus, .dark #id_password1:focus, .dark #id_password2:focus, .dark #id_email:focus {
-        border-color: #60A5FA; /* dark:focus:border-blue-400 */
-        box-shadow: 0 0 0 1px #60A5FA; /* dark:focus:ring-blue-400 */
-     }
-</style>
+        // Hover events
+        icon.addEventListener('mouseenter', () => {
+            popover.classList.add('active');
+        });
+        icon.addEventListener('mouseleave', () => {
+            if (!popover.classList.contains('click-active')) {
+                popover.classList.remove('active');
+            }
+        });
+
+        // Click events
+        icon.addEventListener('click', (e) => {
+            e.preventDefault();
+            popover.classList.toggle('click-active');
+            popover.classList.toggle('active');
+        });
+    });
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.help-icon') && !e.target.closest('.help-popover')) {
+            document.querySelectorAll('.help-popover.click-active').forEach(popover => {
+                popover.classList.remove('active', 'click-active');
+            });
+        }
+    });
+
+    // Password toggle functionality
+    const toggleIcons = document.querySelectorAll('.password-toggle');
+    toggleIcons.forEach(icon => {
+        icon.addEventListener('click', () => {
+            const inputId = icon.dataset.target;
+            const input = document.getElementById(inputId);
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isPassword);
+            icon.classList.toggle('fa-eye-slash', isPassword);
+        });
+    });
+});
+</script>
 {% endblock %}
