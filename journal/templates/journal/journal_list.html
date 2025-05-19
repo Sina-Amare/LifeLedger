@@ -83,6 +83,64 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
+
+    /* Pagination Styles */
+    .pagination-nav {
+        display: flex;
+        justify-content: center;
+        margin-top: 3rem;
+    }
+
+    .pagination-ul {
+        display: flex;
+        flex-wrap ✔wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .pagination-ul li {
+        list-style: none;
+    }
+
+    .pagination-ul a,
+    .pagination-ul span {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        font-weight: 500;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .pagination-ul a {
+        background: var(--card-light);
+        color: var(--text-light);
+        border: 1px solid var(--border-light);
+    }
+
+    .dark .pagination-ul a {
+        background: var(--card-dark);
+        color: var(--text-dark);
+        border-color: var(--border-dark);
+    }
+
+    .pagination-ul a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .dark .pagination-ul a:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .pagination-ul span {
+        cursor: default;
+    }
+
+    .pagination-ul .active-page {
+        background: linear-gradient(135deg, var(--secondary-light), var(--secondary-dark));
+        color: white;
+        border: none;
+    }
 </style>
 {% endblock %}
 
@@ -145,7 +203,7 @@
         <div class="flex flex-col sm:flex-row justify-end mt-8 pt-6 border-t border-border-light dark:border-border-dark space-y-4 sm:space-y-0 sm:space-x-4">
             {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query or current_tag_filter != '' %}
                 <a href="{% url 'journal:journal_list' %}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-semibold rounded-xl text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
-                    <i class="fas ${({content}}) fa-times mr-2"></i>{% trans "Clear Filters" %}
+                    <i class="fas fa-times mr-2"></i>{% trans "Clear Filters" %}
                 </a>
             {% endif %}
             <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-secondary-light to-secondary-dark text-white rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-secondary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
@@ -226,11 +284,70 @@
         </div>
 
         {% if is_paginated %}
-            {# Pagination controls unchanged #}
+            <nav aria-label="Pagination" class="mt-12 flex justify-center">
+                <ul class="flex items-center space-x-2">
+                    <!-- Previous Page Link -->
+                    {% if page_obj.has_previous %}
+                        <li>
+                            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}"
+                               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                                <i class="fas fa-chevron-left mr-2"></i>{% trans "Previous" %}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <span class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl cursor-not-allowed">
+                                <i class="fas fa-chevron-left mr-2"></i>{% trans "Previous" %}
+                            </span>
+                        </li>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li>
+                                <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-secondary-light to-secondary-dark text-white rounded-xl font-semibold shadow-md">
+                                    {{ num }}
+                                </span>
+                            </li>
+                        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                            <li>
+                                <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}"
+                                   class="inline-flex items-center px-4 py-2 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Next Page Link -->
+                    {% if page_obj.has_next %}
+                        <li>
+                            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}"
+                               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                                {% trans "Next" %}<i class="fas fa-chevron-right ml-2"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <span class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl cursor-not-allowed">
+                                {% trans "Next" %}<i class="fas fa-chevron-right ml-2"></i>
+                            </span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% endif %}
 
     {% else %}
-        {# No Entries message unchanged #}
+        <div class="text-center py-12">
+            <p class="text-xl text-text-light dark:text-text-dark font-semibold">{% trans "No journal entries found." %}</p>
+            <p class="text-base text-gray-500 dark:text-gray-400 mt-2">{% trans "Start by writing a new entry!" %}</p>
+            <a href="{% url 'journal:journal_create' %}"
+               class="mt-4 inline-flex items-center px-6 py-3 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 font-semibold text-base transform hover:scale-105">
+                <i class="fas fa-feather-alt mr-2"></i>{% trans "Write New Entry" %}
+            </a>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
