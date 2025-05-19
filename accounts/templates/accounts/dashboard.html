@@ -6,11 +6,10 @@
 
 {% block extra_head %}
 <style>
-    /* Optional: Add specific styles for dashboard elements if needed, */
-    /* e.g., for custom icon colors or card entry animations */
+    /* Animations and specific styles for dashboard elements */
     .dashboard-card {
         transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        @apply bg-card-light dark:bg-card-dark rounded-xl shadow-lg dark:shadow-2xl;
+        @apply bg-card-light dark:bg-card-dark rounded-xl shadow-lg dark:shadow-2xl p-6 sm:p-8;
     }
     .dashboard-card:hover {
         transform: translateY(-6px);
@@ -23,14 +22,237 @@
         transform: scale(1.1);
     }
 
-    .quick-action-link {
-        @apply block p-5 rounded-lg shadow-md transition-all duration-300 ease-in-out;
-        @apply bg-card-light dark:bg-card-dark hover:bg-gray-50 dark:hover:bg-gray-700;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-light dark:focus-visible:ring-offset-card-dark;
+    /* Fade-in animation */
+    .fade-in-element {
+        opacity: 0;
+        animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     }
-    .quick-action-link:hover {
-        transform: translateY(-2px);
-        @apply shadow-lg;
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Popover styles */
+    .help-popover {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 0.5rem);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        width: 100%;
+        max-width: 260px;
+        padding: 0.75rem;
+        background-color: #F5FAFF;
+        border: 1px solid #BFDBFE;
+        border-radius: 0.75rem;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        opacity: 0;
+    }
+    .dark .help-popover {
+        background-color: #1E293B;
+        border-color: #4B6EAF;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .help-popover.active {
+        display: block;
+        opacity: 1;
+        transform: translateX(-50%) translateY(-0.5rem);
+    }
+    .help-popover::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #BFDBFE;
+    }
+    .dark .help-popover::after {
+        border-top-color: #4B6EAF;
+    }
+    .help-icon {
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    .help-icon:hover {
+        color: #2563EB;
+    }
+    .dark .help-icon:hover {
+        color: #60A5FA;
+    }
+
+    /* Card action link styles */
+    .card-action {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        @apply text-primary-light dark:text-primary-dark font-medium text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light;
+    }
+    .card-action::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background: linear-gradient(90deg, #3B82F6, #8B5CF6);
+        transition: width 0.3s ease;
+    }
+    .dark .card-action::after {
+        background: linear-gradient(90deg, #60A5FA, #A78BFA);
+    }
+    .card-action:hover::after {
+        width: 100%;
+    }
+    .card-action .icon-btn {
+        transition: transform 0.3s ease, filter 0.3s ease;
+    }
+    .card-action:hover .icon-btn {
+        transform: translateX(4px);
+        filter: brightness(1.2);
+    }
+
+    /* Disabled card action */
+    .card-action-disabled {
+        display: inline-flex;
+        align-items: center;
+        @apply text-gray-400 dark:text-gray-500 font-medium text-base cursor-not-allowed;
+    }
+
+    /* Quick Action Styles */
+    .quick-action {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        transition: transform 0.3s ease;
+        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light;
+    }
+
+    /* Staggered positioning for creativity */
+    .quick-action:nth-child(1) {
+        transform: translateY(10px);
+    }
+    .quick-action:nth-child(2) {
+        transform: translateY(-10px);
+    }
+    .quick-action:nth-child(3) {
+        transform: translateY(5px);
+    }
+
+    /* Icon Styles */
+    .quick-action-icon {
+        font-size: 32px;
+        background: linear-gradient(45deg, #3B82F6, #8B5CF6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: all 0.3s ease;
+    }
+    .dark .quick-action-icon {
+        background: linear-gradient(45deg, #60A5FA, #A78BFA);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .quick-action-icon-pencil {
+        background: linear-gradient(45deg, #FBBF24, #F97316);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .dark .quick-action-icon-pencil {
+        background: linear-gradient(45deg, #FCD34D, #F87171);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .quick-action-icon-bulb {
+        background: linear-gradient(45deg, #10B981, #3B82F6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .dark .quick-action-icon-bulb {
+        background: linear-gradient(45deg, #34D399, #60A5FA);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .quick-action:hover .quick-action-icon {
+        transform: rotate(15deg) scale(1.1);
+        text-shadow: 0 0 8px rgba(59,130,246,0.5);
+    }
+    .quick-action-icon-disabled {
+        font-size: 32px;
+        color: #9CA3AF;
+        @apply text-gray-400 dark:text-gray-500;
+    }
+
+    /* Text Styles */
+    .quick-action-title {
+        position: relative;
+        @apply text-base font-semibold text-text-light dark:text-text-dark;
+    }
+    .quick-action-title::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -4px;
+        left: 0;
+        background: linear-gradient(90deg, #3B82F6, #8B5CF6);
+        transition: width 0.3s ease;
+    }
+    .dark .quick-action-title::after {
+        background: linear-gradient(90deg, #60A5FA, #A78BFA);
+    }
+    .quick-action:hover .quick-action-title::after {
+        width: 100%;
+        animation: wave 1s infinite;
+    }
+    @keyframes wave {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(5px); }
+        100% { transform: translateX(0); }
+    }
+    .quick-action-subtitle-container {
+        height: 100px;
+        overflow-y: auto;
+        @apply bg-background-light dark:bg-background-dark p-2 rounded mt-2;
+    }
+    .quick-action-subtitle {
+        @apply text-xs text-gray-500 dark:text-gray-400;
+    }
+
+    /* Disabled Quick Action */
+    .quick-action-disabled {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        opacity: 0.7;
+        @apply cursor-not-allowed;
+    }
+    .quick-action-title-disabled {
+        @apply text-base font-semibold text-gray-400 dark:text-gray-500;
+    }
+    .quick-action-subtitle-disabled {
+        @apply text-xs text-gray-400 dark:text-gray-400;
+    }
+
+    /* Custom styles for Latest Reflection icon */
+    .reflection-icon {
+        font-size: 2rem;
+        background: linear-gradient(45deg, #14B8A6, #9333EA);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: transform 0.3s ease-in-out;
+    }
+    .dark .reflection-icon {
+        background: linear-gradient(45deg, #2DD4BF, #A855F7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .dashboard-card:hover .reflection-icon {
+        transform: scale(1.1);
     }
 </style>
 {% endblock %}
@@ -46,34 +268,78 @@
             <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
                 {% trans "Your personal space to reflect, grow, and manage your life's ledger." %}
             </p>
-            {# Optional: Add a subtle AI-generated welcome quote here later #}
-            {# <p id="dashboard-welcome-quote" class="text-sm italic text-gray-500 dark:text-gray-400 mt-4"></p> #}
+            <p id="dashboard-welcome-quote" class="text-sm italic text-gray-500 dark:text-gray-400 mt-4">
+                {% trans "Every entry is a step toward self-discovery." %}
+            </p>
         </header>
+
+        {# Recent Journal Entry Section #}
+        <div class="mb-12 md:mb-16">
+            <h2 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Your Latest Reflection" %}</h2>
+            <div class="dashboard-card fade-in-element" style="animation-delay: 0.2s;">
+                {% if latest_entry %}
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between">
+                        <div class="flex items-start mb-4">
+                            <i class="fas fa-feather-alt reflection-icon mr-4"></i>
+                            <div>
+                                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">
+                                    {{ latest_entry.title|truncatechars:50 }}
+                                </h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                    {% trans "Written on" %} {{ latest_entry.created_at|date:"F j, Y" }}
+                                </p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                                    {{ latest_entry.content|truncatewords:20 }}
+                                </p>
+                            </div>
+                        </div>
+                        <a href="{% url 'journal:journal_detail' pk=latest_entry.pk %}"
+                           class="card-action mt-4 sm:mt-0">
+                            {% trans "Read More" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                        {% trans "No journal entries yet. Start your journey by writing your first reflection!" %}
+                    </p>
+                    <a href="{% url 'journal:journal_create' %}"
+                       class="card-action mt-4">
+                        {% trans "Write Your First Entry" %} <i class="fas fa-pencil-alt icon-btn ml-2 text-sm"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
 
         {# Main Action Cards Section #}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-16 md:mb-20">
             {# My Journal Card #}
-            <div class="dashboard-card group p-6 sm:p-8 flex flex-col">
-                <div class="flex items-start text-primary-light dark:text-primary-dark mb-4">
+            <div class="dashboard-card group p-6 sm:p-8 flex flex-col fade-in-element" style="animation-delay: 0.3s;">
+                <div class="flex items-start text-primary-light dark:text-primary-dark mb-4 relative">
                     <i class="fas fa-book-open fa-2x mr-4 card-icon pt-1"></i>
                     <div>
                         <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "My Journal" %}</h3>
                         <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Entries" %}</p>
                     </div>
+                    <i class="fas fa-info-circle help-icon ml-2 text-gray-500 dark:text-gray-400 absolute right-0 top-0" data-target="popover-journal" aria-label="Journal information"></i>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Write new entries, revisit your past memories, and reflect on your journey. Your stories await." %}
                 </p>
                 <a href="{% url 'journal:journal_list' %}"
-                   class="inline-flex items-center justify-center w-full mt-auto px-6 py-3 bg-primary-light text-white rounded-lg hover:bg-primary-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-dark dark:focus-visible:ring-offset-card-dark transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
-                    {% trans "Go to Journal" %} <i class="fas fa-arrow-right ml-2 text-xs opacity-75 group-hover:opacity-100 transition-opacity"></i>
+                   class="card-action mt-auto">
+                    {% trans "Go to Journal" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
                 </a>
+                <div class="help-popover" id="popover-journal" aria-describedby="journal-help">
+                    <p class="text-xs text-gray-900 dark:text-gray-100">
+                        {% trans "Create and view your journal entries here. Reflect on your thoughts and memories." %}
+                    </p>
+                </div>
             </div>
 
-            {# AI Insights Card (Placeholder) #}
-            <div class="dashboard-card group p-6 sm:p-8 flex flex-col">
+            {# AI Insights Card #}
+            <div class="dashboard-card group p-6 sm:p-8 flex flex-col fade-in-element" style="animation-delay: 0.4s;">
                 <div class="flex items-start text-secondary-light dark:text-secondary-dark mb-4">
-                    <i class="fas fa-brain fa-2x mr-4 card-icon pt-1"></i> {# Changed icon #}
+                    <i class="fas fa-brain fa-2x mr-4 card-icon pt-1"></i>
                     <div>
                         <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "AI Insights" %}</h3>
                         <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Discover Yourself" %}</p>
@@ -82,28 +348,28 @@
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Uncover patterns in your emotions and experiences with upcoming AI-powered analysis." %}
                 </p>
-                <a href="#" {# Replace with actual URL when ready #}
-                   class="inline-flex items-center justify-center w-full mt-auto px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed focus:outline-none font-medium shadow-sm"
+                <a href="#"
+                   class="card-action-disabled mt-auto"
                    aria-disabled="true" title="{% trans 'Coming Soon' %}">
-                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-xs"></i>
+                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-sm"></i>
                 </a>
             </div>
 
             {# Profile & Settings Card #}
-            <div class="dashboard-card group p-6 sm:p-8 flex flex-col">
+            <div class="dashboard-card group p-6 sm:p-8 flex flex-col fade-in-element" style="animation-delay: 0.5s;">
                 <div class="flex items-start text-accent-light dark:text-accent-dark mb-4">
                     <i class="fas fa-user-cog fa-2x mr-4 card-icon pt-1"></i>
                     <div>
                         <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Profile & Settings" %}</h3>
-                         <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Account" %}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Account" %}</p>
                     </div>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Manage your account details, preferences, and application settings to tailor your experience." %}
                 </p>
-                <a href="#" {# TODO: Replace with actual profile URL e.g. {% url 'accounts:profile_edit' %} #}
-                   class="inline-flex items-center justify-center w-full mt-auto px-6 py-3 bg-accent-light text-white rounded-lg hover:bg-yellow-500 dark:hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent-dark dark:focus-visible:ring-offset-card-dark transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
-                    {% trans "Manage Account" %} <i class="fas fa-sliders-h ml-2 text-xs opacity-75 group-hover:opacity-100 transition-opacity"></i>
+                <a href="#"
+                   class="card-action mt-auto">
+                    {% trans "Manage Account" %} <i class="fas fa-sliders-h icon-btn ml-2 text-sm"></i>
                 </a>
             </div>
         </div>
@@ -111,43 +377,96 @@
         {# Quick Actions Section #}
         <div class="mt-12 md:mt-16">
             <h3 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6 md:mb-8 text-center sm:text-left">{% trans "Quick Actions" %}</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                 <a href="{% url 'journal:journal_create' %}" class="quick-action-link">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-primary-light/10 dark:bg-primary-dark/20 text-primary-light dark:text-primary-dark p-3 rounded-lg mr-4">
-                            <i class="fas fa-pencil-alt text-xl"></i>
-                        </div>
-                        <div>
-                            <span class="font-semibold text-text-light dark:text-text-dark text-base">{% trans "Write New Entry" %}</span>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "Start a new reflection." %}</p>
-                        </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <a href="{% url 'journal:journal_create' %}" class="quick-action fade-in-element relative" style="animation-delay: 0.6s;">
+                    <i class="fas fa-pencil-alt quick-action-icon quick-action-icon-pencil"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title">{% trans "Write New Entry" %}</h4>
+                        <p class="quick-action-subtitle">{% trans "Start a new reflection." %}</p>
+                    </div>
+                    <i class="fas fa-info-circle help-icon absolute right-0 top-0 text-gray-400 dark:text-gray-400" data-target="popover-write-entry" aria-label="Write entry information"></i>
+                    <div class="help-popover" id="popover-write-entry" aria-describedby="write-entry-help">
+                        <p class="text-xs text-gray-900 dark:text-gray-100">
+                            {% trans "Capture your thoughts and memories in a new journal entry." %}
+                        </p>
                     </div>
                 </a>
-                 <a href="#" class="quick-action-link opacity-60 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}" onclick="return false;">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-secondary-light/10 dark:bg-secondary-dark/20 text-secondary-light dark:text-secondary-dark p-3 rounded-lg mr-4">
-                            <i class="fas fa-calendar-check text-xl"></i>
-                        </div>
-                        <div>
-                            <span class="font-medium text-text-light dark:text-text-dark text-base">{% trans "Review Today's Entry" %}</span>
-                             <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "Coming soon." %}</p>
-                        </div>
+                <a href="#" class="quick-action-disabled fade-in-element" style="animation-delay: 0.7s;" aria-disabled="true" title="{% trans 'Coming Soon' %}">
+                    <i class="fas fa-calendar-check quick-action-icon-disabled"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title-disabled">{% trans "Review Today's Entry" %}</h4>
+                        <p class="quick-action-subtitle-disabled">{% trans "Coming soon." %}</p>
                     </div>
                 </a>
-                 <a href="#" class="quick-action-link opacity-60 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}" onclick="return false;">
-                    <div class="flex items-center">
-                         <div class="flex-shrink-0 bg-accent-light/10 dark:bg-accent-dark/20 text-accent-light dark:text-accent-dark p-3 rounded-lg mr-4">
-                            <i class="fas fa-lightbulb text-xl"></i>
-                        </div>
-                        <div>
-                            <span class="font-medium text-text-light dark:text-text-dark text-base">{% trans "Get a Writing Prompt" %}</span>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "Coming soon." %}</p>
+                <button onclick="showWritingPrompt()" class="quick-action fade-in-element" style="animation-delay: 0.8s;" aria-label="{% trans 'Get a Writing Prompt' %}">
+                    <i class="fas fa-lightbulb quick-action-icon quick-action-icon-bulb"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title">{% trans "Get a Writing Prompt" %}</h4>
+                        <div class="quick-action-subtitle-container">
+                            <p id="writing-prompt-text" class="quick-action-subtitle"></p>
                         </div>
                     </div>
-                </a>
+                </button>
             </div>
         </div>
-
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Fade-in animations
+    const fadeElements = document.querySelectorAll('.fade-in-element');
+    fadeElements.forEach((el, index) => {
+        el.style.animationDelay = `${0.2 + index * 0.1}s`;
+    });
+
+    // Help popover hover and click
+    const helpIcons = document.querySelectorAll('.help-icon');
+    helpIcons.forEach(icon => {
+        const popoverId = icon.dataset.target;
+        const popover = document.getElementById(popoverId);
+
+        icon.addEventListener('mouseenter', () => {
+            popover.classList.add('active');
+        });
+        icon.addEventListener('mouseleave', () => {
+            if (!popover.classList.contains('click-active')) {
+                popover.classList.remove('active');
+            }
+        });
+
+        icon.addEventListener('click', (e) => {
+            e.preventDefault();
+            popover.classList.toggle('click-active');
+            popover.classList.toggle('active');
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.help-icon') && !e.target.closest('.help-popover')) {
+            document.querySelectorAll('.help-popover.click-active').forEach(popover => {
+                popover.classList.remove('active', 'click-active');
+            });
+        }
+    });
+});
+
+// Writing prompt functionality
+function showWritingPrompt() {
+    const prompts = [
+        "What's a moment you're grateful for today?",
+        "Describe a challenge you faced recently and how you overcame it.",
+        "What does your dream day look like?",
+        "Write about a memory that always makes you smile.",
+        "What's something new you learned this week?",
+        "How do you feel right now, and why?",
+        "What’s a goal you’re working toward, and what’s your next step?"
+    ];
+    const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+    const promptText = document.getElementById('writing-prompt-text');
+    promptText.textContent = randomPrompt;
+}
+</script>
 {% endblock %}

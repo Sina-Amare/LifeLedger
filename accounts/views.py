@@ -22,8 +22,7 @@ from django.contrib import messages # Import the messages framework
 
 from .forms import CustomUserCreationForm, UsernameEmailAuthenticationForm, ResendActivationEmailForm # Import the new forms
 from .models import UserProfile # Import the new UserProfile model
-
-# Removed: User = get_user_model() # Do not call get_user_model() here. Use settings.AUTH_USER_MODEL in models.py
+from journal.models import JournalEntry  # Added import
 
 class HomeView(TemplateView):
     """
@@ -40,6 +39,14 @@ class HomeView(TemplateView):
         else:
             return ['home.html']
 
+    def get_context_data(self, **kwargs):
+        """
+        Adds latest journal entry to context for authenticated users.
+        """
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_authenticated:
+            context['latest_entry'] = JournalEntry.objects.filter(user=self.request.user).order_by('-created_at').first()
+        return context
 
 class SignUpView(CreateView):
     """
