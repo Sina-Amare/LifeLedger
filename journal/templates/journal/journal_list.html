@@ -1,497 +1,734 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-{% load journal_tags %}
 
 {% block title %}{% trans "My Journal Entries" %}{% endblock %}
 
 {% block extra_head %}
 <style>
-    :root {
-        --primary-light: #4f46e5;
-        --primary-dark: #818cf8;
-        --secondary-light: #10b981;
-        --secondary-dark: #34d399;
-        --card-light: #ffffff;
-        --card-dark: #1f2937;
-        --text-light: #1f2937;
-        --text-dark: #f3f4f6;
-        --border-light: #e5e7eb;
-        --border-dark: #374151;
-    }
-
-    /* Input Focus States */
-    select:focus, input[type="text"]:focus, input[type="checkbox"]:focus {
-        outline: none;
-        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
-        border-color: var(--primary-light);
-        transform: scale(1.01);
-    }
-    .dark select:focus, .dark input[type="text"]:focus, .dark input[type="checkbox"]:focus {
-        box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2);
-        border-color: var(--primary-dark);
-    }
-
-    /* Custom Select Arrow */
-    .custom-select-arrow {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.75rem center;
-        background-repeat: no-repeat;
-        background-size: 1.25em;
-        padding-right: 2.75rem;
-        transition: all 0.3s ease;
-    }
-    .dark .custom-select-arrow {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    }
-
-    /* Form Glassmorphism */
-    .filter-form {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .dark .filter-form {
-        background: rgba(31, 41, 55, 0.85);
-        border-color: rgba(255, 255, 255, 0.15);
-    }
-
-    /* Loading Spinner */
-    .loading .spinner {
-        display: inline-block;
-        width: 1.25rem;
-        height: 1.25rem;
-        border: 2px solid #ffffff;
-        border-top-color: transparent;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin-right: 0.5rem;
-    }
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* Memory Wall Layout */
-    .memory-wall {
+    .timeline-container {
         position: relative;
-        background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="rgba(79,70,229,0.1)" fill-opacity="1" d="M0,192L60,181.3C120,171,240,149,360,160C480,171,600,213,720,213.3C840,213,960,171,1080,149.3C1200,128,1320,128,1380,128L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"%3E%3C/path%3E%3C/svg%3E') no-repeat center bottom;
-        background-size: cover;
-        padding: 1.5rem;
-        column-count: 2;
-        column-gap: 1.25rem;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2.5rem 0;
     }
-    .dark .memory-wall {
-        background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="rgba(129,140,248,0.1)" fill-opacity="1" d="M0,192L60,181.3C120,171,240,149,360,160C480,171,600,213,720,213.3C840,213,960,171,1080,149.3C1200,128,1320,128,1380,128L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"%3E%3C/path%3E%3C/svg%3E') no-repeat center bottom;
+    .timeline-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        background: linear-gradient(to bottom, #00E1C8, #C678DD, 70%, #E5E7EB);
+        transform: translateX(-50%);
+        z-index: 0;
     }
-    @media (max-width: 640px) {
-        .memory-wall {
-            column-count: 1;
-            background: none;
-            padding: 1rem;
+    @media (max-width: 768px) {
+        .timeline-container::before {
+            left: 20px;
         }
     }
 
-    /* Entry Card */
+    .journal-group {
+        position: relative;
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+    }
+    .journal-group::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 10%;
+        width: 80%;
+        height: 2px;
+        background: linear-gradient(to right, transparent, #00E1C8, #C678DD, transparent);
+        box-shadow: 0 0 8px rgba(198, 120, 221, 0.3);
+    }
+    .journal-group:last-child::after {
+        display: none;
+    }
+
+    .timeline-entry {
+        position: relative;
+        margin-bottom: 3rem;
+        width: 48%;
+        padding: 0 2.5rem;
+        z-index: 1;
+        display: flex;
+        align-items: flex-start;
+    }
+    .journal-group:nth-child(odd) .timeline-entry {
+        left: 0;
+        justify-content: flex-end;
+    }
+    .journal-group:nth-child(even) .timeline-entry {
+        left: 52%;
+        justify-content: flex-start;
+    }
+    @media (max-width: 768px) {
+        .journal-group:nth-child(odd) .timeline-entry,
+        .journal-group:nth-child(even) .timeline-entry {
+            width: 100%;
+            left: 0 !important;
+            justify-content: flex-start !important;
+            padding-left: 3.5rem;
+            margin-bottom: 2.5rem;
+        }
+    }
+
+    .date-badge {
+        position: absolute;
+        top: -1.5rem;
+        background: linear-gradient(135deg, #00E1C8, #C678DD);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 1.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transform: translateY(-50%);
+        z-index: 2;
+        box-shadow: 0 2px 6px rgba(0, 225, 200, 0.2);
+    }
+    .journal-group:nth-child(odd) .date-badge {
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+    }
+    .journal-group:nth-child(even) .date-badge {
+        right: 50%;
+        transform: translateX(50%) translateY(-50%);
+    }
+    @media (max-width: 768px) {
+        .date-badge {
+            left: 20px !important;
+            right: auto !important;
+            top: -1rem;
+            transform: translateY(-50%);
+        }
+    }
+
     .entry-card {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        margin-bottom: 1rem;
-        break-inside: avoid;
-        animation: floatIn 0.8s ease-in-out;
+        position: relative;
+        background: var(--card-light-bg);
+        border: 1px solid #E5E7EB;
+        border-radius: 2.5rem;
+        padding: 2rem;
         transition: transform 0.4s ease, box-shadow 0.4s ease;
-        transform: perspective(1000px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 5px 10px rgba(198, 120, 221, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.02);
+        transform: perspective(1000px) translateZ(0);
+        width: 600px;
+        height: 450px;
+        min-height: 450px;
+        max-height: 450px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
     .dark .entry-card {
-        background: rgba(31, 41, 55, 0.9);
-        border-color: rgba(255, 255, 255, 0.1);
+        background: var(--card-dark-bg);
+        border-color: #4B5563;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(179, 109, 251, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
     }
     .entry-card:hover {
-        transform: perspective(1000px) rotateX(1.5deg) rotateY(1.5deg);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        transform: perspective(1000px) translateY(-8px) translateZ(10px) rotateX(2deg);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 8px 15px rgba(198, 120, 221, 0.15), 0 0 0 2px rgba(0, 225, 200, 0.1);
     }
     .dark .entry-card:hover {
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15), 0 8px 15px rgba(179, 109, 251, 0.15), 0 0 0 2px rgba(179, 109, 251, 0.1);
     }
     .entry-card.favorite::before {
         content: '★';
         position: absolute;
         top: -10px;
-        right: 10px;
-        color: #f59e0b;
-        font-size: 1.25rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        right: 15px;
+        color: #FBBF24;
+        font-size: 1.5rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     .entry-card.latest::before {
-        content: 'New';
+        content: '★';
         position: absolute;
         top: -10px;
-        left: 10px;
-        background: var(--primary-light);
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: bold;
+        left: 15px;
+        color: #00E1C8;
+        font-size: 1.5rem;
+        text-shadow: 0 2px 4px rgba(0, 225, 200, 0.2);
     }
     .dark .entry-card.latest::before {
-        background: var(--primary-dark);
-    }
-    @media (max-width: 640px) {
-        .entry-card {
-            padding: 1rem;
-        }
-        .entry-card:hover {
-            transform: scale(1.02);
-        }
+        color: #B36DFB;
+        text-shadow: 0 2px 4px rgba(179, 109, 251, 0.2);
     }
 
-    /* Mood-Based Glow */
-    .entry-card.mood-happy {
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    .entry-content {
+        flex: 1;
+        word-wrap: break-word;
+        display: flex;
+        flex-direction: column;
     }
-    .entry-card.mood-sad {
-        box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
-    }
-    .entry-card.mood-neutral {
-        box-shadow: 0 0 8px rgba(107, 114, 128, 0.3);
-    }
-
-    /* Float-In Animation */
-    @keyframes floatIn {
-        from {
-            opacity: 0;
-            transform: translateY(15px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .content-preview {
+        max-height: 200px;
+        overflow: hidden;
     }
 
-    /* Tag Pills */
+    .read-more {
+        background: #60A5FA;
+        color: white;
+        border-radius: 2rem;
+        padding: 0.5rem 1rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        box-shadow: 0 4px 10px rgba(96, 165, 250, 0.1), 0 2px 4px rgba(96, 165, 250, 0.1);
+        transform: perspective(500px) translateZ(0);
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-top: 0.5rem;
+        align-self: flex-start;
+        display: inline-block;
+    }
+    .dark .read-more {
+        background: #8B5CF6;
+        box-shadow: 0 4px 10px rgba(139, 92, 246, 0.1), 0 2px 4px rgba(139, 92, 246, 0.1);
+    }
+    .read-more:hover {
+        transform: perspective(500px) translateY(-4px) translateZ(6px);
+        box-shadow: 0 8px 20px rgba(96, 165, 250, 0.2), 0 4px 8px rgba(96, 165, 250, 0.2);
+        background: #3B82F6;
+    }
+    .dark .read-more:hover {
+        box-shadow: 0 8px 20px rgba(139, 92, 246, 0.2), 0 4px 8px rgba(139, 92, 246, 0.2);
+        background: #7C3AED;
+    }
+    .read-more.active {
+        background: #3B82F6;
+    }
+    .dark .read-more.active {
+        background: #7C3AED;
+    }
+
+    .thought-bubble {
+        position: absolute; /* Changed to absolute to fix position relative to document */
+        background: var(--card-light-bg);
+        border: 1px solid #D1D5DB;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        padding-top: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.03);
+        max-width: 380px;
+        max-height: 300px;
+        overflow-y: auto;
+        word-wrap: break-word;
+        z-index: 1000;
+        display: none;
+        animation: floatUp 0.3s ease-out;
+        scrollbar-width: thin;
+        scrollbar-color: #C678DD var(--card-light-bg);
+    }
+    
+    .dark .thought-bubble {
+        background: var(--card-dark-bg);
+        border-color: #4B5563;
+        scrollbar-color: #B36DFB var(--card-dark-bg);
+    }
+    
+    .thought-bubble::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-top: 15px solid transparent;
+        border-bottom: 15px solid transparent;
+        border-right: 15px solid var(--card-light-bg);
+        filter: drop-shadow(-1px 1px 1px rgba(0,0,0,0.05));
+        left: -14px;
+        top: var(--tail-top, calc(50% - 15px));
+    }
+    
+    .dark .thought-bubble::after {
+        border-right-color: var(--card-dark-bg);
+    }
+    
+    .thought-bubble.right::after {
+        border-right: none;
+        border-left: 15px solid var(--card-light-bg);
+        right: -14px;
+        left: auto;
+        top: var(--tail-top, calc(50% - 15px));
+    }
+    
+    .dark .thought-bubble.right::after {
+        border-left-color: var(--card-dark-bg);
+    }
+    
+    .thought-bubble-close-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.75rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #9CA3AF;
+        background: transparent;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        cursor: pointer;
+        line-height: 1;
+        transition: color 0.2s ease;
+    }
+    
+    .dark .thought-bubble-close-btn {
+        color: #6B7280;
+    }
+    
+    .thought-bubble-close-btn:hover {
+        color: #EF4444;
+    }
+    
+    .dark .thought-bubble-close-btn:hover {
+        color: #F87171;
+    }
+
+    @keyframes floatUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .entry-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+        max-height: 120px;
+        overflow-y: auto;
+    }
     .tag-pill-list-item {
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-        font-size: 0.75rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 0.8rem;
         font-weight: 500;
-        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        background: #F3F4F6;
         color: #374151;
         transition: transform 0.2s ease;
+        display: inline-block;
+        margin-right: 0.5rem;
     }
     .dark .tag-pill-list-item {
-        background: linear-gradient(135deg, #4b5563, #6b7280);
-        color: #d1d5db;
+        background: #4B5563;
+        color: #D1D5DB;
     }
     .tag-pill-list-item:hover {
         transform: translateY(-2px);
+        background: linear-gradient(90deg, #00E1C8, #C678DD, 70%, #F3F4F6);
+    }
+    .dark .tag-pill-list-item:hover {
+        background: linear-gradient(90deg, #00A3A0, #B36DFB, 70%, #4B5563);
     }
 
-    /* Pagination Styles */
-    .pagination-ul {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        align-items: center;
+    .entry-icon {
+        font-size: 2rem;
+        background: linear-gradient(45deg, #00E1C8, #C678DD);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: transform 0.3s ease;
     }
-    .pagination-ul li {
-        list-style: none;
+    .dark .entry-icon {
+        background: linear-gradient(45deg, #00A3A0, #B36DFB);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
-    .pagination-ul a,
-    .pagination-ul span {
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border-radius: 0.5rem;
-        transition: all 0.3s ease;
-    }
-    .pagination-ul a {
-        background: var(--card-light);
-        color: var(--text-light);
-        border: 1px solid var(--border-light);
-    }
-    .dark .pagination-ul a {
-        background: var(--card-dark);
-        color: var(--text-dark);
-        border-color: var(--border-dark);
-    }
-    .pagination-ul a:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .dark .pagination-ul a:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    .pagination-ul .active-page {
-        background: linear-gradient(135deg, var(--secondary-light), var(--secondary-dark));
-        color: white;
-        border: none;
-        box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
-    }
-
-    /* Pagination Message */
-    .pagination-message {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 0.75rem 1.25rem;
-        border-radius: 0.5rem;
-        font-size: 0.75rem;
-        animation: fadeScale 0.5s ease-out;
-        transition: box-shadow 0.3s ease;
-    }
-    .dark .pagination-message {
-        background: rgba(31, 41, 55, 0.9);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-    .pagination-message:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .dark .pagination-message:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    @media (min-width: 640px) {
-        .pagination-message {
-            font-size: 0.875rem;
-        }
-    }
-    @keyframes fadeScale {
-        from {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-
-    /* Back to Top Button */
-    .back-to-top {
-        position: fixed;
-        bottom: 1.5rem;
-        right: 1.5rem;
-        background: var(--primary-light);
-        color: white;
-        padding: 0.75rem;
-        border-radius: 50%;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-    .dark .back-to-top {
-        background: var(--primary-dark);
-    }
-    .back-to-top.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-    .back-to-top:hover {
+    .entry-card:hover .entry-icon {
         transform: scale(1.1);
     }
+
+    .mood-happy { box-shadow: 0 0 8px rgba(251, 191, 36, 0.2); }
+    .mood-sad { box-shadow: 0 0 8px rgba(0, 225, 200, 0.2); }
+    .mood-neutral { box-shadow: 0 0 8px rgba(107, 114, 128, 0.2); }
+    .mood-happy:hover { box-shadow: 0 0 12px rgba(251, 191, 36, 0.3); }
+    .mood-sad:hover { box-shadow: 0 0 12px rgba(0, 225, 200, 0.3); }
+    .mood-neutral:hover { box-shadow: 0 0 12px rgba(107, 114, 128, 0.3); }
+
+    .timeline-image {
+        position: relative;
+        margin-bottom: 2.5rem;
+        width: 48%;
+        padding: 0 2.5rem;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+    }
+    .journal-group:nth-child(odd) .timeline-image { left: 52%; }
+    .journal-group:nth-child(even) .timeline-image { left: 0; }
+    @media (max-width: 768px) {
+        .journal-group:nth-child(odd) .timeline-image,
+        .journal-group:nth-child(even) .timeline-image {
+            width: 100%;
+            left: 0 !important;
+            padding-left: 3.5rem;
+            margin-bottom: 2rem;
+        }
+    }
+    .timeline-image img {
+        max-width: 500px;
+        max-height: 350px;
+        border-radius: 2rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 5px 10px rgba(198, 120, 221, 0.05);
+        transition: transform 0.3s ease;
+        object-fit: cover;
+    }
+    .timeline-image img:hover { transform: scale(1.03); }
+
+    header {
+        border-bottom: 1px solid #E5E7EB;
+        padding-bottom: 1.5rem;
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #00D4FF, #FF00CC);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.2), 0 0 12px rgba(255, 0, 204, 0.1);
+        animation: glow 2.5s ease-in-out infinite alternate;
+        transition: text-shadow 0.3s ease;
+    }
+    .dark h1 {
+        background: linear-gradient(45deg, #00A3A0, #B36DFB);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 8px rgba(0, 163, 160, 0.2), 0 0 12px rgba(179, 109, 251, 0.1);
+    }
+    @keyframes glow {
+        from { text-shadow: 0 0 5px #00D4FF, 0 0 8px #FF00CC; }
+        to { text-shadow: 0 0 10px #00D4FF, 0 0 15px #FF00CC; }
+    }
+
+    .filter-form {
+        background: var(--card-light-bg);
+        border: 1px solid #E5E7EB;
+        border-radius: 2.5rem;
+        padding: 2rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 5px 10px rgba(198, 120, 221, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.02);
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        transform: perspective(1000px) translateZ(0);
+    }
+    .dark .filter-form {
+        background: var(--card-dark-bg);
+        border-color: #4B5563;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(179, 109, 251, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+    .filter-form:hover {
+        transform: perspective(1000px) translateY(-6px) translateZ(8px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1), 0 8px 15px rgba(198, 120, 221, 0.15), 0 0 0 2px rgba(0, 225, 200, 0.1);
+    }
+    .dark .filter-form:hover {
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15), 0 8px 15px rgba(179, 109, 251, 0.15), 0 0 0 2px rgba(179, 109, 251, 0.1);
+    }
+    .filter-form label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #374151;
+        background: linear-gradient(90deg, #00E1C8, #C678DD);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: transform 0.3s ease;
+    }
+    .dark .filter-form label {
+        color: #D1D5DB;
+        background: linear-gradient(90deg, #00A3A0, #B36DFB);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .filter-form label:hover { transform: translateY(-1px); }
+    .filter-form select,
+    .filter-form input[type="text"] {
+        border: 1px solid #E5E7EB;
+        border-radius: 2rem;
+        padding: 0.8rem 1.2rem;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.03), inset 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+        background: white;
+        font-size: 0.9rem;
+    }
+    .dark .filter-form select,
+    .dark .filter-form input[type="text"] {
+        border-color: #4B5563;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        background: #374151;
+        color: #D1D5DB;
+    }
+    .filter-form select:focus,
+    .filter-form input[type="text"]:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 225, 200, 0.1), inset 0 1px 3px rgba(0, 225, 200, 0.05);
+    }
+    .dark .filter-form select:focus,
+    .dark .filter-form input[type="text"]:focus {
+        box-shadow: 0 6px 15px rgba(179, 109, 251, 0.1), inset 0 1px 3px rgba(179, 109, 251, 0.05);
+    }
+    .filter-form option { background: white; color: #374151; padding: 0.5rem; }
+    .dark .filter-form option { background: #374151; color: #D1D5DB; }
+
+    .write-new-button {
+        background: linear-gradient(45deg, #00E1C8, #C678DD, 70%, #E5E7EB);
+        color: white;
+        border-radius: 2rem;
+        padding: 0.8rem 1.5rem;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: 0 6px 15px rgba(0, 225, 200, 0.1), 0 3px 6px rgba(198, 120, 221, 0.1), 0 0 0 1px rgba(0, 225, 200, 0.05);
+        transform: perspective(500px) translateZ(0);
+        font-size: 1rem;
+    }
+    .dark .write-new-button {
+        background: linear-gradient(45deg, #00A3A0, #B36DFB, 70%, #4B5563);
+        box-shadow: 0 6px 15px rgba(179, 109, 251, 0.1), 0 3px 6px rgba(198, 120, 221, 0.1), 0 0 0 1px rgba(179, 109, 251, 0.05);
+    }
+    .write-new-button:hover {
+        transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
+        box-shadow: 0 10px 25px rgba(0, 225, 200, 0.2), 0 5px 10px rgba(198, 120, 221, 0.2), 0 0 0 2px rgba(0, 225, 200, 0.1);
+    }
+    .dark .write-new-button:hover {
+        box-shadow: 0 10px 25px rgba(179, 109, 251, 0.2), 0 5px 10px rgba(198, 120, 221, 0.2), 0 0 0 2px rgba(179, 109, 251, 0.1);
+    }
+
+    .edit-button {
+        background: #00A3A0;
+        color: white;
+        border-radius: 2rem;
+        padding: 0.6rem 1.2rem;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: 0 6px 15px rgba(0, 163, 160, 0.1), 0 3px 6px rgba(0, 163, 160, 0.1), 0 0 0 1px rgba(0, 163, 160, 0.05);
+        transform: perspective(500px) translateZ(0);
+        font-size: 0.9rem;
+    }
+    .dark .edit-button {
+        background: #B36DFB;
+        box-shadow: 0 6px 15px rgba(179, 109, 251, 0.1), 0 3px 6px rgba(179, 109, 251, 0.1), 0 0 0 1px rgba(179, 109, 251, 0.05);
+    }
+    .edit-button:hover {
+        transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
+        box-shadow: 0 10px 25px rgba(0, 163, 160, 0.2), 0 5px 10px rgba(0, 163, 160, 0.2), 0 0 0 2px rgba(0, 163, 160, 0.1);
+        background: #00E1C8;
+    }
+    .dark .edit-button:hover {
+        box-shadow: 0 10px 25px rgba(179, 109, 251, 0.2), 0 5px 10px rgba(179, 109, 251, 0.2), 0 0 0 2px rgba(179, 109, 251, 0.1);
+        background: #C678DD;
+    }
+
+    .delete-entry-button {
+        background: #EF4444;
+        color: white;
+        border-radius: 2rem;
+        padding: 0.6rem 1.2rem;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        box-shadow: 0 6px 15px rgba(239, 68, 68, 0.1), 0 3px 6px rgba(239, 68, 68, 0.1), 0 0 0 1px rgba(239, 68, 68, 0.05);
+        transform: perspective(500px) translateZ(0);
+        font-size: 0.9rem;
+    }
+    .dark .delete-entry-button {
+        background: #F87171;
+        box-shadow: 0 6px 15px rgba(247, 113, 113, 0.1), 0 3px 6px rgba(247, 113, 113, 0.1), 0 0 0 1px rgba(247, 113, 113, 0.05);
+    }
+    .delete-entry-button:hover {
+        transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2), 0 5px 10px rgba(239, 68, 68, 0.2), 0 0 0 2px rgba(239, 68, 68, 0.1);
+    }
+    .dark .delete-entry-button:hover {
+        box-shadow: 0 10px 25px rgba(247, 113, 113, 0.2), 0 5px 10px rgba(247, 113, 113, 0.2), 0 0 0 2px rgba(247, 113, 113, 0.1);
+    }
+    .filter-submit, .clear-filters, .pagination-ul a, .pagination-ul span, .back-to-top { /* ... keep these as they are ... */ }
+    .visible { opacity: 1; transform: translateY(0); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <header class="flex flex-col sm:flex-row justify-between items-center mb-12 pb-8 border-b border-border-light dark:border-border-dark">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-text-light dark:text-text-dark mb-6 sm:mb-0 tracking-tight">
+    <header class="flex flex-col sm:flex-row justify-between items-center mb-12">
+        <h1 class="text-4xl sm:text-5xl font-bold mb-4 sm:mb-0 fade-in-element" style="animation-delay: 0.1s;">
             {% trans "My Journal Entries" %}
         </h1>
-        <a href="{% url 'journal:journal_create' %}" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 font-semibold text-base transform hover:scale-105">
+        <a href="{% url 'journal:journal_create' %}" class="write-new-button fade-in-element" style="animation-delay: 0.2s;">
             <i class="fas fa-feather-alt mr-2"></i>{% trans "Write New Entry" %}
         </a>
     </header>
 
-    <form method="get" class="filter-form mb-12 p-6 bg-card-light dark:bg-card-dark rounded-2xl shadow-xl dark:shadow-custom-dark" id="filter-form">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+    <form method="get" class="filter-form mb-12 fade-in-element" style="animation-delay: 0.3s;" id="filter-form">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-                <label for="mood-filter" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Filter by Mood" %}</label>
-                <div class="relative">
-                    <select id="mood-filter" name="mood" aria-label="{% trans 'Filter journal entries by mood' %}" class="custom-select-arrow block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-sm appearance-none transition-all duration-300">
-                        {% for value, label in mood_options %}
-                            <option value="{{ value }}" {% if current_mood == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+                <label for="mood-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Mood" %}</label>
+                <select id="mood-filter" name="mood" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+                    <option value="">{% trans "Select Mood" %}</option>
+                    {% for value, label in mood_options %}
+                        <option value="{{ value }}" {% if current_mood == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div>
-                <label for="time-period-filter" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Filter by Time" %}</label>
-                <div class="relative">
-                    <select id="time-period-filter" name="time_period" aria-label="{% trans 'Filter journal entries by time period' %}" class="custom-select-arrow block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-sm appearance-none transition-all duration-300">
-                        {% for value, label in time_period_options %}
-                            <option value="{{ value }}" {% if current_time_period == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+                <label for="time-period-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Time" %}</label>
+                <select id="time-period-filter" name="time_period" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+                    <option value="all">{% trans "All Time" %}</option>
+                    {% for value, label in time_period_options %}
+                        <option value="{{ value }}" {% if current_time_period == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div>
-                <label for="tag-filter-select" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Filter by Tag" %}</label>
-                <div class="relative">
-                    <select id="tag-filter-select" name="tag_filter" aria-label="{% trans 'Filter journal entries by tag' %}" class="custom-select-arrow block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-sm appearance-none transition-all duration-300">
-                        <option value="">{% trans "All Tags" %}</option>
-                        {% for tag in all_tags_for_filter %}
-                            <option value="{{ tag.name }}" {% if current_tag_filter == tag.name %}selected{% endif %}>{{ tag }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+                <label for="tag-filter-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Tag" %}</label>
+                <select id="tag-filter-select" name="tag_filter" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+                    <option value="">{% trans "All Tags" %}</option>
+                    {% for tag in all_tags_for_filter %}
+                        <option value="{{ tag.name }}" {% if current_tag_filter == tag.name %}selected{% endif %}>{{ tag }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="flex items-center gap-3">
-                <input id="is_favorite_filter" name="is_favorite" type="checkbox" class="h-5 w-5 text-primary-light border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-primary-dark focus:ring-2 focus:ring-offset-0 transition-all duration-300" {% if current_is_favorite %}checked{% endif %} aria-label="{% trans 'Show only favorite journal entries' %}">
-                <label for="is_favorite_filter" class="text-sm font-semibold text-text-light dark:text-text-dark">{% trans "Favorites Only" %}</label>
+                <input id="is_favorite_filter" name="is_favorite" type="checkbox" class="h-5 w-5 border-gray-300 dark:border-gray-600" {% if current_is_favorite %}checked{% endif %}>
+                <label for="is_favorite_filter" class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "Favorites Only" %}</label>
             </div>
             <div class="sm:col-span-2 lg:col-span-4">
-                <label for="search-query-input" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Search Entries" %}</label>
-                <input type="text" id="search-query-input" name="q" value="{{ current_search_query }}" placeholder="{% trans 'Keywords...' %}" aria-label="{% trans 'Search journal entries by keywords' %}" class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-sm transition-all duration-300">
+                <label for="search-query-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Search Entries" %}</label>
+                <input type="text" id="search-query-input" name="q" value="{{ current_search_query }}" placeholder="{% trans 'Keywords...' %}" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
             </div>
         </div>
-        <div class="flex flex-col sm:flex-row justify-end mt-6 pt-4 border-t border-border-light dark:border-border-dark gap-3">
+        <div class="flex flex-col sm:flex-row justify-end mt-6 gap-3">
             {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query or current_tag_filter != '' %}
-                <a href="{% url 'journal:journal_list' %}" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-semibold rounded-lg text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                <a href="{% url 'journal:journal_list' %}" class="clear-filters">
                     <i class="fas fa-times mr-1"></i>{% trans "Clear Filters" %}
                 </a>
             {% endif %}
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-secondary-light to-secondary-dark text-white rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-secondary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" id="filter-submit">
-                <span class="spinner hidden"></span>
+            <button type="submit" class="filter-submit">
                 <i class="fas fa-search mr-1"></i>{% trans "Apply & Search" %}
             </button>
         </div>
     </form>
 
     {% if entries %}
-        <div class="memory-wall">
+        <div class="timeline-container">
             {% for entry in entries %}
-                <article id="entry-{{ entry.pk }}" class="entry-card flex flex-col {% if entry.is_favorite %}favorite{% endif %} {% if entry.mood %}mood-{{ entry.mood }}{% endif %} {% if forloop.first %}latest{% endif %}" role="article" aria-label="{% trans 'Journal entry from' %} {{ entry.created_at|date:'F j, Y' }}">
-                    <header class="mb-2">
-                        <a href="{% url 'journal:journal_detail' pk=entry.pk %}" class="block">
-                            <h2 class="text-2xl font-semibold text-primary-light dark:text-primary-dark hover:text-primary-dark dark:hover:text-primary-light hover:underline decoration-2 underline-offset-4 truncate transition-all duration-300" title="{{ entry.title|default:_('Untitled Entry') }}">
-                                {{ entry.title|default:_("Untitled Entry") }}
-                            </h2>
-                        </a>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
-                            <i class="far fa-calendar-alt mr-1 opacity-75"></i>
+                <div class="journal-group" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
+                    <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
+                        <div class="date-badge">
                             {{ entry.created_at|date:"F j, Y" }}
-                        </p>
-                    </header>
-
-                    <div class="text-sm text-text-light dark:text-text-dark mb-3 flex-grow prose prose-sm dark:prose-invert max-w-none">
-                        <p>{{ entry.content|striptags|truncatewords_html:20|safe }}</p>
-                    </div>
-
-                    <footer class="mt-auto pt-3 border-t border-border-light dark:border-border-dark">
-                        {% if entry.tags.all %}
-                            <div class="mb-2 flex flex-wrap gap-2">
-                                {% for tag in entry.tags.all %}
-                                    <a href="{% url 'journal:journal_list' %}?tag_filter={{ tag.name|urlencode }}" class="tag-pill-list-item hover:opacity-90">
-                                        {{ tag }}
+                        </div>
+                        <article class="entry-card {% if entry.is_favorite %}favorite{% endif %} {% if entry.mood %}mood-{{ entry.mood }}{% endif %} {% if forloop.first %}latest{% endif %}">
+                            <div class="flex items-start mb-4">
+                                <i class="fas fa-book entry-icon mr-4"></i>
+                                <div class="entry-content">
+                                    <div style="display: none;" class="debug-info">
+                                        Raw Content: {{ entry.content|safe }}<br>
+                                        Raw Content Length: {{ entry.content|length }}<br>
+                                        Stripped Content: {{ entry.content|striptags }}<br>
+                                        Stripped Content Length: {{ entry.content|striptags|length }}<br>
+                                        Truncated Content: {{ entry.content|striptags|truncatewords_html:20|safe }}<br>
+                                        Truncated Content Length: {{ entry.content|striptags|truncatewords_html:20|length }}<br>
+                                        Should Show Read More: {% if entry.content|length > 20 %}Yes{% else %}No{% endif %}
+                                    </div>
+                                    <a href="{% url 'journal:journal_detail' pk=entry.pk %}">
+                                        <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200">
+                                            {{ entry.title|default:_("Untitled Entry") }}
+                                        </h2>
                                     </a>
-                                {% endfor %}
+                                    <div class="content-preview">
+                                        <p class="short-content text-base text-gray-600 dark:text-gray-400 mt-2">
+                                            {{ entry.content|striptags|truncatewords_html:20|safe }}
+                                        </p>
+                                    </div>
+                                    <p class="full-content" style="display: none;">
+                                        {{ entry.content|striptags|safe }}
+                                    </p>
+                                    {% if entry.content|length > 20 %}
+                                        <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">Read More</div>
+                                    {% else %}
+                                        <div style="display: none;" class="debug-no-read-more">
+                                            Read More not rendered for entry {{ entry.pk }} because content length ({{ entry.content|length }}) is not greater than 20.
+                                        </div>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                        {{ entry.created_at|time:"H:i" }}
+                                    </p>
+                                </div>
                             </div>
-                        {% endif %}
-
-                        <div class="text-xs text-gray-600 dark:text-gray-400 space-y-1 mb-3">
-                            {% if entry.mood %}
-                                <p class="flex items-center">
-                                    {% with current_mood_visual=mood_visuals|get_item:entry.mood %}
-                                        {% if current_mood_visual.emoji %}<span class="mr-1 text-base">{{ current_mood_visual.emoji }}</span>{% endif %}
-                                        <span class="{{ current_mood_visual.text_color|default:'' }}">{{ entry.get_mood_display }}</span>
-                                    {% endwith %}
-                                </p>
+                            <div class="entry-meta">
+                                {% if entry.tags.all %}
+                                    <div class="flex flex-wrap gap-3 mb-3">
+                                        {% for tag in entry.tags.all %}
+                                            <span class="tag-pill-list-item">
+                                                {{ tag }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if entry.mood %}
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                                        {% if mood_visuals.entry.mood.emoji %}<span class="mr-2">{{ mood_visuals.entry.mood.emoji }}</span>{% endif %}
+                                        {{ entry.get_mood_display }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                                    <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
+                                        <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
+                                    </a>
+                                    <button class="delete-entry-button" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}" onclick="window.showDeleteModal(); document.getElementById('modal-entry-title').textContent = this.dataset.entryTitle;">
+                                        <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
+                                    </button>
+                                </div>
+                            </footer>
+                        </article>
+                    </div>
+                    {% if entry.attachments.exists %}
+                        {% for attachment in entry.attachments.all %}
+                            {% if attachment.file_type == 'image' %}
+                                <div class="timeline-image fade-in-element" style="animation-delay: {{ forloop.parentloop.counter|add:0.4 }}s;">
+                                    <img src="{{ attachment.file.url }}" alt="{{ entry.title|default:'Journal Image' }}" loading="lazy">
+                                </div>
                             {% endif %}
-                            {% if entry.location %}
-                                <p class="flex items-center">
-                                    <i class="fas fa-map-marker-alt w-4 mr-1 text-center opacity-75"></i>
-                                    <span class="truncate" title="{{entry.location}}">{% trans "Location" %}: <span class="font-semibold text-text-light dark:text-text-dark">{{ entry.location|truncatechars:18 }}</span></span>
-                                </p>
-                            {% endif %}
-                            {% if entry.is_favorite %}
-                                <p class="text-yellow-500 dark:text-yellow-400 flex items-center font-semibold">
-                                    <i class="fas fa-star w-4 mr-1 text-center"></i>
-                                    <span>{% trans "Favorite" %}</span>
-                                </p>
-                            {% endif %}
-                        </div>
-
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="inline-flex items-center justify-center px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg">
-                                <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
-                            </a>
-                            <button class="delete-entry-button inline-flex items-center justify-center px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}">
-                                <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
-                            </button>
-                        </div>
-                    </footer>
-                </article>
+                        {% endfor %}
+                    {% endif %}
+                </div>
             {% endfor %}
         </div>
 
         {% if is_paginated %}
-            <nav aria-label="{% trans 'Pagination for journal entries' %}" aria-describedby="pagination-info" class="mt-10 flex flex-col items-center">
-                <ul class="pagination-ul">
+            <nav class="mt-10 flex justify-center" aria-label="{% trans 'Pagination for journal entries' %}">
+                <ul class="pagination-ul flex gap-3">
                     {% if page_obj.has_previous %}
                         <li>
-                            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="inline-flex items-center px-3 py-1 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
                                 <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
                             </a>
                         </li>
-                    {% else %}
-                        <li>
-                            <span class="inline-flex items-center px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed">
-                                <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
-                            </span>
-                        </li>
                     {% endif %}
-
                     {% for num in page_obj.paginator.page_range %}
                         {% if page_obj.number == num %}
+                            <li><span class="active-page">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:-2 and num < page_obj.number|add:2 %}
                             <li>
-                                <span class="active-page inline-flex items-center px-3 py-1 text-white rounded-lg font-semibold shadow-md" aria-current="page">
-                                    {{ num }}
-                                </span>
-                            </li>
-                        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-                            <li>
-                                <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="inline-flex items-center px-3 py-1 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
-                                    {{ num }}
-                                </a>
+                                <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}">{{ num }}</a>
                             </li>
                         {% endif %}
                     {% endfor %}
-
                     {% if page_obj.has_next %}
                         <li>
-                            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="inline-flex items-center px-3 py-1 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
+                            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
                                 {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
                             </a>
                         </li>
-                    {% else %}
-                        <li>
-                            <span class="inline-flex items-center px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed">
-                                {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
-                            </span>
-                        </li>
                     {% endif %}
                 </ul>
-                <div id="pagination-info" class="pagination-message mt-3 text-gray-600 dark:text-gray-400" role="status" aria-live="polite">
-                    {% trans "Page" %} {{ page_obj.number }} {% trans "of" %} {{ page_obj.paginator.num_pages }}
-                </div>
             </nav>
         {% endif %}
 
     {% else %}
-        <div class="text-center py-10">
-            <p class="text-lg text-text-light dark:text-text-dark font-semibold">{% trans "No journal entries found." %}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{% trans "Start by writing a new entry!" %}</p>
-            <a href="{% url 'journal:journal_create' %}" class="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 font-semibold text-sm transform hover:scale-105">
+        <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
+            <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">{% trans "No journal entries found." %}</p>
+            <p class="text-base text-gray-600 dark:text-gray-400 mt-3">{% trans "Start by writing a new entry!" %}</p>
+            <a href="{% url 'journal:journal_create' %}" class="write-new-button mt-5">
                 <i class="fas fa-feather-alt mr-1"></i>{% trans "Write New Entry" %}
             </a>
         </div>
     {% endif %}
 
-    <button class="back-to-top" aria-label="{% trans 'Back to top' %}" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+    <button class="back-to-top hidden fixed bottom-8 right-8 fade-in-element" style="animation-delay: 0.5s;" aria-label="{% trans 'Back to top' %}" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <i class="fas fa-arrow-up"></i>
     </button>
 </div>
@@ -500,38 +737,138 @@
 {% block extra_js %}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
 <script>
-    // Toggle loading state on filter form submission
-    document.getElementById('filter-form').addEventListener('submit', function() {
-        const submitButton = document.getElementById('filter-submit');
-        submitButton.disabled = true;
-        submitButton.classList.add('loading');
-    });
-
-    // Refined parallax tilt effect
-    document.querySelectorAll('.entry-card').forEach(card => {
-        card.addEventListener('mousemove', e => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const tiltX = (y - centerY) / 50;
-            const tiltY = (centerX - x) / 50;
-            card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+    document.addEventListener('DOMContentLoaded', () => {
+        let activeBubble = null;
+        let activeButton = null;
+    
+        const readMoreButtons = document.querySelectorAll('.read-more');
+        console.log('Number of Read More buttons found:', readMoreButtons.length);
+        readMoreButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                console.log('Read More button clicked for entry:', button.getAttribute('data-debug'));
+    
+                const fullContentElement = button.parentElement.querySelector('.full-content');
+                if (!fullContentElement) {
+                    console.error('Full content element not found for entry:', button.getAttribute('data-debug'));
+                    return;
+                }
+                const fullContent = fullContentElement.textContent || 'No content available';
+                if (!fullContent.trim()) {
+                    console.warn('Full content is empty for entry:', button.getAttribute('data-debug'));
+                }
+    
+                // Close any existing bubble
+                if (activeBubble && activeButton !== button) {
+                    activeBubble.remove();
+                    activeBubble = null;
+                    activeButton.classList.remove('active');
+                }
+    
+                // Toggle the bubble for the clicked button
+                if (activeButton === button && activeBubble) {
+                    activeBubble.remove();
+                    activeBubble = null;
+                    activeButton.classList.remove('active');
+                    activeButton = null;
+                    return;
+                }
+    
+                activeButton = button;
+                activeButton.classList.add('active');
+    
+                // Create thought bubble
+                activeBubble = document.createElement('div');
+                activeBubble.classList.add('thought-bubble');
+                const closeBtn = document.createElement('button');
+                closeBtn.classList.add('thought-bubble-close-btn');
+                closeBtn.textContent = '×';
+                closeBtn.addEventListener('click', () => {
+                    activeBubble.remove();
+                    activeButton.classList.remove('active');
+                    activeBubble = null;
+                    activeButton = null;
+                });
+                activeBubble.appendChild(closeBtn);
+                activeBubble.appendChild(document.createTextNode(fullContent));
+                document.body.appendChild(activeBubble);
+    
+                // Force reflow to get accurate dimensions
+                activeBubble.style.display = 'block';
+                activeBubble.style.visibility = 'hidden';
+                void activeBubble.offsetWidth; // Trigger reflow
+                const bubbleWidth = activeBubble.offsetWidth;
+                const bubbleHeight = activeBubble.offsetHeight;
+                activeBubble.style.visibility = 'visible';
+    
+                // Determine the position based on journal side
+                const journalGroup = button.closest('.journal-group');
+                const side = journalGroup.getAttribute('data-side');
+                const card = button.closest('.entry-card');
+                const cardRect = card.getBoundingClientRect();
+                const timelineContainer = document.querySelector('.timeline-container');
+                const timelineRect = timelineContainer.getBoundingClientRect();
+                const timelineCenter = timelineRect.left + timelineRect.width / 2;
+                const scrollX = window.scrollX || window.pageXOffset;
+                const scrollY = window.scrollY || window.pageYOffset;
+                const margin = 20;
+    
+                // Calculate initial position once, relative to the document
+                let bubbleLeft, bubbleTop;
+                if (side === 'left') {
+                    // Left-side entry, place bubble on the right side
+                    activeBubble.classList.remove('right'); // Tail points left
+                    bubbleLeft = timelineCenter + margin + scrollX;
+                } else {
+                    // Right-side entry, place bubble on the left side
+                    activeBubble.classList.add('right'); // Tail points right
+                    bubbleLeft = timelineCenter - bubbleWidth - margin + scrollX;
+                }
+                // Align vertically with the card's center, relative to document
+                bubbleTop = cardRect.top + (cardRect.height / 2) - (bubbleHeight / 2) + scrollY;
+    
+                // Adjust tail position to align with the "Read More" button
+                const buttonRect = button.getBoundingClientRect();
+                const tailTop = buttonRect.top + (buttonRect.height / 2) - (bubbleTop - scrollY);
+                const minTailTop = 10;
+                const maxTailTop = bubbleHeight - 25;
+                const clampedTailTop = Math.min(Math.max(tailTop, minTailTop), maxTailTop);
+                activeBubble.style.setProperty('--tail-top', `${clampedTailTop}px`);
+    
+                // Adjust to stay within viewport at the time of display
+                if (bubbleLeft + bubbleWidth > window.innerWidth) {
+                    bubbleLeft = window.innerWidth - bubbleWidth - 10;
+                } else if (bubbleLeft < 0) {
+                    bubbleLeft = 10;
+                }
+                if (bubbleTop + bubbleHeight > document.documentElement.scrollHeight) {
+                    bubbleTop = document.documentElement.scrollHeight - bubbleHeight - 10;
+                } else if (bubbleTop < 0) {
+                    bubbleTop = 10;
+                }
+    
+                console.log('Bubble dimensions:', bubbleWidth, bubbleHeight);
+                console.log('Bubble position:', bubbleLeft, bubbleTop);
+                console.log('Timeline center:', timelineCenter, 'Scroll:', scrollX, scrollY);
+                console.log('Journal side:', side);
+    
+                activeBubble.style.left = `${bubbleLeft}px`;
+                activeBubble.style.top = `${bubbleTop}px`;
+                activeBubble.style.display = 'block';
+            });
         });
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'perspective(1000px)';
+    
+        // Close bubble when clicking outside
+        document.addEventListener('click', (e) => {
+            if (activeBubble && !e.target.classList.contains('read-more') && !activeBubble.contains(e.target)) {
+                activeBubble.remove();
+                activeBubble = null;
+                if (activeButton) {
+                    activeButton.classList.remove('active');
+                    activeButton = null;
+                }
+            }
         });
-    });
-
-    // Back to top button visibility
-    window.addEventListener('scroll', () => {
-        const button = document.querySelector('.back-to-top');
-        if (window.scrollY > 300) {
-            button.classList.add('visible');
-        } else {
-            button.classList.remove('visible');
-        }
     });
 </script>
 {% endblock %}

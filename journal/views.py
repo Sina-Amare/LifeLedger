@@ -56,12 +56,12 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related('tags')
+        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related('tags', 'attachments')  # Added 'attachments'
         mood = self.request.GET.get('mood')
         time_period = self.request.GET.get('time_period')
         is_favorite = self.request.GET.get('is_favorite')
         search_query = self.request.GET.get('q')
-        tag_filter_name = self.request.GET.get('tag_filter') 
+        tag_filter_name = self.request.GET.get('tag_filter')
 
         if mood and mood != '':
             queryset = queryset.filter(mood=mood)
@@ -104,7 +104,6 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         context['all_tags_for_filter'] = Tag.objects.filter(pk__in=[pk for pk in user_entry_tags_pks if pk is not None]).order_by('name')
         context['current_tag_filter'] = self.request.GET.get('tag_filter', '')
         return context
-
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = JournalEntry
     template_name = 'journal/journal_detail.html'

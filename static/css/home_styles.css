@@ -1,0 +1,314 @@
+/* static/css/home_styles.css */
+/* Styles specific to home.html */
+
+:root {
+  /* Hero Section Specific Variables */
+  --hero-text-glow-light: rgba(255, 255, 255, 0.6);
+  --hero-text-glow-dark: rgba(220, 225, 255, 0.7);
+
+  /* Colors from home.html <style> block - these should ideally be in base_styles.css if global */
+  --primary-color: #3b82f6;
+  --primary-dark-color: #60a5fa;
+  --secondary-color: #10b981;
+  --secondary-dark-color: #34d399;
+  --accent-color: #f59e0b;
+  --accent-dark-color: #fbbf24;
+}
+
+/* Hero Section Animations & Styles */
+@keyframes heroBgKenBurnsAdvanced {
+  0% {
+    transform: scale(1.15) translate(3%, -3%);
+    filter: brightness(0.9) saturate(1.15);
+  }
+  50% {
+    transform: scale(1.05) translate(0, 0);
+    filter: brightness(0.8) saturate(1.05);
+  }
+  100% {
+    transform: scale(1.15) translate(-3%, 3%);
+    filter: brightness(0.9) saturate(1.15);
+  }
+}
+.hero-bg-image-creative {
+  animation: heroBgKenBurnsAdvanced 40s ease-in-out infinite alternate;
+}
+
+@keyframes heroTitleLetterFlyIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px) rotateX(-45deg) scale(0.7);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0deg) scale(1);
+    filter: blur(0px);
+  }
+}
+.hero-title-creative span {
+  display: inline-block;
+  opacity: 0;
+  animation: heroTitleLetterFlyIn 1s cubic-bezier(0.215, 0.61, 0.355, 1)
+    forwards;
+  text-shadow: 0 0 12px var(--hero-text-glow-light),
+    0 0 25px var(--hero-text-glow-light), 0 0 40px rgba(255, 255, 255, 0.3);
+}
+.dark .hero-title-creative span {
+  text-shadow: 0 0 12px var(--hero-text-glow-dark),
+    0 0 25px var(--hero-text-glow-dark), 0 0 40px rgba(200, 210, 255, 0.3);
+}
+
+.hero-cta-button-creative {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+  box-shadow: 0 8px 25px -7px rgba(0, 0, 0, 0.2),
+    0 5px 15px -8px rgba(0, 0, 0, 0.1);
+  will-change: transform, box-shadow;
+  z-index: 1;
+}
+.hero-cta-button-creative:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 12px 30px -9px rgba(0, 0, 0, 0.3),
+    0 8px 20px -10px rgba(0, 0, 0, 0.2);
+}
+.hero-cta-button-creative .icon-cta {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  z-index: 2;
+}
+.hero-cta-button-creative:hover .icon-cta {
+  transform: rotate(-15deg) scale(1.2) translateX(-3px);
+}
+.hero-cta-button-creative > span {
+  position: relative;
+  z-index: 2;
+}
+.hero-cta-button-creative::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 20px;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(25deg);
+  transition: left 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  z-index: 1;
+  opacity: 0;
+}
+.hero-cta-button-creative:hover::after {
+  left: 150%;
+  opacity: 1;
+  transition-duration: 0.8s;
+}
+.hero-cta-button-creative.primary-cta::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: radial-gradient(circle, var(--primary-color) 0%, transparent 65%);
+  opacity: 0;
+  animation: pulseRing 2.5s 0.2s infinite;
+  z-index: 0;
+}
+.dark .hero-cta-button-creative.primary-cta::before {
+  background: radial-gradient(
+    circle,
+    var(--primary-dark-color) 0%,
+    transparent 65%
+  );
+}
+.hero-cta-button-creative.secondary-cta::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle,
+    var(--secondary-color) 0%,
+    transparent 65%
+  );
+  opacity: 0;
+  animation: pulseRing 2.5s 0.7s infinite;
+  z-index: 0;
+}
+.dark .hero-cta-button-creative.secondary-cta::before {
+  background: radial-gradient(
+    circle,
+    var(--secondary-dark-color) 0%,
+    transparent 65%
+  );
+}
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes scrollIndicatorWave {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.8;
+  }
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  transition: opacity 0.9s cubic-bezier(0.165, 0.84, 0.44, 1),
+    transform 0.9s cubic-bezier(0.165, 0.84, 0.44, 1);
+  will-change: opacity, transform;
+}
+.animate-on-scroll.is-visible {
+  opacity: 1;
+}
+.animate-slide-up.is-visible {
+  transform: translateY(0) rotateX(0);
+}
+.animate-slide-up {
+  transform: translateY(60px) rotateX(-15deg);
+}
+.animate-slide-left.is-visible {
+  transform: translateX(0) rotateY(0);
+}
+.animate-slide-left {
+  transform: translateX(-60px) rotateY(20deg);
+}
+.animate-slide-right.is-visible {
+  transform: translateX(0) rotateY(0);
+}
+.animate-slide-right {
+  transform: translateX(60px) rotateY(-20deg);
+}
+.animate-scale-in.is-visible {
+  transform: scale(1) rotate(0);
+}
+.animate-scale-in {
+  transform: scale(0.85) rotate(-3deg);
+}
+
+.hero-section-bg-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.45) 60%,
+    rgba(0, 0, 0, 0.75) 100%
+  );
+  z-index: 1;
+  transition: background 0.5s ease;
+}
+.dark .hero-section-bg-overlay::before {
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 10, 20, 0.25) 0%,
+    rgba(10, 10, 20, 0.55) 60%,
+    rgba(10, 10, 20, 0.85) 100%
+  );
+}
+
+/* Define two separate keyframes for pulseVignette */
+@keyframes pulseVignetteLight {
+  0% {
+    box-shadow: inset 0 0 70px 30px rgba(0, 0, 0, 0.1);
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: inset 0 0 100px 50px rgba(0, 0, 0, 0.18);
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: inset 0 0 70px 30px rgba(0, 0, 0, 0.1);
+    opacity: 0.5;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseVignetteDark {
+  /* Dark mode specific vignette animation */
+  0% {
+    box-shadow: inset 0 0 90px 40px rgba(0, 0, 0, 0.2);
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: inset 0 0 130px 65px rgba(0, 0, 0, 0.3);
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: inset 0 0 90px 40px rgba(0, 0, 0, 0.2);
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+.hero-section-bg-overlay::after {
+  /* Animated Vignette */
+  content: "";
+  position: absolute;
+  inset: -50px;
+  border-radius: 50%;
+  /* Apply the light mode animation by default */
+  animation: pulseVignetteLight 8s ease-in-out infinite alternate;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.6; /* Initial opacity, keyframes can override */
+  /* Initial box-shadow will be set by the first frame of the animation */
+}
+.dark .hero-section-bg-overlay::after {
+  /* Override to use the dark mode animation */
+  animation-name: pulseVignetteDark;
+  /* Initial box-shadow for dark mode can also be set by its animation's first frame */
+}
+
+.feature-pill-no-box {
+  transition: transform 0.3s ease-out, filter 0.3s ease-out;
+}
+.group:hover .feature-pill-no-box {
+  transform: translateX(5px);
+}
+.feature-pill-no-box .pill-icon {
+  transition: transform 0.3s ease-out;
+}
+.group:hover .feature-pill-no-box .pill-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+.pill-text {
+  transition: all 0.3s;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.dark .pill-text {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.group:hover .feature-pill-no-box .pill-text {
+  filter: brightness(1.1);
+  transform: translateX(2px);
+}
+
+.cta-section-creative {
+  padding: 8rem 1rem;
+}
