@@ -173,11 +173,10 @@
 }
 
 .read-more {
-  background: linear-gradient(
-    135deg,
-    #8b5cf6 0%,
-    #8b5cf6 100%
-  ); /* Predefine gradient for smooth transition */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #8b5cf6 0%, #8b5cf6 100%);
   color: #ffffff;
   border-radius: 2rem;
   padding: 0.5rem 1rem;
@@ -189,18 +188,33 @@
   cursor: pointer;
   margin-top: 0.5rem;
   align-self: flex-start;
-  display: inline-block;
 }
 .dark .read-more {
   background: linear-gradient(135deg, #a78bfa 0%, #a78bfa 100%);
   box-shadow: 0 4px 10px rgba(167, 139, 250, 0.1),
     0 2px 4px rgba(167, 139, 250, 0.1);
 }
+.read-more::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.dark .read-more::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
 .read-more:hover {
   transform: perspective(500px) translateY(-4px) translateZ(6px);
   box-shadow: 0 8px 20px rgba(139, 92, 246, 0.2),
     0 4px 8px rgba(139, 92, 246, 0.2);
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+.read-more:hover::after {
+  width: 100%;
 }
 .dark .read-more:hover {
   box-shadow: 0 8px 20px rgba(167, 139, 250, 0.2),
@@ -317,22 +331,26 @@
   border-radius: 2rem;
   font-size: 0.8rem;
   font-weight: 500;
-  background: #e5e7eb;
+  background: linear-gradient(
+    90deg,
+    #dbeafe 0%,
+    #e9d5ff 100%
+  ); /* Soft blue to purple gradient */
   color: #1f2937;
-  transition: transform 0.2s ease, background 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
   display: inline-block;
   margin-right: 0.5rem;
 }
 .dark .tag-pill-list-item {
-  background: #4b5563;
-  color: #d1d5db;
-}
-.tag-pill-list-item:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 70%, #e5e7eb 100%);
-}
-.dark .tag-pill-list-item:hover {
-  background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 70%, #4b5563 100%);
+  background: linear-gradient(
+    90deg,
+    #4b6eaf 0%,
+    #7c3aed 100%
+  ); /* Darker blue to purple */
+  color: #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .entry-icon {
@@ -427,7 +445,7 @@ h1 {
   -webkit-text-fill-color: transparent;
   text-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
   transition: background 0.3s ease, text-shadow 0.3s ease;
-  pointer-events: none; /* Disable pointer events to prevent hover issues */
+  pointer-events: none;
 }
 .dark h1 {
   color: #d1d5db;
@@ -554,6 +572,9 @@ h1 {
 }
 
 .edit-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
   color: #ffffff;
   border-radius: 2rem;
@@ -569,11 +590,27 @@ h1 {
   box-shadow: 0 6px 15px rgba(96, 165, 250, 0.1),
     0 3px 6px rgba(96, 165, 250, 0.1), 0 0 0 1px rgba(96, 165, 250, 0.05);
 }
+.edit-button::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.dark .edit-button::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
 .edit-button:hover {
   transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
   box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2),
     0 5px 10px rgba(59, 130, 246, 0.2), 0 0 0 2px rgba(59, 130, 246, 0.1);
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+.edit-button:hover::after {
+  width: 100%;
 }
 .dark .edit-button:hover {
   box-shadow: 0 10px 25px rgba(96, 165, 250, 0.2),
@@ -623,7 +660,60 @@ h1 {
     0 4px 8px rgba(248, 113, 113, 0.15);
 }
 
-.filter-submit,
+.filter-submit {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(45deg, #3b82f6 0%, #8b5cf6 70%, #e5e7eb 100%);
+  color: #ffffff;
+  border-radius: 2rem;
+  padding: 0.8rem 1.5rem;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.1),
+    0 3px 6px rgba(139, 92, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.05);
+  transform: perspective(500px) translateZ(0);
+  font-size: 1rem;
+}
+.dark .filter-submit {
+  background: linear-gradient(45deg, #60a5fa 0%, #a78bfa 70%, #4b5563 100%);
+  box-shadow: 0 6px 15px rgba(96, 165, 250, 0.1),
+    0 3px 6px rgba(167, 139, 250, 0.1), 0 0 0 1px rgba(96, 165, 250, 0.05);
+}
+.filter-submit::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.dark .filter-submit::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
+.filter-submit:hover {
+  transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2),
+    0 5px 10px rgba(139, 92, 246, 0.2), 0 0 0 2px rgba(59, 130, 246, 0.1);
+  background: linear-gradient(45deg, #8b5cf6 0%, #3b82f6 100%);
+}
+.filter-submit:hover::after {
+  width: 100%;
+}
+.dark .filter-submit:hover {
+  box-shadow: 0 10px 25px rgba(96, 165, 250, 0.2),
+    0 5px 10px rgba(167, 139, 250, 0.2), 0 0 0 2px rgba(96, 165, 250, 0.1);
+  background: linear-gradient(45deg, #a78bfa 0%, #60a5fa 100%);
+}
+.filter-submit:active {
+  transform: perspective(500px) translateY(-4px) translateZ(6px);
+}
+.dark .filter-submit:active {
+  box-shadow: 0 8px 20px rgba(96, 165, 250, 0.15),
+    0 4px 8px rgba(167, 139, 250, 0.15);
+}
+
 .clear-filters,
 .pagination-ul a,
 .pagination-ul span,
