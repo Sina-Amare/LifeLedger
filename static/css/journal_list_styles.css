@@ -1,3 +1,5 @@
+/* journal_list_styles.css*/
+/* Container for the timeline layout */
 .timeline-container {
   position: relative;
   max-width: 1000px;
@@ -21,6 +23,7 @@
   }
 }
 
+/* Grouping for journal entries */
 .journal-group {
   position: relative;
   padding-bottom: 2rem;
@@ -46,6 +49,7 @@
   display: none;
 }
 
+/* Individual timeline entry styling */
 .timeline-entry {
   position: relative;
   margin-bottom: 3rem;
@@ -74,6 +78,7 @@
   }
 }
 
+/* Date badge styling for timeline entries */
 .date-badge {
   position: absolute;
   top: -1.5rem;
@@ -104,6 +109,7 @@
   }
 }
 
+/* Card styling for journal entries */
 .entry-card {
   position: relative;
   background: #f5faff;
@@ -139,19 +145,19 @@
     0 8px 15px rgba(139, 92, 246, 0.15), 0 0 0 2px rgba(139, 92, 246, 0.1);
 }
 .entry-card.favorite::before {
-  content: "★";
+  content: "★"; /* Golden star for favorite entries */
   position: absolute;
-  top: -10px;
-  right: 15px;
+  top: 0.5rem;
+  right: 1rem; /* Moved to top-right corner */
   color: #fbbf24;
   font-size: 1.5rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .entry-card.latest::before {
-  content: "★";
+  content: "🔥"; /* Fire emoji for new entries */
   position: absolute;
-  top: -10px;
-  left: 15px;
+  top: 0.5rem;
+  right: 2.5rem; /* Moved to top-right corner, spaced from favorite */
   color: #10b981;
   font-size: 1.5rem;
   text-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
@@ -161,6 +167,7 @@
   text-shadow: 0 2px 4px rgba(52, 211, 153, 0.2);
 }
 
+/* Content area inside entry cards */
 .entry-content {
   flex: 1;
   word-wrap: break-word;
@@ -172,27 +179,20 @@
   overflow: hidden;
 }
 
+/* Read More link styling */
 .read-more {
   position: relative;
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(135deg, #8b5cf6 0%, #8b5cf6 100%);
-  color: #ffffff;
-  border-radius: 2rem;
-  padding: 0.5rem 1rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
-  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.1),
-    0 2px 4px rgba(139, 92, 246, 0.1);
-  transform: perspective(500px) translateZ(0);
+  color: #1f2937;
   font-size: 0.8rem;
-  cursor: pointer;
   margin-top: 0.5rem;
   align-self: flex-start;
+  text-decoration: none;
+  cursor: pointer; /* Added to show hand cursor on hover */
 }
 .dark .read-more {
-  background: linear-gradient(135deg, #a78bfa 0%, #a78bfa 100%);
-  box-shadow: 0 4px 10px rgba(167, 139, 250, 0.1),
-    0 2px 4px rgba(167, 139, 250, 0.1);
+  color: #e5e7eb;
 }
 .read-more::after {
   content: "";
@@ -207,34 +207,11 @@
 .dark .read-more::after {
   background: linear-gradient(90deg, #60a5fa, #a78bfa);
 }
-.read-more:hover {
-  transform: perspective(500px) translateY(-4px) translateZ(6px);
-  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.2),
-    0 4px 8px rgba(139, 92, 246, 0.2);
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-}
 .read-more:hover::after {
   width: 100%;
 }
-.dark .read-more:hover {
-  box-shadow: 0 8px 20px rgba(167, 139, 250, 0.2),
-    0 4px 8px rgba(167, 139, 250, 0.2);
-  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-}
-.read-more:active {
-  transform: perspective(500px) translateY(-2px) translateZ(4px);
-}
-.dark .read-more:active {
-  box-shadow: 0 6px 15px rgba(167, 139, 250, 0.15),
-    0 3px 6px rgba(167, 139, 250, 0.15);
-}
-.read-more.active {
-  background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
-}
-.dark .read-more.active {
-  background: linear-gradient(135deg, #60a5fa 0%, #60a5fa 100%);
-}
 
+/* Thought bubble popup styling */
 .thought-bubble {
   position: absolute;
   background: #f5faff;
@@ -307,6 +284,7 @@
   color: #f87171;
 }
 
+/* Animation for thought bubble appearance */
 @keyframes floatUp {
   from {
     opacity: 0;
@@ -318,6 +296,7 @@
   }
 }
 
+/* Meta information section in entry cards */
 .entry-meta {
   display: flex;
   flex-direction: column;
@@ -353,12 +332,14 @@
     inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
+/* Icon styling for journal entries */
 .entry-icon {
   font-size: 2rem;
   background: linear-gradient(45deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   transition: transform 0.3s ease;
+  margin-right: 1rem; /* Added to ensure space from right edge */
 }
 .dark .entry-icon {
   background: linear-gradient(45deg, #60a5fa, #a78bfa);
@@ -369,6 +350,7 @@
   transform: scale(1.1);
 }
 
+/* Mood-based shadow effects for entry cards */
 .mood-happy {
   box-shadow: 0 0 8px rgba(251, 191, 36, 0.2);
 }
@@ -388,6 +370,7 @@
   box-shadow: 0 0 12px rgba(107, 114, 128, 0.3);
 }
 
+/* Styling for images in the timeline */
 .timeline-image {
   position: relative;
   margin-bottom: 2.5rem;
@@ -427,9 +410,11 @@
     0 8px 15px rgba(139, 92, 246, 0.15);
 }
 
+/* Header section styling */
 header {
   border-bottom: 1px solid #bfdbfe;
-  padding-bottom: 1.5rem;
+  padding-bottom: 1.5rem; /* Increased padding to give more space */
+  padding-top: 1rem; /* Added padding-top to ensure text is not cut off from the top */
   position: relative;
   margin-bottom: 2rem;
 }
@@ -446,6 +431,7 @@ h1 {
   text-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
   transition: background 0.3s ease, text-shadow 0.3s ease;
   pointer-events: none;
+  margin-top: 0; /* Removed negative margin-top */
 }
 .dark h1 {
   color: #d1d5db;
@@ -455,6 +441,7 @@ h1 {
   text-shadow: 0 2px 4px rgba(96, 165, 250, 0.1);
 }
 
+/* Filter form styling */
 .filter-form {
   background: #f5faff;
   border: 1px solid #bfdbfe;
@@ -462,7 +449,7 @@ h1 {
   padding: 2rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05),
     0 5px 10px rgba(139, 92, 246, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.02);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
   transform: perspective(1000px) translateZ(0);
 }
 .dark .filter-form {
@@ -536,16 +523,18 @@ h1 {
   color: #d1d5db;
 }
 
+/* Write new entry button styling */
 .write-new-button {
-  background: linear-gradient(45deg, #3b82f6 0%, #8b5cf6 70%, #e5e7eb 100%);
-  color: #ffffff;
-  border-radius: 2rem;
-  padding: 0.8rem 1.5rem;
-  transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
-  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.1),
-    0 3px 6px rgba(139, 92, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.05);
-  transform: perspective(500px) translateZ(0);
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 0.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .dark .write-new-button {
   background: linear-gradient(45deg, #60a5fa 0%, #a78bfa 70%, #4b5563 100%);
@@ -571,24 +560,17 @@ h1 {
     0 4px 8px rgba(167, 139, 250, 0.15);
 }
 
+/* Edit button styling */
 .edit-button {
   position: relative;
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
-  color: #ffffff;
-  border-radius: 2rem;
-  padding: 0.6rem 1.2rem;
-  transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
-  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.1),
-    0 3px 6px rgba(59, 130, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.05);
-  transform: perspective(500px) translateZ(0);
+  color: #1f2937;
   font-size: 0.9rem;
+  text-decoration: none;
 }
 .dark .edit-button {
-  background: linear-gradient(135deg, #60a5fa 0%, #60a5fa 100%);
-  box-shadow: 0 6px 15px rgba(96, 165, 250, 0.1),
-    0 3px 6px rgba(96, 165, 250, 0.1), 0 0 0 1px rgba(96, 165, 250, 0.05);
+  color: #e5e7eb;
 }
 .edit-button::after {
   content: "";
@@ -603,28 +585,11 @@ h1 {
 .dark .edit-button::after {
   background: linear-gradient(90deg, #60a5fa, #a78bfa);
 }
-.edit-button:hover {
-  transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
-  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2),
-    0 5px 10px rgba(59, 130, 246, 0.2), 0 0 0 2px rgba(59, 130, 246, 0.1);
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-}
 .edit-button:hover::after {
   width: 100%;
 }
-.dark .edit-button:hover {
-  box-shadow: 0 10px 25px rgba(96, 165, 250, 0.2),
-    0 5px 10px rgba(96, 165, 250, 0.2), 0 0 0 2px rgba(96, 165, 250, 0.1);
-  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-}
-.edit-button:active {
-  transform: perspective(500px) translateY(-4px) translateZ(6px);
-}
-.dark .edit-button:active {
-  box-shadow: 0 8px 20px rgba(96, 165, 250, 0.15),
-    0 4px 8px rgba(96, 165, 250, 0.15);
-}
 
+/* Delete button styling */
 .delete-entry-button {
   background: linear-gradient(135deg, #ef4444 0%, #ef4444 100%);
   color: #ffffff;
@@ -660,24 +625,17 @@ h1 {
     0 4px 8px rgba(248, 113, 113, 0.15);
 }
 
+/* Filter submit button styling */
 .filter-submit {
   position: relative;
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(45deg, #3b82f6 0%, #8b5cf6 70%, #e5e7eb 100%);
-  color: #ffffff;
-  border-radius: 2rem;
-  padding: 0.8rem 1.5rem;
-  transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
-  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.1),
-    0 3px 6px rgba(139, 92, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.05);
-  transform: perspective(500px) translateZ(0);
+  color: #1f2937;
   font-size: 1rem;
+  text-decoration: none;
 }
 .dark .filter-submit {
-  background: linear-gradient(45deg, #60a5fa 0%, #a78bfa 70%, #4b5563 100%);
-  box-shadow: 0 6px 15px rgba(96, 165, 250, 0.1),
-    0 3px 6px rgba(167, 139, 250, 0.1), 0 0 0 1px rgba(96, 165, 250, 0.05);
+  color: #e5e7eb;
 }
 .filter-submit::after {
   content: "";
@@ -692,35 +650,140 @@ h1 {
 .dark .filter-submit::after {
   background: linear-gradient(90deg, #60a5fa, #a78bfa);
 }
-.filter-submit:hover {
-  transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
-  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2),
-    0 5px 10px rgba(139, 92, 246, 0.2), 0 0 0 2px rgba(59, 130, 246, 0.1);
-  background: linear-gradient(45deg, #8b5cf6 0%, #3b82f6 100%);
-}
 .filter-submit:hover::after {
   width: 100%;
 }
-.dark .filter-submit:hover {
-  box-shadow: 0 10px 25px rgba(96, 165, 250, 0.2),
-    0 5px 10px rgba(167, 139, 250, 0.2), 0 0 0 2px rgba(96, 165, 250, 0.1);
-  background: linear-gradient(45deg, #a78bfa 0%, #60a5fa 100%);
+
+/* Clear filters link styling */
+.clear-filters {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #ef4444;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
-.filter-submit:active {
-  transform: perspective(500px) translateY(-4px) translateZ(6px);
+.dark .clear-filters {
+  color: #f87171;
 }
-.dark .filter-submit:active {
-  box-shadow: 0 8px 20px rgba(96, 165, 250, 0.15),
-    0 4px 8px rgba(167, 139, 250, 0.15);
+.clear-filters::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  transition: width 0.3s ease;
+}
+.dark .clear-filters::after {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+.clear-filters:hover {
+  color: #dc2626;
+}
+.dark .clear-filters:hover {
+  color: #ef4444;
+}
+.clear-filters:hover::after {
+  width: 100%;
 }
 
-.clear-filters,
-.pagination-ul a,
-.pagination-ul span,
-.back-to-top {
-  /* ... keep these as they are ... */
+/* Pagination links styling */
+.pagination-ul a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #1f2937;
+  font-size: 0.9rem;
+  margin: 0 0.5rem;
+  text-decoration: none;
+  transition: transform 0.3s ease, color 0.3s ease;
 }
+.dark .pagination-ul a {
+  color: #e5e7eb;
+}
+.pagination-ul a::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.dark .pagination-ul a::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
+.pagination-ul a:hover {
+  transform: scale(1.05);
+  color: #3b82f6;
+}
+.dark .pagination-ul a:hover {
+  color: #60a5fa;
+}
+.pagination-ul a:hover::after {
+  width: 100%;
+}
+
+/* Active page number styling in pagination */
+.pagination-ul span {
+  color: #ffffff;
+  font-size: 0.9rem;
+  margin: 0 0.5rem;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  padding: 0.3rem 0.8rem;
+  border-radius: 1rem;
+  font-weight: 600;
+}
+.dark .pagination-ul span {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
+
+/* Back to top button styling */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  text-decoration: none;
+  transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+  opacity: 0;
+  pointer-events: none;
+}
+.dark .back-to-top {
+  background: linear-gradient(45deg, #60a5fa, #a78bfa);
+  box-shadow: 0 4px 10px rgba(96, 165, 250, 0.2);
+}
+.back-to-top:hover {
+  transform: translateY(-4px);
+  background: linear-gradient(45deg, #8b5cf6, #3b82f6);
+}
+.dark .back-to-top:hover {
+  background: linear-gradient(45deg, #a78bfa, #60a5fa);
+}
+.back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Utility class for visibility transitions */
 .visible {
   opacity: 1;
   transform: translateY(0);
+  -webkit-transform: translateY(0);
+  -moz-transform: translateY(0);
+  -ms-transform: translateY(0);
+  -o-transform: translateY(0);
 }

@@ -35,9 +35,7 @@ class JournalModelTests(TestCase):
         # Use get_or_create for predefined tags to avoid IntegrityError
         cls.tag_work, _ = Tag.objects.get_or_create(name="Work", defaults={'emoji': '💼'})
         cls.tag_personal, _ = Tag.objects.get_or_create(name="Personal", defaults={'emoji': '🏠'})
-        # If you need a tag that is definitely not predefined for some test:
-        # cls.tag_custom_model_test = Tag.objects.create(name=f"CustomModelTest_{uuid.uuid4().hex[:4]}", emoji="🧪")
-
+        
         cls.entry1.tags.add(cls.tag_work)
 
         cls.test_file_content_model = b"Alpha model test file content."
@@ -46,11 +44,13 @@ class JournalModelTests(TestCase):
         )
         cls.attachment1 = JournalAttachment.objects.create(journal_entry=cls.entry1, file=cls.uploaded_file_model, file_type='image')
 
-
     @classmethod
     def tearDownClass(cls):
         if os.path.exists(TEST_MEDIA_ROOT_JOURNAL):
-            shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            try:
+                shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            except Exception as e:
+                logger.error(f"Failed to clean up test media root: {e}")
         super().tearDownClass()
 
     def test_tag_creation_and_str(self):
@@ -70,7 +70,6 @@ class JournalModelTests(TestCase):
     def test_journal_attachment_creation(self):
         self.assertTrue(self.attachment1.file.name.startswith(f'user_{self.user1.id}/journal_attachments/'))
         self.assertEqual(self.attachment1.file_type, 'image')
-
 
     def test_journal_attachment_str(self):
         expected_str_start = f"Attachment for Entry {self.entry1.id}:"
@@ -112,15 +111,16 @@ class JournalFormTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user_form_test = User.objects.create_user(username=f'form_user_{uuid.uuid4().hex[:6]}', email=f'form_user_{uuid.uuid4().hex[:6]}@example.com', password='password123')
-        # Tags are populated by post_migrate signal, ensure they exist for tests
         Tag.objects.get_or_create(name="Work", defaults={'emoji': '💼'})
         Tag.objects.get_or_create(name="Personal", defaults={'emoji': '🏠'})
-
 
     @classmethod
     def tearDownClass(cls):
         if os.path.exists(TEST_MEDIA_ROOT_JOURNAL):
-            shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            try:
+                shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            except Exception as e:
+                logger.error(f"Failed to clean up test media root: {e}")
         super().tearDownClass()
 
     def test_journal_entry_form_valid(self):
@@ -145,11 +145,36 @@ class JournalFormTests(TestCase):
         self.assertIn('Work', form.cleaned_data['tags'])
         self.assertIn('New Custom Tag', form.cleaned_data['tags'])
 
-
     def test_journal_entry_form_invalid_missing_content(self):
         form = JournalEntryForm(data={'title': 'Incomplete Form Final', 'mood': 'happy', 'privacy_level': 'private'})
         self.assertFalse(form.is_valid())
         self.assertIn('content', form.errors)
+
+    def test_journal_entry_form_invalid_mood(self):
+        invalid_mood = 'invalid_mood'
+        form_data = {
+            'title': 'Invalid Mood Test',
+            'content': 'Valid content.',
+            'mood': invalid_mood,
+            'privacy_level': 'private',
+            'is_favorite': False
+        }
+        form = JournalEntryForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('mood', form.errors)
+
+    def test_journal_entry_form_empty_tags(self):
+        form_data = {
+            'title': 'Empty Tags Test',
+            'content': 'Valid content.',
+            'mood': 'happy',
+            'privacy_level': 'private',
+            'is_favorite': False,
+            'tags': ''
+        }
+        form = JournalEntryForm(data=form_data)
+        self.assertTrue(form.is_valid(), msg=f"Form errors with empty tags: {form.errors.as_json()}")
+        self.assertEqual(form.cleaned_data['tags'], [])
 
     def test_journal_attachment_form_valid(self):
         f = SimpleUploadedFile(f"form_attach_final_{uuid.uuid4().hex}.txt", b"content", content_type="text/plain")
@@ -166,7 +191,6 @@ class JournalFormTests(TestCase):
         instance = form.save(commit=False)
         self.assertEqual(instance.file_type, 'image')
 
-
     def test_journal_attachment_form_no_file(self):
         form = JournalAttachmentForm(data={})
         self.assertFalse(form.is_valid())
@@ -181,9 +205,7 @@ class JournalViewTests(TestCase):
         cls.user = User.objects.create_user(username=cls.user_username, email=f'{cls.user_username}@example.com', password='password123')
         cls.other_user = User.objects.create_user(username=cls.other_user_username, email=f'{cls.other_user_username}@example.com', password='password123')
         
-        # Use get_or_create for predefined tags
         cls.tag_test_view, _ = Tag.objects.get_or_create(name="ViewTestTag", defaults={'emoji':"🧪"})
-
 
         cls.entry_user = JournalEntry.objects.create(
             user=cls.user, title="User's Main Entry For View Test Final", content="Content by main user final.", mood="happy"
@@ -202,7 +224,10 @@ class JournalViewTests(TestCase):
     @classmethod
     def tearDownClass(cls):
         if os.path.exists(TEST_MEDIA_ROOT_JOURNAL):
-            shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            try:
+                shutil.rmtree(TEST_MEDIA_ROOT_JOURNAL)
+            except Exception as e:
+                logger.error(f"Failed to clean up test media root: {e}")
         super().tearDownClass()
 
     def test_journal_list_view_authenticated(self):
@@ -211,6 +236,20 @@ class JournalViewTests(TestCase):
         self.assertIn(self.entry_user, response.context['entries'])
         self.assertContains(response, escape(self.entry_user.title))
         self.assertContains(response, self.tag_test_view.name) 
+
+    def test_journal_list_view_no_duplicate_mood_options(self):
+        response = self.client.get(reverse('journal:journal_list'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        mood_select_count = content.count('<option value="">Select Mood</option>')
+        self.assertEqual(mood_select_count, 1, "Duplicate 'Select Mood' options found")
+
+    def test_journal_list_view_no_duplicate_time_options(self):
+        response = self.client.get(reverse('journal:journal_list'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        all_time_count = content.count('<option value="all">All Time</option>')
+        self.assertEqual(all_time_count, 1, "Duplicate 'All Time' options found")
 
     def test_journal_detail_view_owner_access(self):
         response = self.client.get(reverse('journal:journal_detail', kwargs={'pk': self.entry_user.pk}))
@@ -233,7 +272,6 @@ class JournalViewTests(TestCase):
         new_entry = JournalEntry.objects.get(title='New Entry No Attach Final')
         self.assertIn(self.tag_test_view, new_entry.tags.all())
         self.assertTrue(Tag.objects.filter(name="Customtag1").exists())
-
 
     def test_journal_create_view_post_valid_with_attachment(self):
         entry_count_before = JournalEntry.objects.count()
@@ -275,7 +313,6 @@ class JournalViewTests(TestCase):
         self.assertEqual(new_entry.attachments.first().file_type, 'image')
         self.assertIn(Tag.objects.get(name="Work"), new_entry.tags.all())
 
-
     def test_journal_update_view_post_owner(self):
         updated_title = "Updated Title Test Final"
         original_is_favorite = self.entry_user.is_favorite
@@ -315,6 +352,18 @@ class JournalViewTests(TestCase):
         self.assertIn(Tag.objects.get(name="Personal"), self.entry_user.tags.all())
         self.assertTrue(Tag.objects.filter(name="Updatedtag").exists()) 
 
+    def test_journal_list_view_filter_by_mood(self):
+        response = self.client.get(reverse('journal:journal_list') + '?mood=happy')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.entry_user, response.context['entries'])
+        self.assertNotIn(self.entry_other_user, response.context['entries'])
+
+    def test_journal_list_view_filter_by_time(self):
+        today = timezone.now().date()
+        response = self.client.get(reverse('journal:journal_list') + '?time_period=today')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.entry_user, response.context['entries'])  # Assuming entry_user is created today
+
     def test_journal_list_view_login_required(self):
         self.client.logout()
         response = self.client.get(reverse('journal:journal_list'))
@@ -336,7 +385,6 @@ class JournalViewTests(TestCase):
         self.assertContains(response, f'value="{escape(self.entry_user.title)}"')
         self.assertIn('predefined_tags', response.context)
         self.assertIn(self.tag_test_view.name, response.context['form']['tags'].initial)
-
 
     def test_journal_delete_view_get_owner_method_not_allowed(self):
         response = self.client.get(reverse('journal:journal_delete', kwargs={'pk': self.entry_user.pk}))

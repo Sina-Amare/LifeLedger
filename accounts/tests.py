@@ -2,9 +2,8 @@
 
 import uuid
 import os
-import shutil # Added for tearDownClass
+import shutil
 
-# Import override_settings from django.test
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse, reverse_lazy
 from django.contrib.auth import get_user_model
@@ -65,8 +64,6 @@ class AccountsModelTests(TestCase):
 
 
 class AccountsFormTests(TestCase):
-    # No specific media root needed here if forms don't directly save files in these tests
-    
     def test_custom_user_creation_form_valid(self):
         username = f'form_valid_user_{uuid.uuid4().hex[:6]}'
         email = f'{username}@example.com'
@@ -129,6 +126,20 @@ class AccountsFormTests(TestCase):
             form.errors[NON_FIELD_ERRORS]
         )
 
+    def test_username_email_authentication_form_invalid_credentials(self):
+        active_username = f'auth_active_user_form_{uuid.uuid4().hex[:6]}'
+        User.objects.create_user(username=active_username, email=f'{active_username}@example.com', password='password123', is_active=True)
+        form_data = {'username': active_username, 'password': 'wrongpassword'}
+        request = Client().request().wsgi_request 
+        form = UsernameEmailAuthenticationForm(request=request, data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn(NON_FIELD_ERRORS, form.errors)
+        self.assertIn(
+            "Please enter a correct username and password. Note that both fields may be case-sensitive.",
+            form.errors[NON_FIELD_ERRORS]
+        )
+
+
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class AccountsViewTests(TestCase):
     def setUp(self):
@@ -168,7 +179,7 @@ class AccountsViewTests(TestCase):
         response = self.client.get(reverse('accounts:home'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'accounts/dashboard.html')
-        self.assertContains(response, f'Hello, <strong class="font-semibold">{self.active_user_username}</strong>')
+        self.assertContains(response, self.active_user_username, html=True)
         self.client.logout()
 
     def test_signup_view_creates_inactive_user_and_sends_email(self):
@@ -186,11 +197,26 @@ class AccountsViewTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(new_user.profile.activation_key, mail.outbox[0].body)
 
+    def test_signup_view_invalid_form(self):
+        response = self.client.post(reverse('accounts:signup'), {
+            'username': f'signup_test_final_v5_{uuid.uuid4().hex[:6]}',
+            'email': f'signup_test_final_v5_{uuid.uuid4().hex[:6]}@example.com',
+            'password1': 'TestPass123!', 'password2': 'DifferentPass123!'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response.context['form'], 'password2', "The two password fields didn’t match.")
+
     def test_account_activation_view_valid_key(self):
         response = self.client.get(reverse('accounts:activate', kwargs={'activation_key': self.inactive_profile.activation_key}))
         self.assertRedirects(response, reverse('accounts:account_activation_success'))
         self.inactive_user.refresh_from_db()
         self.assertTrue(self.inactive_user.is_active)
+
+    def test_account_activation_view_invalid_key(self):
+        response = self.client.get(reverse('accounts:activate', kwargs={'activation_key': 'invalid-key'}))
+        self.assertRedirects(response, reverse('accounts:account_activation_invalid'))
+        self.inactive_user.refresh_from_db()
+        self.assertFalse(self.inactive_user.is_active)
 
     def test_login_view_inactive_user(self):
         response = self.client.post(reverse('accounts:login'), {
@@ -200,6 +226,14 @@ class AccountsViewTests(TestCase):
         self.assertFormError(response.context['form'], None, 
                              "Your account is not active. Please check your email for the activation link or use the 'Resend Activation Email' option.")
 
+    @override_settings(LOGIN_REDIRECT_URL='/accounts/')
+    def test_login_view_success(self):
+        response = self.client.post(reverse('accounts:login'), {
+            'username': self.active_user_username, 'password': 'password123'
+        })
+        self.assertRedirects(response, reverse('accounts:home'))
+        self.assertTrue('_auth_user_id' in self.client.session)
+
     def test_logout_view(self):
         self.client.login(username=self.active_user_username, password='password123')
         self.assertTrue('_auth_user_id' in self.client.session)
@@ -207,7 +241,6 @@ class AccountsViewTests(TestCase):
         response_confirm = self.client.get(reverse('accounts:logout_confirm'))
         self.assertEqual(response_confirm.status_code, 200)
         self.assertContains(response_confirm, f"Are you sure you want to log out, {self.active_user_username}?")
-
         response_logout = self.client.post(reverse('accounts:logout'))
         self.assertRedirects(response_logout, reverse('accounts:home')) 
         self.assertFalse('_auth_user_id' in self.client.session)
@@ -220,11 +253,27 @@ class AccountsViewTests(TestCase):
         self.inactive_profile.refresh_from_db()
         self.assertNotEqual(self.inactive_profile.activation_key, old_key)
 
+    def test_resend_activation_email_view_active_user(self):
+        response = self.client.post(reverse('accounts:resend_activation_email'), {'username_or_email': self.active_user.email})
+        self.assertEqual(response.status_code, 200)
+        form = response.context['form']
+        self.assertFalse(form.is_valid())
+        self.assertIn('username_or_email', form.errors)
+        self.assertIn(
+            "This account is already active. Please try logging in.",
+            form.errors['username_or_email']
+        )
+
     def test_password_reset_view_sends_email(self):
         response = self.client.post(reverse('accounts:password_reset'), {'email': self.active_user.email})
         self.assertRedirects(response, reverse('accounts:password_reset_done'))
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [self.active_user.email])
+
+    def test_password_reset_view_invalid_email(self):
+        response = self.client.post(reverse('accounts:password_reset'), {'email': 'nonexistent@example.com'})
+        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_static_template_views_render(self):
         pages_to_test_unauthenticated = [

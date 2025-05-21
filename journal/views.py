@@ -49,6 +49,10 @@ MOOD_VISUALS = {
     'excited': {'emoji': "🎉", 'text_color': "text-yellow-700 dark:text-yellow-400", 'bg_color': "bg-yellow-100 dark:bg-yellow-800", 'border_color': "border-yellow-500"},
 }
 
+# journal/views.py (partial update)
+
+# journal/views.py (partial update)
+
 class JournalEntryListView(LoginRequiredMixin, ListView):
     model = JournalEntry
     template_name = 'journal/journal_list.html'
@@ -56,7 +60,7 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related('tags', 'attachments')  # Added 'attachments'
+        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related('tags', 'attachments')
         mood = self.request.GET.get('mood')
         time_period = self.request.GET.get('time_period')
         is_favorite = self.request.GET.get('is_favorite')
@@ -67,34 +71,39 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(mood=mood)
         if time_period and time_period != 'all':
             now = timezone.now()
-            if time_period == 'today': queryset = queryset.filter(created_at__date=now.date())
+            if time_period == 'today':
+                queryset = queryset.filter(created_at__date=now.date())
             elif time_period == 'this_week':
                 start_of_week = now.date() - timezone.timedelta(days=now.weekday())
                 queryset = queryset.filter(created_at__date__gte=start_of_week)
-            elif time_period == 'this_month': queryset = queryset.filter(created_at__year=now.year, created_at__month=now.month)
-            elif time_period == 'this_year': queryset = queryset.filter(created_at__year=now.year)
+            elif time_period == 'this_month':
+                queryset = queryset.filter(created_at__year=now.year, created_at__month=now.month)
+            elif time_period == 'this_year':
+                queryset = queryset.filter(created_at__year=now.year)
         if is_favorite == 'on':
             queryset = queryset.filter(is_favorite=True)
-        
+
         if tag_filter_name:
             queryset = queryset.filter(tags__name__iexact=tag_filter_name)
 
         if search_query:
             queryset = queryset.filter(
-                Q(title__icontains=search_query) | 
+                Q(title__icontains=search_query) |
                 Q(content__icontains=search_query) |
                 Q(tags__name__icontains=search_query)
             ).distinct()
-        
+
         return queryset.order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['mood_options'] = MOOD_CHOICES_FORM_DISPLAY 
+        context['mood_options'] = [option for option in MOOD_CHOICES_FORM_DISPLAY if option[0] != ""]
         context['mood_visuals'] = MOOD_VISUALS
         context['time_period_options'] = [
-            ('all', 'All Time'), ('today', 'Today'), ('this_week', 'This Week'),
-            ('this_month', 'This Month'), ('this_year', 'This Year'),
+            ('today', 'Today'),
+            ('this_week', 'This Week'),
+            ('this_month', 'This Month'),
+            ('this_year', 'This Year'),
         ]
         context['current_mood'] = self.request.GET.get('mood', '')
         context['current_time_period'] = self.request.GET.get('time_period', 'all')
@@ -103,7 +112,21 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         user_entry_tags_pks = JournalEntry.objects.filter(user=self.request.user).values_list('tags__pk', flat=True).distinct()
         context['all_tags_for_filter'] = Tag.objects.filter(pk__in=[pk for pk in user_entry_tags_pks if pk is not None]).order_by('name')
         context['current_tag_filter'] = self.request.GET.get('tag_filter', '')
+
+        # Check if any filter is applied
+        context['is_filtered'] = any([
+            context['current_mood'],
+            context['current_time_period'] != 'all',
+            context['current_is_favorite'],
+            context['current_search_query'],
+            context['current_tag_filter']
+        ])
+
+        # Add new entries (created within last 24 hours)
+        context['new_entries'] = [entry for entry in context['entries'] if (timezone.now() - entry.created_at).total_seconds() <= 24 * 3600]
+
         return context
+
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = JournalEntry
     template_name = 'journal/journal_detail.html'
@@ -540,4 +563,3 @@ class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, Delete
         except Exception as e:
             logger.error(f"Unexpected error in JournalEntryAjaxDeleteView POST for pk={kwargs.get('pk')}: {e}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'An unexpected server error occurred.'}, status=500)
-
