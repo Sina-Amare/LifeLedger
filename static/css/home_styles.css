@@ -1,4 +1,3 @@
-/* static/css/home_styles.css */
 /* Styles specific to home.html */
 
 :root {
@@ -73,6 +72,9 @@
   box-shadow: 0 12px 30px -9px rgba(0, 0, 0, 0.3),
     0 8px 20px -10px rgba(0, 0, 0, 0.2);
 }
+.hero-cta-button-creative:hover > span {
+  filter: brightness(1.1); /* Remove blur, only adjust brightness */
+}
 .hero-cta-button-creative .icon-cta {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
@@ -132,7 +134,7 @@
   border-radius: inherit;
   background: radial-gradient(
     circle,
-    var(--secondary-color) 0%,
+    var(--secondary-color) лож,
     transparent 65%
   );
   opacity: 0;
@@ -311,4 +313,21 @@
 
 .cta-section-creative {
   padding: 8rem 1rem;
+}
+
+/* Connect & Safeguard Styling */
+.feature-block-creative .pill-text:contains("Connect & Safeguard") {
+  color: #fbbf24 !important;
+}
+/* Start Your Adventure Styling */
+.start-adventure {
+  color: #3b82f6; /* Light theme, as you said it's okay */
+}
+.dark
+  .hero-cta-button-creative.secondary-cta
+  span:contains("Start Your Adventure") {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

@@ -1,14 +1,4 @@
-/* static/css/dashboard_styles.css */
 /* Styles specific to dashboard.html */
-
-/*
-    IMPORTANT NOTE ON @apply:
-    The @apply directive is a Tailwind CSS feature. For these styles to work correctly,
-    this CSS file MUST be processed by your Tailwind CSS build pipeline
-    (e.g., through PostCSS with Tailwind configured, similar to how your output.css is generated).
-    If this file is linked as a plain CSS file without Tailwind processing,
-    the @apply rules will be ignored by the browser.
-*/
 
 /* Animations and specific styles for dashboard elements */
 .dashboard-card {
@@ -110,7 +100,6 @@
   height: 2px;
   bottom: -2px;
   left: 0;
-  /* Assuming --primary-light, --accent-color, --primary-dark, --accent-dark-color are globally available from base_styles.css */
   background: linear-gradient(
     90deg,
     var(--primary-light, #3b82f6),
@@ -150,7 +139,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
-  transition: transform 0.3s ease;
+  /* Removed transition: transform to prevent box movement on hover */
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light;
 }
 
@@ -176,7 +165,7 @@
   -webkit-background-clip: text;
   background-clip: text; /* Standard property */
   -webkit-text-fill-color: transparent;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease; /* Only transform transition */
 }
 .dark .quick-action-icon {
   background: linear-gradient(
@@ -230,12 +219,11 @@
 }
 .quick-action:hover .quick-action-icon {
   transform: rotate(15deg) scale(1.1);
-  text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  /* Removed text-shadow to prevent color change */
 }
 .quick-action-icon-disabled {
   font-size: 32px;
   color: #9ca3af; /* gray-400 */
-  /* @apply text-gray-400 dark:text-gray-500; - Removed @apply, color set directly */
 }
 .dark .quick-action-icon-disabled {
   color: #6b7280; /* gray-500 */
@@ -244,7 +232,6 @@
 /* Text Styles for Quick Actions */
 .quick-action-title {
   position: relative;
-  /* @apply text-base font-semibold text-text-light dark:text-text-dark; - Removed @apply */
   /* Base styling will come from Tailwind classes in HTML */
 }
 .quick-action-title::after {
@@ -286,11 +273,9 @@
 .quick-action-subtitle-container {
   height: 100px;
   overflow-y: auto;
-  /* @apply bg-background-light dark:bg-background-dark p-2 rounded mt-2; - Removed @apply */
   /* Base styling will come from Tailwind classes in HTML */
 }
 .quick-action-subtitle {
-  /* @apply text-xs text-gray-500 dark:text-gray-400; - Removed @apply */
   /* Base styling will come from Tailwind classes in HTML */
 }
 
@@ -301,13 +286,6 @@
   align-items: flex-start;
   gap: 0.5rem;
   opacity: 0.7;
-  /* @apply cursor-not-allowed; - Removed @apply, apply in HTML */
-}
-.quick-action-title-disabled {
-  /* @apply text-base font-semibold text-gray-400 dark:text-gray-500; - Removed @apply */
-}
-.quick-action-subtitle-disabled {
-  /* @apply text-xs text-gray-400 dark:text-gray-400; - Removed @apply */
 }
 
 /* Custom styles for Latest Reflection icon */
@@ -329,7 +307,14 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-/* This hover effect relies on .dashboard-card class being present on the parent */
 .dashboard-card:hover .reflection-icon {
   transform: scale(1.1);
+}
+
+/* Your Latest Reflection Styling */
+.latest-reflection-title {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

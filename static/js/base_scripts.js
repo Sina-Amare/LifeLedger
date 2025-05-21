@@ -1,43 +1,32 @@
-// static/js/base_scripts.js
-// Contains logic for preloader, Fancybox, Navbar animation, and Delete Modal
-
 document.addEventListener("DOMContentLoaded", function () {
   // --- Preloader Hiding Logic ---
   const preloader = document.getElementById("page-preloader");
   if (preloader) {
-    // Ensure preloader is visible initially
     preloader.classList.remove("hidden");
     window.addEventListener("load", () => {
-      // Wait a brief moment after load for content to render, then hide preloader
       setTimeout(() => {
         preloader.classList.add("hidden");
-      }, 200); // Adjust delay as needed
+      }, 200);
     });
   }
 
   // --- Initialize Fancybox ---
-  // Ensure Fancybox is loaded before trying to use it
   if (typeof Fancybox !== "undefined") {
-    Fancybox.bind("[data-fancybox]", {
-      // Optional: Add any global Fancybox configurations here
-    });
+    Fancybox.bind("[data-fancybox]", {});
   } else {
     console.warn("Fancybox library not found. Image previews may not work.");
   }
 
-  // --- Navbar Entrance Animation Control ---
+  // --- Navbar Scroll Behavior ---
   const navbar = document.getElementById("main-navbar");
   if (navbar) {
-    const hasAnimated = sessionStorage.getItem("navbarAnimated");
-    if (!hasAnimated) {
-      // If not animated yet in this session, add animation class
-      navbar.classList.add("navbar-animate-on-load");
-      sessionStorage.setItem("navbarAnimated", "true"); // Mark as animated for this session
-    } else {
-      // If already animated, ensure it's immediately visible without animation
-      navbar.style.opacity = "1";
-      navbar.style.transform = "translateY(0)";
-    }
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 50) {
+        navbar.classList.add("scrolled");
+      } else {
+        navbar.classList.remove("scrolled");
+      }
+    });
   }
 
   // --- Global Delete Modal Interaction Logic ---
@@ -46,10 +35,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ? deleteModal.querySelector(".modal-dialog-box")
     : null;
   const closeModalXButton = document.getElementById("close-modal-x-button");
-  const cancelDeleteButton = document.getElementById("cancel-delete-button"); // This is the "Cancel" button inside the modal
+  const cancelDeleteButton = document.getElementById("cancel-delete-button");
 
-  // Function to show the delete modal with animation
-  // This function will be called by other scripts (e.g., ajax_delete.js)
   window.showDeleteModal = function () {
     if (!deleteModal || !modalDialog) {
       console.error(
@@ -57,29 +44,22 @@ document.addEventListener("DOMContentLoaded", function () {
       );
       return;
     }
-    deleteModal.classList.remove("hidden"); // Make modal container visible
-
-    // Trigger animations shortly after display to ensure they play
-    // Reset initial state for animation
-    deleteModal.classList.remove("opacity-0"); // Ensure backdrop is not transparent
+    deleteModal.classList.remove("hidden");
+    deleteModal.classList.remove("opacity-0");
     modalDialog.style.opacity = "0";
     modalDialog.style.transform = "scale(0.95) translateY(10px)";
 
     setTimeout(() => {
-      // Apply entering animations
       deleteModal.classList.add("modal-entering");
       modalDialog.style.opacity = "1";
       modalDialog.style.transform = "scale(1) translateY(0)";
-    }, 10); // Small delay for CSS to catch up
+    }, 10);
 
-    // Remove 'modal-entering' after animation duration to clean up
-    // This timeout should roughly match the duration of modalDialogBounceIn
     setTimeout(() => {
       if (deleteModal) deleteModal.classList.remove("modal-entering");
-    }, 400); // e.g., 0.4s for modalDialogBounceIn
+    }, 400);
   };
 
-  // Function to hide the delete modal with animation
   window.hideDeleteModal = function () {
     if (!deleteModal || !modalDialog) {
       console.error(
@@ -87,17 +67,14 @@ document.addEventListener("DOMContentLoaded", function () {
       );
       return;
     }
-    deleteModal.classList.add("modal-exiting"); // Add class to trigger exit animations
+    deleteModal.classList.add("modal-exiting");
 
-    // After exit animation, hide the modal completely
-    // This timeout should roughly match the duration of modalBackdropFadeOut / modalDialogBounceOut
     setTimeout(() => {
       deleteModal.classList.add("hidden", "opacity-0");
       deleteModal.classList.remove("modal-exiting");
     }, 300);
   };
 
-  // Event listeners for modal close actions (X button and Cancel button)
   if (closeModalXButton) {
     closeModalXButton.addEventListener("click", window.hideDeleteModal);
   } else {
@@ -110,7 +87,6 @@ document.addEventListener("DOMContentLoaded", function () {
     console.warn("#cancel-delete-button not found.");
   }
 
-  // Accessibility: Close modal with Escape key or by clicking outside on the backdrop
   if (deleteModal) {
     window.addEventListener("keydown", (event) => {
       if (
@@ -121,7 +97,6 @@ document.addEventListener("DOMContentLoaded", function () {
         window.hideDeleteModal();
       }
     });
-    // Close if backdrop (deleteModal itself) is clicked
     deleteModal.addEventListener("click", function (event) {
       if (event.target === deleteModal) {
         window.hideDeleteModal();

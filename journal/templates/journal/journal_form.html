@@ -226,6 +226,10 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+        // Pass initial_tags_str from Django to JavaScript
+        const initialTagsFromDjango = "{{ initial_tags_str|escapejs|default_if_none:'' }}";
+    </script>
     <script src="{% static 'js/journal_form_scripts.js' %}"></script>
     <script src="{% static 'js/journal_form_ai_progress.js' %}"></script>
 {% endblock %}

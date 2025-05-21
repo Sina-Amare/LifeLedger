@@ -1,7 +1,7 @@
 {% load static %}
 {% load i18n %}
 <!DOCTYPE html>
-<html lang="{{ request.LANGUAGE_CODE|default:"en" }}" class="light">
+<html lang="{{ request.LANGUAGE_CODE|default:'en' }}" class="light">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -27,7 +27,6 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="flex flex-col min-h-screen bg-background-light text-text-light dark:bg-background-dark dark:text-text-dark font-sans antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-slate-900">
-
     <div id="page-preloader" class="preloader">
         <i class="fas fa-feather-alt preloader-icon"></i>
     </div>
@@ -77,20 +76,20 @@
         </div>
     </nav>
 
-    <main class="flex-grow w-full">
+    <main class="flex-grow min-h-[calc(100vh-64px)]"> <!-- Added min-height to ensure space -->
         {% block content %}
         {% endblock %}
     </main>
 
-    <footer class="bg-card-light/85 dark:bg-card-dark/85 border-t border-gray-200/60 dark:border-gray-700/60 mt-auto py-10 sm:py-12 md:py-16 transition-colors duration-300 ease-in-out">
+    <footer class="bg-card-light/85 dark:bg-card-dark/85 border-t border-gray-200/60 dark:border-gray-700/60 py-6 sm:py-8 transition-colors duration-300 ease-in-out">
         <div class="container mx-auto px-4 text-center">
-            <a href="{% url 'accounts:home' %}" class="text-3xl font-bold text-primary-light dark:text-primary-dark-theme hover:opacity-80 transition-opacity mb-5 inline-block">
+            <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark-theme hover:opacity-80 transition-opacity mb-3 inline-block">
                 LifeLedger
             </a>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2.5">
-                &copy; {% now "Y" %} LifeLedger. {% trans "All rights reserved." %}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                © {% now "Y" %} LifeLedger. {% trans "All rights reserved." %}
             </p>
-            <p class="text-xs text-gray-500 dark:text-gray-500 mb-8">
+            <p class="text-xs text-gray-500 dark:text-gray-500 mb-4">
                 {% trans "Cherish your memories, discover your emotions." %}
             </p>
             <div class="space-x-6">
@@ -149,5 +148,12 @@
     <script src="{% static 'js/base_scripts.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
+    <svg class="wave-clip" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="waveClipPath">
+            <path d="M0,80 C200,0 400,160 600,80 C800,0 1000,160 1200,80 V160 H0 Z" />
+          </clipPath>
+        </defs>
+      </svg>
 </body>
 </html>
