@@ -30,7 +30,7 @@ class JournalEntryForm(forms.ModelForm):
     tags = forms.CharField(
         required=False,
         label="Tags",
-        help_text="Select from suggestions or enter your own comma-separated tags.",
+        help_text="Select from suggestions.",
         widget=forms.TextInput(attrs={
             'placeholder': 'e.g., Work, Personal, Ideas',
             'class': 'mt-1 block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm focus:ring-primary-light focus:border-primary-light'
