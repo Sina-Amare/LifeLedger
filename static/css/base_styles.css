@@ -2,56 +2,40 @@
 /* Global CSS Custom Properties (Theme Variables) & Base Styles */
 
 :root {
-  --primary-light: #3b82f6; /* Blue-500 */
-  --primary-dark-theme: #60a5fa; /* Blue-400 (for text/icons in dark mode) */
-
-  --secondary-light: #10b981; /* Emerald-500 */
-  --secondary-dark-theme: #34d399; /* Emerald-400 (for text/icons in dark mode) */
-
-  --accent-light: #8b5cf6; /* Tailwind violet-500 - Added for consistency if used by other pages like login */
-  --accent-dark-theme: #a78bfa; /* Tailwind violet-400 - Added for consistency */
-
-  --background-light: #f9fafb; /* Tailwind gray-50 */
-  --background-dark-theme: #111827; /* Tailwind gray-900 */
-
-  /* Text colors are generally handled by Tailwind utilities like text-gray-800 dark:text-gray-200 */
-  /* --text-light-theme: #1F2937; /* Tailwind gray-800 */
-  /* --text-dark-theme: #E5E7EB;  /* Tailwind gray-200 */
-
-  --card-light-bg: #ffffff; /* Tailwind white */
-  --card-dark-bg: #1f2937; /* Tailwind gray-800 */
-
-  --border-light-theme: #d1d5db; /* Tailwind gray-300 */
-  --border-dark-theme: #374151; /* Tailwind gray-700 */
-
+  --primary-light: #00e1c8;
+  --primary-dark-theme: #c678dd;
+  --secondary-light: #10b981;
+  --secondary-dark-theme: #34d399;
+  --accent-light: #8b5cf6;
+  --accent-dark-theme: #a78bfa;
+  --background-light: #f9fafb;
+  --background-dark-theme: #111827;
+  --card-light-bg: #ffffff;
+  --card-dark-bg: #1f2937;
+  --border-light-theme: #d1d5db;
+  --border-dark-theme: #374151;
   --focus-ring-color: var(--primary-light);
-  --focus-ring-shadow-color: rgba(59, 130, 246, 0.35);
-
-  --scrollbar-thumb-bg-start: rgba(59, 130, 246, 0.6);
-  --scrollbar-thumb-bg-end: rgba(96, 165, 250, 0.7);
-  --scrollbar-thumb-hover-bg-start: rgba(59, 130, 246, 0.8);
-  --scrollbar-thumb-hover-bg-end: rgba(96, 165, 250, 0.9);
+  --focus-ring-shadow-color: rgba(0, 225, 200, 0.35);
+  --scrollbar-thumb-bg-start: rgba(0, 225, 200, 0.6);
+  --scrollbar-thumb-bg-end: rgba(198, 120, 221, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(0, 225, 200, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(198, 120, 221, 0.9);
   --scrollbar-track-color: rgba(249, 250, 251, 0.3);
-
   --preloader-bg: var(--background-light);
   --preloader-icon-color: var(--primary-light);
-
-  /* Specific dark panel background colors (used in login/signup) */
-  --primary-dark-panel-bg: #1e3a8a; /* Tailwind blue-800 (a darker blue) */
-  --secondary-dark-panel-bg: #065f46; /* Tailwind emerald-800 (a darker green) */
-  --accent-dark-panel-bg: #5b21b6; /* Tailwind violet-700 (a darker purple) */
+  --primary-dark-panel-bg: #1e3a8a;
+  --secondary-dark-panel-bg: #065f46;
+  --accent-dark-panel-bg: #5b21b6;
 }
 
 .dark {
   --focus-ring-color: var(--primary-dark-theme);
-  --focus-ring-shadow-color: rgba(96, 165, 250, 0.35);
-
-  --scrollbar-thumb-bg-start: rgba(96, 165, 250, 0.6);
-  --scrollbar-thumb-bg-end: rgba(59, 130, 246, 0.7);
-  --scrollbar-thumb-hover-bg-start: rgba(96, 165, 250, 0.8);
-  --scrollbar-thumb-hover-bg-end: rgba(59, 130, 246, 0.9);
+  --focus-ring-shadow-color: rgba(198, 120, 221, 0.35);
+  --scrollbar-thumb-bg-start: rgba(198, 120, 221, 0.6);
+  --scrollbar-thumb-bg-end: rgba(0, 225, 200, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(198, 120, 221, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(0, 225, 200, 0.9);
   --scrollbar-track-color: rgba(17, 24, 39, 0.3);
-
   --preloader-bg: var(--background-dark-theme);
   --preloader-icon-color: var(--primary-dark-theme);
 }
