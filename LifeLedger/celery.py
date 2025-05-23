@@ -1,8 +1,7 @@
 # LifeLedger/LifeLedger/celery.py
-
 import os
 import logging
-import sys # <--- IMPORT SYS MODULE HERE
+import sys
 
 # --- Gevent Monkey Patching ---
 # Apply this at the VERY TOP of the file, before any other imports,

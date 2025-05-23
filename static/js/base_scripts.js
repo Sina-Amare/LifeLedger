@@ -1,35 +1,36 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // --- Preloader Hiding Logic ---
+  // Preloader Hiding Logic
   const preloader = document.getElementById("page-preloader");
   if (preloader) {
     preloader.classList.remove("hidden");
     window.addEventListener("load", () => {
       setTimeout(() => {
         preloader.classList.add("hidden");
-      }, 200);
+      }, 100); // Reduced from 200ms to 100ms
     });
   }
 
-  // --- Initialize Fancybox ---
+  // Initialize Fancybox
   if (typeof Fancybox !== "undefined") {
     Fancybox.bind("[data-fancybox]", {});
   } else {
     console.warn("Fancybox library not found. Image previews may not work.");
   }
 
-  // --- Navbar Scroll Behavior ---
+  // Navbar Entrance Animation Control
   const navbar = document.getElementById("main-navbar");
   if (navbar) {
-    window.addEventListener("scroll", () => {
-      if (window.scrollY > 50) {
-        navbar.classList.add("scrolled");
-      } else {
-        navbar.classList.remove("scrolled");
-      }
-    });
+    const hasAnimated = sessionStorage.getItem("navbarAnimated");
+    if (!hasAnimated) {
+      navbar.classList.add("navbar-animate-on-load");
+      sessionStorage.setItem("navbarAnimated", "true");
+    } else {
+      navbar.style.opacity = "1";
+      navbar.style.transform = "translateY(0)";
+    }
   }
 
-  // --- Global Delete Modal Interaction Logic ---
+  // Global Delete Modal Interaction Logic
   const deleteModal = document.getElementById("delete-modal");
   const modalDialog = deleteModal
     ? deleteModal.querySelector(".modal-dialog-box")
@@ -57,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     setTimeout(() => {
       if (deleteModal) deleteModal.classList.remove("modal-entering");
-    }, 400);
+    }, 200); // Reduced from 400ms to 200ms
   };
 
   window.hideDeleteModal = function () {
@@ -72,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
       deleteModal.classList.add("hidden", "opacity-0");
       deleteModal.classList.remove("modal-exiting");
-    }, 300);
+    }, 150); // Reduced from 300ms to 150ms
   };
 
   if (closeModalXButton) {

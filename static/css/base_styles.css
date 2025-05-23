@@ -1,14 +1,8 @@
+/* static/css/base_styles.css */
 /* Global CSS Custom Properties (Theme Variables) & Base Styles */
-
-/* Base settings to ensure consistent rendering across browsers */
-html,
-body {
-  margin: 0; /* Remove default browser margins */
-  padding: 0; /* Remove default browser paddings */
-}
-
 :root {
-  --primary-light: #00e1c8;
+  --primary-light: #3b82f6;
+  --primary-dark-theme: #60a5fa;
   --secondary-light: #10b981;
   --secondary-dark-theme: #34d399;
   --accent-light: #8b5cf6;
@@ -19,140 +13,145 @@ body {
   --card-dark-bg: #1f2937;
   --border-light-theme: #d1d5db;
   --border-dark-theme: #374151;
+  --focus-ring-color: var(--primary-light);
+  --focus-ring-shadow-color: rgba(59, 130, 246, 0.35);
+  --scrollbar-thumb-bg-start: rgba(59, 130, 246, 0.6);
+  --scrollbar-thumb-bg-end: rgba(96, 165, 250, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(59, 130, 246, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(96, 165, 250, 0.9);
+  --scrollbar-track-color: rgba(249, 250, 251, 0.3);
   --preloader-bg: var(--background-light);
+  --preloader-icon-color: var(--primary-light);
+  --footer-height: 120px; /* Adjusted for shorter footer */
 }
 
 .dark {
+  --focus-ring-color: var(--primary-dark-theme);
+  --focus-ring-shadow-color: rgba(96, 165, 250, 0.35);
+  --scrollbar-thumb-bg-start: rgba(96, 165, 250, 0.6);
+  --scrollbar-thumb-bg-end: rgba(59, 130, 246, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(96, 165, 250, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(59, 130, 246, 0.9);
+  --scrollbar-track-color: rgba(17, 24, 39, 0.3);
   --preloader-bg: var(--background-dark-theme);
+  --preloader-icon-color: var(--primary-dark-theme);
 }
 
-/* Ensure Footer Stays at Bottom using Flexbox */
+html {
+  scroll-behavior: smooth;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+}
+
 body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  opacity: 0;
+  animation: fadeInPage 0.3s ease-out 0.2s forwards;
 }
 
-main {
-  flex-grow: 1;
+@keyframes fadeInPage {
+  to {
+    opacity: 1;
+  }
 }
 
-footer {
-  margin-top: auto;
+/* Focus Visible: Enhanced focus styling for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-shadow-color);
+  border-radius: 2px;
 }
 
-/* Custom Navbar Styling with Galactic Map Effect */
+/* Custom Scrollbar Styling (WebKit browsers) */
+@keyframes scrollbarGradientAnim {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    45deg,
+    var(--scrollbar-thumb-bg-start),
+    var(--scrollbar-thumb-bg-end)
+  );
+  background-size: 200% 200%;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  animation: scrollbarGradientAnim 10s ease infinite;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    45deg,
+    var(--scrollbar-thumb-hover-bg-start),
+    var(--scrollbar-thumb-hover-bg-end)
+  );
+}
+/* Custom Scrollbar Styling (Firefox) */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-bg-start) var(--scrollbar-track-color);
+}
+
+/* Navbar Entrance Animation */
+@keyframes fadeInDownSmooth {
+  from {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.navbar-animate-on-load {
+  animation: fadeInDownSmooth 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s
+    forwards;
+}
+
+/* Navbar Styling */
 #main-navbar {
   position: sticky;
   top: 0;
   z-index: 50;
-  transition: box-shadow 0.3s ease;
-  overflow: hidden;
-  background: red; /* Temporary bright color to ensure visibility */
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid var(--border-light-theme);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
 }
-
-#main-navbar::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: conic-gradient(
-    from 45deg,
-    rgba(96, 165, 250, 0.1) 0%,
-    rgba(167, 139, 250, 0.05) 25%,
-    rgba(0, 225, 200, 0.02) 50%,
-    rgba(167, 139, 250, 0.05) 75%,
-    rgba(96, 165, 250, 0.1) 100%
-  );
-  opacity: 1;
-  z-index: -1;
-  animation: galaxyTwinkle 10s ease-in-out infinite;
-}
-
 .dark #main-navbar {
-  background: rgba(17, 24, 39, 0.9); /* Darker in dark mode */
+  background: rgba(17, 24, 39, 0.9);
+  border-bottom: 1px solid var(--border-dark-theme);
 }
-
-.dark #main-navbar::before {
-  background: conic-gradient(
-    from 45deg,
-    rgba(96, 165, 250, 0.2) 0%,
-    rgba(167, 139, 250, 0.15) 25%,
-    rgba(0, 225, 200, 0.1) 50%,
-    rgba(167, 139, 250, 0.15) 75%,
-    rgba(96, 165, 250, 0.2) 100%
-  );
-}
-
-/* Galactic Animation */
-@keyframes galaxyTwinkle {
-  0% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 50% 50%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
-}
-
-/* Navbar Scroll Behavior */
-#main-navbar.scrolled {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* Feather Icon Styling */
 #main-navbar .fa-feather-alt {
-  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  transition: transform 0.3s ease;
+  transition: transform 0.15s ease;
 }
-
 #main-navbar .group:hover .fa-feather-alt {
   transform: rotate(10deg) scale(1.1);
-}
-
-/* Preloader Styles */
-.preloader {
-  position: fixed;
-  inset: 0;
-  background-color: var(--preloader-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  opacity: 1;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
-
-.preloader.hidden {
-  opacity: 0;
-  visibility: hidden;
-}
-
-.preloader-icon {
-  font-size: 3rem;
-  background: linear-gradient(90deg, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: preloaderPulse 1.5s infinite ease-in-out;
-}
-
-@keyframes preloaderPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-  }
 }
 
 /* Modal Animations */
@@ -164,7 +163,6 @@ footer {
     opacity: 1;
   }
 }
-
 @keyframes modalBackdropFadeOut {
   from {
     opacity: 1;
@@ -173,7 +171,6 @@ footer {
     opacity: 0;
   }
 }
-
 @keyframes modalDialogBounceIn {
   0% {
     opacity: 0;
@@ -188,7 +185,6 @@ footer {
     transform: scale(1) translateY(0);
   }
 }
-
 @keyframes modalDialogBounceOut {
   0% {
     opacity: 1;
@@ -203,22 +199,49 @@ footer {
     transform: scale(0.9) translateY(20px);
   }
 }
-
-/* Modal state classes for animation control */
 #delete-modal.modal-entering {
-  animation: modalBackdropFadeIn 0.3s ease-out forwards;
+  animation: modalBackdropFadeIn 0.2s ease-out forwards;
 }
-
 #delete-modal.modal-exiting {
-  animation: modalBackdropFadeOut 0.3s ease-in forwards;
-  -webkit-animation: modalBackdropFadeOut 0.3s ease-in forwards;
+  animation: modalBackdropFadeOut 0.15s ease-in forwards;
 }
-
 #delete-modal.modal-entering .modal-dialog-box {
-  animation: modalDialogBounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: modalDialogBounceIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+#delete-modal.modal-exiting .modal-dialog-box {
+  animation: modalDialogBounceOut 0.15s cubic-bezier(0.47, 0, 0.75, 0.72)
+    forwards;
 }
 
-#delete-modal.modal-exiting .modal-dialog-box {
-  animation: modalDialogBounceOut 0.3s cubic-bezier(0.47, 0, 0.75, 0.72)
-    forwards;
+/* Preloader Styles */
+.preloader {
+  position: fixed;
+  inset: 0;
+  background-color: var(--preloader-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+}
+.preloader.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+.preloader-icon {
+  font-size: 3rem;
+  color: var(--preloader-icon-color);
+  animation: preloaderPulse 1s infinite ease-in-out;
+}
+@keyframes preloaderPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
 }
