@@ -28,7 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.sites', 
     'accounts.apps.AccountsConfig', 
     'journal.apps.JournalAppConfig', 
-    'ai_services.apps.AiServicesConfig', 
+    'ai_services.apps.AiServicesConfig',
+    'user_profile.apps.UserProfileConfig',
     'widget_tweaks',
 ]
 
