@@ -20,6 +20,9 @@ urlpatterns = [
     # Assuming your journal.urls also defines an app_name = 'journal'.
     path('journal/', include('journal.urls')),
     
+    # User_profile URL
+    path('profile/', include('user_profile.urls')),
+    
     # Root URL for the project, directly mapping to HomeView from the accounts app.
     # This avoids including 'accounts.urls' again, which caused the namespace conflict.
     # We give this URL pattern a distinct name, e.g., 'site_home', to avoid clashes

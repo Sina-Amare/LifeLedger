@@ -28,7 +28,6 @@
         {# Recent Journal Entry Section #}
         <div class="mb-12 md:mb-16">
             <h2 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Your Latest Reflection" %}</h2>
-            {# dashboard-card class is defined in dashboard_styles.css and uses @apply #}
             <div class="dashboard-card fade-in-element" style="animation-delay: 0.2s;">
                 {% if latest_entry %}
                     <div class="flex flex-col sm:flex-row sm:items-start justify-between">
@@ -46,7 +45,6 @@
                                 </p>
                             </div>
                         </div>
-                        {# card-action class is defined in dashboard_styles.css and uses @apply #}
                         <a href="{% url 'journal:journal_detail' pk=latest_entry.pk %}"
                            class="card-action mt-4 sm:mt-0">
                             {% trans "Read More" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
@@ -56,7 +54,6 @@
                     <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
                         {% trans "No journal entries yet. Start your journey by writing your first reflection!" %}
                     </p>
-                     {# card-action class is defined in dashboard_styles.css and uses @apply #}
                     <a href="{% url 'journal:journal_create' %}"
                        class="card-action mt-4">
                         {% trans "Write Your First Entry" %} <i class="fas fa-pencil-alt icon-btn ml-2 text-sm"></i>
@@ -103,7 +100,6 @@
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Uncover patterns in your emotions and experiences with upcoming AI-powered analysis." %}
                 </p>
-                {# card-action-disabled class is defined in dashboard_styles.css and uses @apply #}
                 <span class="card-action-disabled mt-auto" aria-disabled="true" title="{% trans 'Coming Soon' %}">
                     {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-sm"></i>
                 </span>
@@ -121,7 +117,8 @@
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Manage your account details, preferences, and application settings to tailor your experience." %}
                 </p>
-                <a href="#" class="card-action mt-auto">
+                {% comment %} UPDATED: Link for "Manage Account" now points to the profile update page {% endcomment %}
+                <a href="{% url 'user_profile:profile_update' %}" class="card-action mt-auto">
                     {% trans "Manage Account" %} <i class="fas fa-sliders-h icon-btn ml-2 text-sm"></i>
                 </a>
             </div>
@@ -131,7 +128,6 @@
         <div class="mt-12 md:mt-16">
             <h3 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6 md:mb-8 text-center sm:text-left">{% trans "Quick Actions" %}</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {# quick-action class is defined in dashboard_styles.css and uses @apply for focus #}
                 <a href="{% url 'journal:journal_create' %}" class="quick-action fade-in-element relative block p-5 rounded-lg shadow-md bg-card-light dark:bg-card-dark hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg" style="animation-delay: 0.6s;">
                     <i class="fas fa-pencil-alt quick-action-icon quick-action-icon-pencil"></i>
                     <div class="flex flex-col">
@@ -146,7 +142,6 @@
                     </div>
                 </a>
                 
-                {# quick-action-disabled class is defined in dashboard_styles.css and uses @apply for cursor #}
                 <div class="quick-action-disabled fade-in-element block p-5 rounded-lg shadow-md bg-card-light dark:bg-card-dark" style="animation-delay: 0.7s;" title="{% trans 'Coming Soon' %}">
                     <i class="fas fa-calendar-check quick-action-icon-disabled text-gray-400 dark:text-gray-500"></i>
                     <div class="flex flex-col">

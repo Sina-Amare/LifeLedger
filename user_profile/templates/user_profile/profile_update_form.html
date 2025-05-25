@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% load i18n %}
+
+{% load widget_tweaks %}
+
+{% block title %}{{ page_title|default:_("Update Profile") }} - LifeLedger{% endblock title %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+    <style>
+        :root {
+            --primary-light: {{ css_vars.primary_light|default:'#00e1c8' }};
+            --primary-dark: {{ css_vars.primary_dark|default:'#c678dd' }};
+            --card-light-bg: {{ css_vars.card_light_bg|default:'#ffffff' }};
+            --card-dark-bg: {{ css_vars.card_dark_bg|default:'#1f2937' }};
+            --text-light: {{ css_vars.text_light|default:'#1f2937' }};
+            --text-dark: {{ css_vars.text_dark|default:'#f3f4f6' }};
+            --border-light: {{ css_vars.border_light|default:'#e5e7eb' }};
+            --border-dark: {{ css_vars.border_dark|default:'#374151' }};
+            --gradient-blue: #3b82f6;
+            --gradient-purple: #8b5cf6;
+            --gradient-blue-dark: #60a5fa;
+            --gradient-purple-dark: #a78bfa;
+            --focus-ring-light: rgba(59, 130, 246, 0.4);
+            --focus-ring-dark: rgba(96, 165, 250, 0.4);
+        }
+
+        /* Container */
+        .profile-form-card {
+            background: var(--card-light-bg); border: 1px solid var(--border-light);
+            border-radius: 2.5rem; padding: 2.5rem;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08), 0 8px 15px rgba(198,120,221,0.08), 0 0 0 2px rgba(0,0,0,0.03);
+            max-width: 800px; margin: 2rem auto; transition: box-shadow 0.3s ease;
+        }
+        .dark .profile-form-card {
+            background: var(--card-dark-bg); border-color: var(--border-dark);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15), 0 8px 15px rgba(179,109,251,0.15), 0 0 0 2px rgba(0,0,0,0.05);
+        }
+
+        /* Header */
+        .profile-header { border-bottom: 1px solid #bfdbfe; padding-bottom: 1.5rem; margin-bottom: 2rem; text-align: center; }
+        .dark .profile-header { border-color: #4b6eaf; }
+        .profile-header h1 {
+            font-size: 2.5rem; font-weight: 700;
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(59,130,246,0.1);
+        }
+        .dark .profile-header h1 {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(96,165,250,0.1);
+        }
+        .profile-header p {
+            font-size: 1.125rem; font-weight: 600; color: #6b7280;
+            background: linear-gradient(90deg, #34d399, #a3e635);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 1px 2px rgba(52,211,153,0.1); margin-top: 0.5rem;
+        }
+        .dark .profile-header p {
+            color: #9ca3af;
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 1px 2px rgba(96,165,250,0.1);
+        }
+
+        /* Fieldset and Legend */
+        .profile-fieldset legend {
+            font-size: 1.25rem; font-weight: 600; 
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            padding-bottom: 0.5rem; margin-bottom: 1.5rem; width: 100%;
+        }
+        .dark .profile-fieldset legend {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        /* Field Wrapper and Labels */
+        .profile-field-wrapper > label:not(.profile-checkbox-label) {
+            font-size: 1rem; font-weight: 600;
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transition: transform 0.3s ease; display: block; margin-bottom: 0.75rem;
+        }
+        .dark .profile-field-wrapper > label:not(.profile-checkbox-label) {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .profile-field-wrapper > label:not(.profile-checkbox-label):hover { transform: translateY(-1px); }
+
+        /* Unified Input Fields */
+        .profile-input, input[type="date"].profile-input, .profile-textarea, .profile-file-input {
+            padding: 0.9rem 1.2rem !important;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.03), inset 0 1px 3px rgba(0,0,0,0.02) !important;
+            transition: box-shadow .3s ease, transform .3s ease, border-image-source .2s ease, border-image-slice .2s ease, border-color .2s ease !important;
+            background: var(--card-light-bg) !important; color: var(--text-light) !important;
+            font-size: 1rem !important; width: 100% !important;
+            border: 2px solid transparent !important; border-image-slice: 1 !important;
+            border-image-source: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple)) !important;
+            border-radius: 1.5rem !important;
+        }
+        .dark .profile-input, .dark input[type="date"].profile-input, .dark .profile-textarea, .dark .profile-file-input {
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05), inset 0 1px 3px rgba(0,0,0,0.05) !important;
+            background: var(--card-dark-bg) !important; color: var(--text-dark) !important;
+            border-image-source: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)) !important;
+        }
+        .profile-input:focus, input[type="date"].profile-input:focus, .profile-textarea:focus, .profile-file-input:focus {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 15px var(--focus-ring-light), inset 0 1px 3px rgba(59,130,246,0.05) !important;
+            outline: none !important;
+        }
+        .dark .profile-input:focus, .dark input[type="date"].profile-input:focus, .dark .profile-textarea:focus, .dark .profile-file-input:focus {
+            box-shadow: 0 6px 15px var(--focus-ring-dark), inset 0 1px 3px rgba(96,165,250,0.05) !important;
+        }
+        .profile-textarea { min-height: 100px; }
+        
+        /* Profile Picture Preview */
+        .profile-picture-preview {
+            border: 2px dashed; border-image-slice: 1;
+            border-image-source: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            border-radius: 1.5rem; padding: 0.75rem; display: inline-block; background: var(--card-light-bg);
+        }
+        .dark .profile-picture-preview {
+            border-image-source: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            background: var(--card-dark-bg);
+        }
+        .profile-picture-preview img { height: 6rem; width: 6rem; border-radius: 9999px; object-fit: cover; }
+
+        /* Checkbox styling */
+        .profile-checkbox-wrapper { display: flex; align-items: center; margin-top: 0.5rem; padding: 0.5rem 0; }
+        .profile-checkbox-input {
+            height: 1.25rem; width: 1.25rem; appearance: none; border: 2px solid;
+            border-image-slice: 1; border-image-source: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            border-radius: 0.375rem; transition: background-image 0.2s ease-in-out; cursor: pointer; position: relative; flex-shrink: 0;
+        }
+        .dark .profile-checkbox-input { border-image-source: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)); }
+        .profile-checkbox-input:checked { background-image: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple)); }
+        .dark .profile-checkbox-input:checked { background-image: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)); }
+        .profile-checkbox-input:checked::after { content: '✔'; position: absolute; color: white; font-size: 0.9rem; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .profile-checkbox-input:focus { outline: none; box-shadow: 0 0 0 3px var(--focus-ring-light); }
+        .dark .profile-checkbox-input:focus { box-shadow: 0 0 0 3px var(--focus-ring-dark); }
+        .profile-checkbox-label { 
+            margin-left: 0.75rem; font-size: 1rem; font-weight: 600; 
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; cursor: pointer;
+        }
+        .dark .profile-checkbox-label {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Messages */
+        .message-container { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.5); border-radius: 1.5rem; padding: 1rem; transition: all .3s ease; }
+        .dark .message-container { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.7); }
+        .message-container.success { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.5); }
+        .dark .message-container.success { background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.7); }
+        .message-container.info { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.5); }
+        .dark .message-container.info { background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.7); }
+
+        /* Toast Notification */
+        .toast-notification {
+            position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+            background: var(--card-light-bg); border: 1px solid var(--border-light);
+            border-radius: 1rem; padding: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex; align-items: center; gap: 0.75rem; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .dark .toast-notification {
+            background: var(--card-dark-bg); border-color: var(--border-dark);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .toast-notification.show { opacity: 1; }
+        .toast-notification i { font-size: 1.25rem; }
+        .toast-notification p { margin: 0; font-size: 0.9rem; color: var(--text-light); }
+        .dark .toast-notification p { color: var(--text-dark); }
+
+        /* Buttons */
+        .profile-submit-button-wrapper { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; align-items: center; gap: 1.5rem;}
+        .dark .profile-submit-button-wrapper { border-color: var(--border-dark); }
+        .profile-submit-button {
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 2rem; padding: 0.9rem 1.5rem; font-size: 1rem; font-weight: 600;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            transform: perspective(500px) translateZ(0);
+            box-shadow: 0 6px 15px rgba(0,225,200,0.1), 0 3px 6px rgba(198,120,221,0.1), 0 0 0 1px rgba(0,225,200,0.05);
+            background: linear-gradient(45deg, var(--primary-light, #00e1c8), var(--primary-dark, #c678dd), 70%, #e5e7eb);
+            color: #ffffff; border: none;
+        }
+        .dark .profile-submit-button {
+            background: linear-gradient(45deg, #00a3a0, var(--primary-dark, #b36dfb), 70%, #4b5563);
+        }
+        .profile-submit-button:hover {
+            transform: perspective(500px) translateY(-4px) translateZ(6px) rotateX(1deg); 
+            box-shadow: 0 10px 25px rgba(0,225,200,0.15), 0 5px 10px rgba(198,120,221,0.15), 0 0 0 2px rgba(0,225,200,0.08);
+        }
+        .dark .profile-submit-button:hover {
+            box-shadow: 0 10px 25px rgba(179,109,251,0.15), 0 5px 10px rgba(198,120,221,0.15), 0 0 0 2px rgba(179,109,251,0.08);
+        }
+        .form-action-link {
+            position: relative; font-size: 0.95rem; font-weight: 600;
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-decoration: none; padding: 0;
+            transition: color 0.3s ease; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .dark .form-action-link {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .form-action-link::after {
+            content: ''; position: absolute; width: 0; height: 2px; display: block;
+            bottom: 0; left: 1.25rem; /* Start after the icon */
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            transition: width 0.3s ease-in-out;
+        }
+        .dark .form-action-link::after { background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)); }
+        .form-action-link:hover::after { width: calc(100% - 1.25rem); } /* Extend underline under text only */
+        .form-action-link i { font-size: 0.85rem; }
+
+        /* Custom Calendar (Flatpickr) Styling */
+        .flatpickr-wrapper {
+            position: relative;
+        }
+        .flatpickr-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            color: var(--gradient-blue);
+            pointer-events: none;
+        }
+        .dark .flatpickr-icon {
+            color: var(--gradient-blue-dark);
+        }
+        .flatpickr-input {
+            padding-right: 3.5rem !important; /* Space for icon */
+        }
+        .flatpickr-calendar {
+            background: var(--card-light-bg) !important; border: 2px solid transparent !important;
+            border-image-slice: 1 !important; border-image-source: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple)) !important;
+            border-radius: 1rem !important; box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            font-family: inherit !important; z-index: 1050 !important; 
+        }
+        .dark .flatpickr-calendar {
+            background: var(--card-dark-bg) !important;
+            border-image-source: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)) !important;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+        }
+        .flatpickr-day { color: var(--text-light) !important; background: transparent !important; border: 1px solid transparent !important; transition: background .2s ease, color .2s ease; border-radius: 0.5rem; }
+        .dark .flatpickr-day { color: var(--text-dark) !important; }
+        .flatpickr-day:hover { background: rgba(59,130,246,0.1) !important; border-color: transparent !important; }
+        .dark .flatpickr-day:hover { background: rgba(96,165,250,0.1) !important; border-color: transparent !important; }
+        .flatpickr-day.selected, .flatpickr-day.selected:hover { background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple)) !important; color: #ffffff !important; border: none !important; }
+        .dark .flatpickr-day.selected, .dark .flatpickr-day.selected:hover { background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark)) !important; }
+
+        /* Month and Year navigation in Flatpickr */
+        .flatpickr-month, 
+        .flatpickr-current-month .flatpickr-monthDropdown-months,
+        .flatpickr-current-month input.cur-year {
+            color: var(--text-light) !important;
+            fill: var(--text-light) !important;
+            background: transparent !important; 
+            font-weight: 600;
+        }
+        .dark .flatpickr-month,
+        .dark .flatpickr-current-month .flatpickr-monthDropdown-months,
+        .dark .flatpickr-current-month input.cur-year {
+            color: var(--text-dark) !important;
+            fill: var(--text-dark) !important;
+        }
+        .flatpickr-monthDropdown-month {
+            color: var(--text-light) !important;
+            background: var(--card-light-bg) !important;
+        }
+        .dark .flatpickr-monthDropdown-month {
+            color: var(--text-dark) !important;
+            background: var(--card-dark-bg) !important;
+        }
+        .flatpickr-monthDropdown-month:hover {
+            background: rgba(59,130,246,0.1) !important;
+        }
+        .dark .flatpickr-monthDropdown-month:hover {
+            background: rgba(96,165,250,0.1) !important;
+        }
+
+        .flatpickr-weekdays, .flatpickr-weekday { color: var(--text-light) !important; background: transparent !important; font-weight: 600; }
+        .dark .flatpickr-weekdays, .dark .flatpickr-weekday { color: var(--text-dark) !important; }
+        .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--gradient-blue) !important; } 
+        .dark .flatpickr-prev-month svg, .dark .flatpickr-next-month svg { fill: var(--gradient-blue-dark) !important; }
+        .flatpickr-prev-month:hover, .flatpickr-next-month:hover { background: rgba(59,130,246,0.05) !important; border-radius: 0.25rem;}
+        .dark .flatpickr-prev-month:hover, .dark .flatpickr-next-month:hover { background: rgba(96,165,250,0.05) !important; }
+
+        /* Modal Styling */
+        .discard-modal { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9000 !important; }
+        .discard-modal.hidden { display: none !important; }
+        .discard-modal-content {
+            background: var(--card-light-bg); border: 1px solid var(--border-light);
+            border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .dark .discard-modal-content { background: var(--card-dark-bg); border-color: var(--border-dark); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .discard-modal-title { color: var(--text-light); }
+        .dark .discard-modal-title { color: var(--text-dark); }
+        .discard-modal-text { color: #4b5563; }
+        .dark .discard-modal-text { color: #9ca3af; }
+        .discard-modal-button-yes {
+            background: linear-gradient(45deg, #ef4444, #dc2626); color: white;
+            border-radius: 2rem; padding: 0.75rem 1.25rem; font-size: 0.9rem; font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .discard-modal-button-yes:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(239,68,68,0.2); }
+        .discard-modal-button-no {
+            background: var(--card-light-bg); color: var(--text-light); border: 1px solid var(--border-light);
+            border-radius: 2rem; padding: 0.75rem 1.25rem; font-size: 0.9rem; font-weight: 600;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .dark .discard-modal-button-no { background: var(--card-dark-bg); color: var(--text-dark); border-color: var(--border-dark); }
+        .discard-modal-button-no:hover { background-color: #f3f4f6; }
+        .dark .discard-modal-button-no:hover { background-color: #374151; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-10 sm:py-12">
+    <div class="profile-form-card">
+        
+        <header class="profile-header">
+            <h1>{{ page_title|default:_("Update Your Profile") }}</h1>
+            <p>{% trans "Keep your information up to date to make the most of LifeLedger." %}</p>
+        </header>
+
+        {% if messages %}
+            <div class="mb-8 space-y-3">
+                {% for message in messages %}
+                    <div class="p-4 rounded-lg text-sm {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-200{% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-200{% else %}bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-200{% endif %}" role="alert">
+                        <div class="flex items-center">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mr-2.5 text-lg"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate class="space-y-10" id="profileUpdateForm">
+            {% csrf_token %}
+
+            <fieldset class="profile-fieldset space-y-6">
+                {% for field in user_form %}
+                    <div class="profile-field-wrapper">
+                        <label for="{{ field.id_for_label }}" class="profile-label">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
+                        </label>
+                        {% render_field field class+="profile-input" placeholder=field.label %}
+                        {% if field.help_text %}
+                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </fieldset>
+
+            <fieldset class="profile-fieldset space-y-6 pt-8 border-t border-border-light dark:border-border-dark">
+                {% for field in profile_form %}
+                    <div class="profile-field-wrapper">
+                        {% if field.widget_type == 'checkbox' %}
+                            <div class="profile-checkbox-wrapper">
+                                {% render_field field class="profile-checkbox-input" %}
+                                <label for="{{ field.id_for_label }}" class="profile-checkbox-label">
+                                    {{ field.label }}
+                                </label>
+                            </div>
+                            {% if field.help_text %}
+                                <p class="ml-8 text-xs text-gray-500 dark:text-gray-400 -mt-1">{{ field.help_text|safe }}</p>
+                            {% endif %}
+                        {% else %}
+                            <label for="{{ field.id_for_label }}" class="profile-label">
+                                {{ field.label }}
+                                {% if field.field.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
+                            </label>
+                            
+                            {% if field.name == 'profile_picture' %}
+                                {% if request.user.profile.profile_picture %}
+                                    <div class="mb-3 p-3 border-dashed rounded-xl inline-block bg-gray-50 dark:bg-gray-700/30 profile-picture-preview">
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1.5">{% trans "Current picture" %}:</p>
+                                        <img src="{{ request.user.profile.profile_picture.url }}" alt="{% trans 'Current profile picture' %}" class="h-24 w-24 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-600">
+                                    </div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <label for="{{ field.id_for_label }}" class="form-action-link">
+                                        <i class="fas fa-camera"></i>
+                                        {% trans "Choose New Picture" %}
+                                    </label>
+                                    {% render_field field class="hidden" id=field.id_for_label %}
+                                </div>
+                                <div id="profile-picture-filename" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400"></div>
+
+                                {% if not field.help_text %}
+                                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{% trans "Max file size: 2MB. PNG, JPG, GIF supported." %}</p>
+                                {% endif %}
+                            {% elif field.name == 'date_of_birth' %}
+                                <div class="flatpickr-wrapper relative">
+                                    {% render_field field class+="profile-input flatpickr-input" placeholder="YYYY-MM-DD" %}
+                                    <i class="fas fa-calendar-alt flatpickr-icon"></i>
+                                </div>
+                            {% elif field.widget_type == 'textarea' %}
+                                {% render_field field class+="profile-textarea" placeholder=field.label %}
+                            {% else %}
+                               {% render_field field class+="profile-input" placeholder=field.label %}
+                            {% endif %}
+
+                            {% if field.help_text %}
+                                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for error in field.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </fieldset>
+
+            <div class="profile-submit-button-wrapper">
+                <a href="#" id="cancelProfileUpdate" class="form-action-link mr-6 self-center">
+                    <i class="fas fa-times"></i>
+                    {% trans "Cancel" %}
+                </a>
+                <button type="submit" class="profile-submit-button">
+                    <i class="fas fa-save mr-2.5"></i> {% trans "Save Changes" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="discard-changes-modal" class="fixed inset-0 discard-modal hidden z-[9000] flex items-center justify-center px-4 transition-opacity duration-150 ease-in-out opacity-0" aria-labelledby="discard-modal-title" role="dialog" aria-modal="true">
+    <div class="discard-modal-content p-6 sm:p-8 w-full max-w-md shadow-2xl rounded-xl">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/40 mb-5 sm:mb-6">
+                <i class="fas fa-exclamation-triangle text-yellow-500 dark:text-yellow-400 text-3xl sm:text-4xl"></i>
+            </div>
+            <h3 id="discard-modal-title" class="text-lg sm:text-xl leading-6 font-semibold discard-modal-title">{% trans "Discard Changes?" %}</h3>
+            <div class="mt-2.5 px-2 py-3">
+                <p class="text-sm sm:text-base discard-modal-text">
+                    {% trans "You have unsaved changes. Are you sure you want to leave? Your changes will be lost." %}
+                </p>
+            </div>
+            <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row-reverse gap: 3.5;">
+                <button id="confirm-discard-button" class="discard-modal-button-yes w-full sm:w-auto inline-flex justify-center">
+                    {% trans "Yes, Discard" %}
+                </button>
+                <button id="cancel-discard-button" type="button" class="discard-modal-button-no w-full sm:w-auto inline-flex justify-center">
+                    {% trans "No, Keep Editing" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-notification" class="toast-notification">
+    <i class="fas fa-info-circle text-blue-500 dark:text-blue-400"></i>
+    <p>{% trans "No changes detected. Redirecting..." %}</p>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Initialize Flatpickr
+            flatpickr(".flatpickr-input", {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "F j, Y",
+                maxDate: "today",
+                position: "auto right",
+                disableMobile: true,
+                onReady: function(selectedDates, dateStr, instance) {
+                    console.log('Flatpickr initialized for:', dateStr);
+                }
+            });
+
+            const profileForm = document.getElementById('profileUpdateForm');
+            let initialFormData = getFormData(profileForm);
+            let formChanged = false;
+
+            function getFormData(form) {
+                const formData = new FormData(form);
+                const data = {};
+                for (let [key, value] of formData.entries()) {
+                    const inputElement = form.elements[key];
+                    if (inputElement && inputElement.type === 'file') {
+                        data[key] = inputElement.files.length > 0 ? inputElement.files[0].name : null;
+                    } else if (inputElement && inputElement.type === 'checkbox') {
+                        data[key] = inputElement.checked ? 'on' : '';
+                    } else {
+                        data[key] = value;
+                    }
+                }
+                console.log('Initial Form Data:', JSON.stringify(data));
+                return JSON.stringify(data);
+            }
+
+            profileForm.addEventListener('input', function(e) {
+                formChanged = true; 
+                console.log('Form changed detected (input):', e.target.name, e.target.value);
+            });
+
+            const checkboxes = profileForm.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    formChanged = true;
+                    console.log('Checkbox changed:', this.name, this.checked);
+                });
+            });
+
+            const fileInputs = profileForm.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    formChanged = true;
+                    if (this.id === '{{ profile_form.profile_picture.id_for_label }}') {
+                        const fileNameDisplay = document.getElementById('profile-picture-filename');
+                        if (this.files.length > 0) {
+                            fileNameDisplay.textContent = `{% trans "Selected:" %} ${this.files[0].name}`;
+                        } else {
+                            fileNameDisplay.textContent = '';
+                        }
+                    }
+                    console.log('File input changed:', this.files);
+                });
+            });
+
+            const cancelBtn = document.getElementById('cancelProfileUpdate');
+            const discardModal = document.getElementById('discard-changes-modal');
+            const confirmDiscardBtn = document.getElementById('confirm-discard-button');
+            const cancelDiscardBtn = document.getElementById('cancel-discard-button');
+            const toastNotification = document.getElementById('toast-notification');
+            
+            function showDiscardModal() {
+                discardModal.classList.remove('hidden');
+                setTimeout(() => discardModal.classList.add('opacity-100'), 10);
+                console.log('Modal shown');
+            }
+
+            function hideDiscardModal() {
+                discardModal.classList.remove('opacity-100');
+                setTimeout(() => discardModal.classList.add('hidden'), 150);
+                console.log('Modal hidden');
+            }
+
+            function showToast(message) {
+                toastNotification.querySelector('p').textContent = message;
+                toastNotification.classList.add('show');
+                setTimeout(() => {
+                    toastNotification.classList.remove('show');
+                }, 2000);
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const currentFormData = getFormData(profileForm);
+                    console.log('Before Decision - Initial:', initialFormData, 'Current:', currentFormData, 'Changed:', formChanged);
+                    if (initialFormData !== currentFormData || formChanged) {
+                        showDiscardModal();
+                    } else {
+                        showToast("{% trans 'No changes detected. Redirecting...' %}");
+                        setTimeout(() => {
+                            window.location.href = "{% url 'accounts:home' %}";
+                        }, 2000);
+                    }
+                });
+            }
+            if (confirmDiscardBtn) {
+                confirmDiscardBtn.addEventListener('click', function() {
+                    window.location.href = "{% url 'accounts:home' %}"; 
+                });
+            }
+            if (cancelDiscardBtn) {
+                cancelDiscardBtn.addEventListener('click', function() {
+                    hideDiscardModal();
+                });
+            }
+            if (discardModal) {
+                discardModal.addEventListener('click', function(event) {
+                    if (event.target === discardModal) {
+                        hideDiscardModal();
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}
