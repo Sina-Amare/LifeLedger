@@ -30,15 +30,42 @@ document.addEventListener("DOMContentLoaded", function () {
     const capitalizedTagsForSubmit = Array.from(currentSelectedTags).map(
       (t_norm) => capitalizeTagName(t_norm)
     );
+
+    // Update the hidden input with the current tags
     if (hiddenTagsInput) {
       hiddenTagsInput.value = capitalizedTagsForSubmit.join(", ");
     }
 
-    if (selectedTagsContainer) {
-      selectedTagsContainer.innerHTML = "";
-      capitalizedTagsForSubmit.forEach((displayTagName, index) => {
-        if (!displayTagName) return;
-        const normalizedTagName = normalizeTagName(displayTagName);
+    if (!selectedTagsContainer) return;
+
+    // Get the current pills in the DOM
+    const existingPills = Array.from(
+      selectedTagsContainer.querySelectorAll(".selected-tag-pill")
+    );
+    const existingTagNames = existingPills.map((pill) =>
+      normalizeTagName(pill.dataset.tagName)
+    );
+
+    // Create a set of tags that should be displayed
+    const newTagNames = capitalizedTagsForSubmit.map((tag) =>
+      normalizeTagName(tag)
+    );
+
+    // Remove pills that are no longer in the selected tags
+    existingPills.forEach((pill) => {
+      const tagName = normalizeTagName(pill.dataset.tagName);
+      if (!newTagNames.includes(tagName)) {
+        pill.classList.add("removing"); // Trigger fade-out animation
+        setTimeout(() => pill.remove(), 300); // Match CSS animation duration
+      }
+    });
+
+    // Add new pills for tags that aren't already in the DOM
+    capitalizedTagsForSubmit.forEach((displayTagName) => {
+      if (!displayTagName) return;
+      const normalizedTagName = normalizeTagName(displayTagName);
+
+      if (!existingTagNames.includes(normalizedTagName)) {
         const pill = document.createElement("span");
         let emojiPrefix = "";
 
@@ -50,6 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         pill.className = "selected-tag-pill";
+        pill.dataset.tagName = displayTagName; // Store the tag name for comparison
         pill.textContent = emojiPrefix + displayTagName;
 
         const removeBtn = document.createElement("button");
@@ -64,19 +92,13 @@ document.addEventListener("DOMContentLoaded", function () {
         };
         pill.appendChild(removeBtn);
 
-        // Add animation
-        setTimeout(() => {
-          pill.classList.add("active");
-        }, index * 100); // Delay for each pill to create a staggered effect
-
         selectedTagsContainer.appendChild(pill);
-      });
-    }
+      }
+    });
   };
 
-  const initialTagsFromDjango =
-    "{{ initial_tags_str|escapejs|default_if_none:'' }}";
-  if (initialTagsFromDjango) {
+  // Use the global variable passed from HTML
+  if (typeof initialTagsFromDjango !== "undefined" && initialTagsFromDjango) {
     initialTagsFromDjango
       .split(",")
       .map((t) => t.trim())

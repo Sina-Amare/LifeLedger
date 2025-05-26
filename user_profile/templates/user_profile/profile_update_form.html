@@ -164,10 +164,10 @@
 
         /* Toast Notification */
         .toast-notification {
-            position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+            position: fixed; top: 1rem; right: 1rem; z-index: 12000;
             background: var(--card-light-bg); border: 1px solid var(--border-light);
             border-radius: 1rem; padding: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            display: flex; align-items: center; gap: 0.75rem; opacity: 0; transition: opacity 0.3s ease;
+            display: flex; align-items: center; gap: 0.75rem; opacity: 0;
         }
         .dark .toast-notification {
             background: var(--card-dark-bg); border-color: var(--border-dark);
@@ -297,11 +297,16 @@
         .dark .flatpickr-prev-month:hover, .dark .flatpickr-next-month:hover { background: rgba(96,165,250,0.05) !important; }
 
         /* Modal Styling */
-        .discard-modal { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 9000 !important; }
-        .discard-modal.hidden { display: none !important; }
+        .modal-backdrop {
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            display: none; z-index: 10500;
+        }
         .discard-modal-content {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: var(--card-light-bg); border: 1px solid var(--border-light);
             border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            min-width: 300px; max-width: 500px; min-height: 200px; padding: 2rem;
+            z-index: 11000; display: none; opacity: 0;
         }
         .dark .discard-modal-content { background: var(--card-dark-bg); border-color: var(--border-dark); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .discard-modal-title { color: var(--text-light); }
@@ -346,10 +351,8 @@
                 {% endfor %}
             </div>
         {% endif %}
-
         <form method="post" enctype="multipart/form-data" novalidate class="space-y-10" id="profileUpdateForm">
             {% csrf_token %}
-
             <fieldset class="profile-fieldset space-y-6">
                 {% for field in user_form %}
                     <div class="profile-field-wrapper">
@@ -442,26 +445,25 @@
     </div>
 </div>
 
-<div id="discard-changes-modal" class="fixed inset-0 discard-modal hidden z-[9000] flex items-center justify-center px-4 transition-opacity duration-150 ease-in-out opacity-0" aria-labelledby="discard-modal-title" role="dialog" aria-modal="true">
-    <div class="discard-modal-content p-6 sm:p-8 w-full max-w-md shadow-2xl rounded-xl">
-        <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/40 mb-5 sm:mb-6">
-                <i class="fas fa-exclamation-triangle text-yellow-500 dark:text-yellow-400 text-3xl sm:text-4xl"></i>
-            </div>
-            <h3 id="discard-modal-title" class="text-lg sm:text-xl leading-6 font-semibold discard-modal-title">{% trans "Discard Changes?" %}</h3>
-            <div class="mt-2.5 px-2 py-3">
-                <p class="text-sm sm:text-base discard-modal-text">
-                    {% trans "You have unsaved changes. Are you sure you want to leave? Your changes will be lost." %}
-                </p>
-            </div>
-            <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row-reverse gap: 3.5;">
-                <button id="confirm-discard-button" class="discard-modal-button-yes w-full sm:w-auto inline-flex justify-center">
-                    {% trans "Yes, Discard" %}
-                </button>
-                <button id="cancel-discard-button" type="button" class="discard-modal-button-no w-full sm:w-auto inline-flex justify-center">
-                    {% trans "No, Keep Editing" %}
-                </button>
-            </div>
+<div id="modal-backdrop" class="modal-backdrop"></div>
+<div id="discard-changes-modal" class="discard-modal-content" aria-labelledby="discard-modal-title" role="dialog" aria-modal="true">
+    <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/40 mb-5 sm:mb-6">
+            <i class="fas fa-exclamation-triangle text-yellow-500 dark:text-yellow-400 text-3xl sm:text-4xl"></i>
+        </div>
+        <h3 id="discard-modal-title" class="text-lg sm:text-xl leading-6 font-semibold discard-modal-title">{% trans "Discard Changes?" %}</h3>
+        <div class="mt-2.5 px-2 py-3">
+            <p class="text-sm sm:text-base discard-modal-text">
+                {% trans "You have unsaved changes. Are you sure you want to leave? Your changes will be lost." %}
+            </p>
+        </div>
+        <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row-reverse gap: 3.5;">
+            <button id="confirm-discard-button" class="discard-modal-button-yes w-full sm:w-auto inline-flex justify-center">
+                {% trans "Yes, Discard" %}
+            </button>
+            <button id="cancel-discard-button" type="button" class="discard-modal-button-no w-full sm:w-auto inline-flex justify-center">
+                {% trans "No, Keep Editing" %}
+            </button>
         </div>
     </div>
 </div>
@@ -477,7 +479,8 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             // Initialize Flatpickr
-            flatpickr(".flatpickr-input", {
+            const flatpickrInput = document.querySelector(".flatpickr-input");
+            const flatpickrInstance = flatpickr(".flatpickr-input", {
                 dateFormat: "Y-m-d",
                 altInput: true,
                 altFormat: "F j, Y",
@@ -486,41 +489,29 @@
                 disableMobile: true,
                 onReady: function(selectedDates, dateStr, instance) {
                     console.log('Flatpickr initialized for:', dateStr);
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    console.log('Flatpickr date changed:', dateStr);
+                    formChanged = true; // Mark form as changed when date is selected
                 }
             });
 
             const profileForm = document.getElementById('profileUpdateForm');
-            let initialFormData = getFormData(profileForm);
             let formChanged = false;
+            let modalActive = false; // Track modal state
 
-            function getFormData(form) {
-                const formData = new FormData(form);
-                const data = {};
-                for (let [key, value] of formData.entries()) {
-                    const inputElement = form.elements[key];
-                    if (inputElement && inputElement.type === 'file') {
-                        data[key] = inputElement.files.length > 0 ? inputElement.files[0].name : null;
-                    } else if (inputElement && inputElement.type === 'checkbox') {
-                        data[key] = inputElement.checked ? 'on' : '';
-                    } else {
-                        data[key] = value;
-                    }
-                }
-                console.log('Initial Form Data:', JSON.stringify(data));
-                return JSON.stringify(data);
+            // Function to mark form as changed
+            function markFormChanged(event) {
+                formChanged = true;
+                console.log('Form changed detected:', event.type, event.target.name, event.target.value);
             }
 
-            profileForm.addEventListener('input', function(e) {
-                formChanged = true; 
-                console.log('Form changed detected (input):', e.target.name, e.target.value);
-            });
+            // Event listeners for various input types
+            profileForm.addEventListener('input', markFormChanged);
 
             const checkboxes = profileForm.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    formChanged = true;
-                    console.log('Checkbox changed:', this.name, this.checked);
-                });
+                checkbox.addEventListener('change', markFormChanged);
             });
 
             const fileInputs = profileForm.querySelectorAll('input[type="file"]');
@@ -539,22 +530,41 @@
                 });
             });
 
+            // Ensure Flatpickr's altInput also triggers form change
+            if (flatpickrInput && flatpickrInput._flatpickr) {
+                const altInput = flatpickrInput._flatpickr.altInput;
+                if (altInput) {
+                    altInput.addEventListener('input', markFormChanged);
+                }
+            }
+
             const cancelBtn = document.getElementById('cancelProfileUpdate');
+            const modalBackdrop = document.getElementById('modal-backdrop');
             const discardModal = document.getElementById('discard-changes-modal');
             const confirmDiscardBtn = document.getElementById('confirm-discard-button');
             const cancelDiscardBtn = document.getElementById('cancel-discard-button');
             const toastNotification = document.getElementById('toast-notification');
             
             function showDiscardModal() {
-                discardModal.classList.remove('hidden');
-                setTimeout(() => discardModal.classList.add('opacity-100'), 10);
-                console.log('Modal shown');
+                modalActive = true;
+                modalBackdrop.style.display = 'block';
+                discardModal.style.display = 'block';
+                setTimeout(() => {
+                    discardModal.style.opacity = '1';
+                    console.log('Modal shown');
+                    console.log('Modal style:', discardModal.style.cssText);
+                }, 10);
             }
 
             function hideDiscardModal() {
-                discardModal.classList.remove('opacity-100');
-                setTimeout(() => discardModal.classList.add('hidden'), 150);
-                console.log('Modal hidden');
+                discardModal.style.opacity = '0';
+                setTimeout(() => {
+                    discardModal.style.display = 'none';
+                    modalBackdrop.style.display = 'none';
+                    modalActive = false;
+                    console.log('Modal hidden');
+                    console.log('Modal style:', discardModal.style.cssText);
+                }, 150);
             }
 
             function showToast(message) {
@@ -568,9 +578,9 @@
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', function(event) {
                     event.preventDefault();
-                    const currentFormData = getFormData(profileForm);
-                    console.log('Before Decision - Initial:', initialFormData, 'Current:', currentFormData, 'Changed:', formChanged);
-                    if (initialFormData !== currentFormData || formChanged) {
+                    event.stopPropagation();
+                    console.log('Cancel button clicked, formChanged:', formChanged);
+                    if (formChanged) {
                         showDiscardModal();
                     } else {
                         showToast("{% trans 'No changes detected. Redirecting...' %}");
@@ -582,17 +592,14 @@
             }
             if (confirmDiscardBtn) {
                 confirmDiscardBtn.addEventListener('click', function() {
-                    window.location.href = "{% url 'accounts:home' %}"; 
+                    if (modalActive) {
+                        window.location.href = "{% url 'accounts:home' %}";
+                    }
                 });
             }
             if (cancelDiscardBtn) {
                 cancelDiscardBtn.addEventListener('click', function() {
-                    hideDiscardModal();
-                });
-            }
-            if (discardModal) {
-                discardModal.addEventListener('click', function(event) {
-                    if (event.target === discardModal) {
+                    if (modalActive) {
                         hideDiscardModal();
                     }
                 });

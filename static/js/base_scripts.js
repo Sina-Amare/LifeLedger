@@ -2,12 +2,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Preloader Hiding Logic
   const preloader = document.getElementById("page-preloader");
   if (preloader) {
-    preloader.classList.remove("hidden");
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        preloader.classList.add("hidden");
-      }, 100); // Reduced from 200ms to 100ms
-    });
+    // Since base.html already sets display: none, we just ensure it's hidden
+    preloader.style.display = "none";
+    console.log("Preloader hidden on DOM load");
   }
 
   // Initialize Fancybox
@@ -17,17 +14,13 @@ document.addEventListener("DOMContentLoaded", function () {
     console.warn("Fancybox library not found. Image previews may not work.");
   }
 
-  // Navbar Entrance Animation Control
+  // Navbar Entrance Animation Control (Temporarily Disabled for Debugging)
   const navbar = document.getElementById("main-navbar");
   if (navbar) {
-    const hasAnimated = sessionStorage.getItem("navbarAnimated");
-    if (!hasAnimated) {
-      navbar.classList.add("navbar-animate-on-load");
-      sessionStorage.setItem("navbarAnimated", "true");
-    } else {
-      navbar.style.opacity = "1";
-      navbar.style.transform = "translateY(0)";
-    }
+    // Skip animation for now to debug click issue
+    navbar.style.opacity = "1";
+    navbar.style.transform = "translateY(0)";
+    console.log("Navbar animation skipped, set to visible");
   }
 
   // Global Delete Modal Interaction Logic
@@ -54,11 +47,12 @@ document.addEventListener("DOMContentLoaded", function () {
       deleteModal.classList.add("modal-entering");
       modalDialog.style.opacity = "1";
       modalDialog.style.transform = "scale(1) translateY(0)";
+      console.log("Delete modal shown, z-index:", deleteModal.style.zIndex);
     }, 10);
 
     setTimeout(() => {
       if (deleteModal) deleteModal.classList.remove("modal-entering");
-    }, 200); // Reduced from 400ms to 200ms
+    }, 200);
   };
 
   window.hideDeleteModal = function () {
@@ -73,7 +67,8 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
       deleteModal.classList.add("hidden", "opacity-0");
       deleteModal.classList.remove("modal-exiting");
-    }, 150); // Reduced from 300ms to 150ms
+      console.log("Delete modal hidden, display:", deleteModal.style.display);
+    }, 150);
   };
 
   if (closeModalXButton) {
@@ -104,4 +99,26 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  // Debug navbar click events
+  const navbarLinks = document.querySelectorAll(
+    "#main-navbar a, #main-navbar button"
+  );
+  navbarLinks.forEach((link) => {
+    link.addEventListener("click", function (e) {
+      console.log("Navbar item clicked:", this.textContent || this.title);
+      console.log(
+        "Computed z-index:",
+        window.getComputedStyle(document.getElementById("main-navbar")).zIndex
+      );
+      console.log(
+        "Computed pointer-events:",
+        window.getComputedStyle(this).pointerEvents
+      );
+      console.log("Element details:", this);
+    });
+    link.addEventListener("mousedown", function (e) {
+      console.log("Navbar item mousedown:", this.textContent || this.title);
+    });
+  });
 });

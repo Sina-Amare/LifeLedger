@@ -251,16 +251,21 @@ input[type="file"]:focus {
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: #ffffff;
   border: none;
-  transition: all 0.3s ease;
-  transform: perspective(500px) translateZ(0) translateY(10px);
-  opacity: 0;
+  opacity: 0; /* Start hidden for fade-in */
+  transform: scale(0.95); /* Slight scale for a pop effect */
+  transition: opacity 0.3s ease, transform 0.3s ease; /* Fade-in and scale animation */
 }
-.selected-tag-pill.active {
-  transform: perspective(500px) translateZ(0) translateY(0);
+.selected-tag-pill:not(.removing) {
   opacity: 1;
+  transform: scale(1);
+}
+.selected-tag-pill.removing {
+  opacity: 0; /* Fade-out for removal */
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .selected-tag-pill:hover {
-  transform: perspective(500px) translateY(-2px) translateZ(5px);
+  transform: scale(1.05); /* Slight scale on hover */
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 .dark .selected-tag-pill {

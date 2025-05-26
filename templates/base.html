@@ -15,13 +15,20 @@
     <link href="{% static 'css/base_styles.css' %}" rel="stylesheet" />
     {% block extra_head %}{% endblock %}
     <style>
-        /* Ensure navbar is always clickable */
+        /* Ensure navbar is always on top and clickable */
         #main-navbar {
-            z-index: 10000 !important; /* Higher than modals and toasts */
+            z-index: 20000 !important;
             position: sticky;
             top: 0;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid var(--border-light-theme);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
         }
-        #main-navbar a, #main-navbar button {
+        .dark #main-navbar {
+            background: rgba(17, 24, 39, 0.9);
+            border-bottom: 1px solid var(--border-dark-theme);
+        }
+        #main-navbar * {
             pointer-events: auto !important;
         }
     </style>
@@ -30,7 +37,7 @@
     <div id="page-preloader" class="preloader">
         <i class="fas fa-feather-alt preloader-icon"></i>
     </div>
-    <nav id="main-navbar" class="sticky top-0 z-50 bg-card-light/90 dark:bg-card-dark/90 backdrop-blur-md shadow-md border-b border-border-light/60 dark:border-border-dark/60 transition-colors duration-150 ease-in-out">
+    <nav id="main-navbar" class="sticky top-0 z-50 bg-card-light/90 dark:bg-card-dark/90 shadow-md border-b border-border-light/60 dark:border-border-dark/60 transition-colors duration-150 ease-in-out">
         <div class="container mx-auto flex justify-between items-center py-3.5 px-4 sm:px-6">
             <a href="{% url 'accounts:home' %}" class="text-2xl md:text-3xl font-bold text-primary-light dark:text-primary-dark transition-opacity duration-150 flex items-center group">
                 <i class="fas fa-feather-alt mr-2.5 text-xl md:text-2xl transition-all duration-150 ease-out group-hover:rotate-[10deg] group-hover:scale-110"></i>
@@ -136,17 +143,6 @@
     <script src="{% static 'js/scroll.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
     <script src="{% static 'js/base_scripts.js' %}"></script>
-    <script>
-        // Debug navbar clicks
-        document.addEventListener("DOMContentLoaded", function () {
-            const navbarLinks = document.querySelectorAll('#main-navbar a, #main-navbar button');
-            navbarLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    console.log('Navbar item clicked:', this.textContent || this.title);
-                });
-            });
-        });
-    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

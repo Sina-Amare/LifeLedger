@@ -132,11 +132,9 @@ html {
 #main-navbar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 20000; /* Match the value in base.html */
   background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid var(--border-light-theme);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
 }
 .dark #main-navbar {

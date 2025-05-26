@@ -3,12 +3,10 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.urls import reverse_lazy
-from django.contrib.auth import update_session_auth_hash # Important for keeping user logged in
-from django.utils.translation import gettext_lazy as _ # For translation
+from django.contrib.auth import update_session_auth_hash 
+from django.utils.translation import gettext_lazy as _ # Standard alias for gettext_lazy
 
-# Forms from user_profile.forms
 from .forms import UserUpdateForm, UserProfileUpdateForm, CurrentPasswordConfirmForm, NewPasswordSetForm
-# UserProfile model from the current app's models
 from .models import UserProfile 
 
 class ProfileUpdateView(LoginRequiredMixin, View):
@@ -27,11 +25,9 @@ class ProfileUpdateView(LoginRequiredMixin, View):
         populated with the current user's data.
         """
         user_form = UserUpdateForm(instance=request.user)
-        # Ensure profile exists. The signal should create it for new users.
-        # For existing users, if it somehow doesn't exist, get_or_create handles it.
-        profile_instance, created = UserProfile.objects.get_or_create(user=request.user)
-        if created:
-            # This log helps identify if a profile was missing and created on-the-fly.
+        # UPDATED: Changed throwaway variable from _ to profile_created
+        profile_instance, profile_created = UserProfile.objects.get_or_create(user=request.user)
+        if profile_created:
             print(f"ProfileUpdateView: Created a new UserProfile for {request.user.username} during GET request because it was missing.")
             
         profile_form = UserProfileUpdateForm(instance=profile_instance)
@@ -39,7 +35,7 @@ class ProfileUpdateView(LoginRequiredMixin, View):
         context = {
             'user_form': user_form,
             'profile_form': profile_form,
-            'page_title': _('Update Your Profile') # Translated page title
+            'page_title': _('Update Your Profile') 
         }
         return render(request, self.template_name, context)
 
@@ -49,20 +45,24 @@ class ProfileUpdateView(LoginRequiredMixin, View):
         Validates and saves the submitted data for both forms.
         """
         user_form = UserUpdateForm(request.POST, instance=request.user)
-        profile_instance, _ = UserProfile.objects.get_or_create(user=request.user)
+        # UPDATED: Changed throwaway variable from _ to profile_created_on_post
+        profile_instance, profile_created_on_post = UserProfile.objects.get_or_create(user=request.user)
+        if profile_created_on_post:
+             print(f"ProfileUpdateView: Created a new UserProfile for {request.user.username} during POST request because it was missing.")
+
         profile_form = UserProfileUpdateForm(request.POST, request.FILES, instance=profile_instance)
 
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save() 
             profile_form.save() 
-            messages.success(request, _('Your profile has been updated successfully!'))
+            messages.success(request, _('Your profile has been updated successfully!')) # Now _ should be the gettext_lazy function
             return redirect(self.success_url)
         else:
-            messages.error(request, _('Please correct the errors below.'))
+            messages.error(request, _('Please correct the errors below.')) # _ should work here too
             context = {
                 'user_form': user_form,
                 'profile_form': profile_form,
-                'page_title': _('Update Your Profile') # Translated page title
+                'page_title': _('Update Your Profile') 
             }
             return render(request, self.template_name, context)
 
@@ -107,8 +107,6 @@ class CustomPasswordChangeView(LoginRequiredMixin, View):
                 request.session[self.SESSION_KEY_PASSWORD_CONFIRMED] = True
                 return redirect(request.path) 
             else:
-                # Form's clean_current_password will add specific error.
-                # We add a general info message here.
                 messages.info(request, _("If you've forgotten your current password, you may need to log out and use the 'Forgot Password' link on the login page."))
                 context = self.get_context_data() 
                 context['current_password_form'] = form 
