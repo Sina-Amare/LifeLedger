@@ -1,20 +1,15 @@
-# journal/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView,
-    View 
+    ListView, DetailView, CreateView, UpdateView, View, DeleteView # CORRECTED: Added DeleteView back
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse, Http404
-from django.core.exceptions import PermissionDenied, ObjectDoesNotExist # Added ObjectDoesNotExist
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.forms import inlineformset_factory 
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _ # For messages
+
 from .forms import JournalEntryForm, JournalAttachmentForm, MOOD_CHOICES_FORM_DISPLAY 
 from .models import JournalEntry, JournalAttachment, Tag
 from django.db.models import Q
@@ -26,8 +21,10 @@ from ai_services.tasks import (
     detect_mood_for_entry_task,
     suggest_tags_for_entry_task
 )
-# from LifeLedger.celery import debug_task # debug_task dispatch removed from views for cleaner AI focus
 from celery.result import AsyncResult 
+
+# Import UserProfile from the user_profile app
+from user_profile.models import UserProfile as NewUserProfile 
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +45,6 @@ MOOD_VISUALS = {
     'neutral': {'emoji': "😐", 'text_color': "text-gray-700 dark:text-gray-400", 'bg_color': "bg-gray-100 dark:bg-gray-700", 'border_color': "border-gray-500"},
     'excited': {'emoji': "🎉", 'text_color': "text-yellow-700 dark:text-yellow-400", 'bg_color': "bg-yellow-100 dark:bg-yellow-800", 'border_color': "border-yellow-500"},
 }
-
-# journal/views.py (partial update)
-
-# journal/views.py (partial update)
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
     model = JournalEntry
@@ -82,17 +75,14 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
                 queryset = queryset.filter(created_at__year=now.year)
         if is_favorite == 'on':
             queryset = queryset.filter(is_favorite=True)
-
         if tag_filter_name:
             queryset = queryset.filter(tags__name__iexact=tag_filter_name)
-
         if search_query:
             queryset = queryset.filter(
                 Q(title__icontains=search_query) |
                 Q(content__icontains=search_query) |
                 Q(tags__name__icontains=search_query)
             ).distinct()
-
         return queryset.order_by('-created_at')
 
     def get_context_data(self, **kwargs):
@@ -100,10 +90,8 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         context['mood_options'] = [option for option in MOOD_CHOICES_FORM_DISPLAY if option[0] != ""]
         context['mood_visuals'] = MOOD_VISUALS
         context['time_period_options'] = [
-            ('today', 'Today'),
-            ('this_week', 'This Week'),
-            ('this_month', 'This Month'),
-            ('this_year', 'This Year'),
+            ('today', _('Today')), ('this_week', _('This Week')), # Translated options
+            ('this_month', _('This Month')), ('this_year', _('This Year')),
         ]
         context['current_mood'] = self.request.GET.get('mood', '')
         context['current_time_period'] = self.request.GET.get('time_period', 'all')
@@ -112,19 +100,11 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         user_entry_tags_pks = JournalEntry.objects.filter(user=self.request.user).values_list('tags__pk', flat=True).distinct()
         context['all_tags_for_filter'] = Tag.objects.filter(pk__in=[pk for pk in user_entry_tags_pks if pk is not None]).order_by('name')
         context['current_tag_filter'] = self.request.GET.get('tag_filter', '')
-
-        # Check if any filter is applied
         context['is_filtered'] = any([
-            context['current_mood'],
-            context['current_time_period'] != 'all',
-            context['current_is_favorite'],
-            context['current_search_query'],
-            context['current_tag_filter']
+            context['current_mood'], context['current_time_period'] != 'all',
+            context['current_is_favorite'], context['current_search_query'], context['current_tag_filter']
         ])
-
-        # Add new entries (created within last 24 hours)
         context['new_entries'] = [entry for entry in context['entries'] if (timezone.now() - entry.created_at).total_seconds() <= 24 * 3600]
-
         return context
 
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
@@ -151,14 +131,11 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        if 'attachment_formset' not in kwargs: # If not passed from post method's form_invalid
+        if 'attachment_formset' not in kwargs:
             if self.request.method == 'POST':
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(
-                    self.request.POST, self.request.FILES, prefix='attachments'
-                )
-            else: # GET request
+                data['attachment_formset'] = JournalAttachmentInlineFormSet(self.request.POST, self.request.FILES, prefix='attachments')
+            else:
                 data['attachment_formset'] = JournalAttachmentInlineFormSet(prefix='attachments')
-        
         data['predefined_tags'] = Tag.objects.all().order_by('name')
         data['initial_tags_str'] = '' 
         return data
@@ -166,9 +143,7 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
     def post(self, request, *args, **kwargs):
         self.object = None 
         form = self.get_form()
-        attachment_formset = JournalAttachmentInlineFormSet(
-            request.POST, request.FILES, prefix='attachments' 
-        )
+        attachment_formset = JournalAttachmentInlineFormSet(request.POST, request.FILES, prefix='attachments')
         if form.is_valid() and attachment_formset.is_valid():
             logger.info("Main form and attachment formset are valid for create.")
             return self.form_valid(form, attachment_formset)
@@ -198,10 +173,7 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
-                        tag, created = Tag.objects.get_or_create(
-                            name__iexact=tag_name_stripped, 
-                            defaults={'name': tag_name_stripped.capitalize()} 
-                        )
+                        tag, created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
             
@@ -212,44 +184,65 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             entry_id = self.object.id
             task_ids = {}
             
-            logger.info(f"Attempting to dispatch AI tasks for entry ID: {entry_id}")
-            # try: # debug_task dispatch removed for brevity
-            #     debug_task.delay() 
-            #     logger.info(f"Dispatched LifeLedger.celery.debug_task for entry ID: {entry_id}")
-            # except Exception as e:
-            #     logger.error(f"Failed to dispatch debug_task (entry ID {entry_id}): {e}", exc_info=True)
+            user_profile = self.request.user.profile 
 
-            try:
-                task_result = generate_quote_for_entry_task.delay(entry_id)
-                self.object.ai_quote_task_id = task_result.id
-                task_ids['quote_task_id'] = task_result.id
-                logger.info(f"Dispatched generate_quote_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
-            except Exception as e:
-                logger.error(f"Failed to dispatch generate_quote_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+            logger.info(f"Attempting to dispatch AI tasks for entry ID: {entry_id} based on user preferences.")
             
-            try:
-                task_result = detect_mood_for_entry_task.delay(entry_id)
-                self.object.ai_mood_task_id = task_result.id
-                task_ids['mood_task_id'] = task_result.id
-                logger.info(f"Dispatched detect_mood_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
-            except Exception as e:
-                logger.error(f"Failed to dispatch detect_mood_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+            if user_profile.ai_enable_quotes:
+                try:
+                    task_result = generate_quote_for_entry_task.delay(entry_id)
+                    self.object.ai_quote_task_id = task_result.id
+                    task_ids['quote_task_id'] = task_result.id
+                    logger.info(f"Dispatched generate_quote_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                except Exception as e:
+                    logger.error(f"Failed to dispatch generate_quote_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+            else:
+                self.object.ai_quote_processed = True 
+                self.object.ai_quote = None 
+                logger.info(f"Quote generation skipped for entry {entry_id} as per user preference.")
 
-            try:
-                task_result = suggest_tags_for_entry_task.delay(entry_id)
-                self.object.ai_tags_task_id = task_result.id
-                task_ids['tags_task_id'] = task_result.id
-                logger.info(f"Dispatched suggest_tags_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
-            except Exception as e:
-                logger.error(f"Failed to dispatch suggest_tags_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+            if user_profile.ai_enable_mood_detection:
+                # Only run mood detection if mood was not set by user in the form
+                if not form.cleaned_data.get('mood'): 
+                    try:
+                        task_result = detect_mood_for_entry_task.delay(entry_id)
+                        self.object.ai_mood_task_id = task_result.id
+                        task_ids['mood_task_id'] = task_result.id
+                        logger.info(f"Dispatched detect_mood_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to dispatch detect_mood_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                else:
+                    self.object.ai_mood_processed = True # User set mood, so AI processing for mood is "done"
+                    logger.info(f"Mood detection skipped for entry {entry_id} as mood was set by user.")
+            else:
+                self.object.ai_mood_processed = True 
+                logger.info(f"Mood detection skipped for entry {entry_id} as per user preference.")
+
+            if user_profile.ai_enable_tag_suggestion:
+                # Only run tag suggestion if no tags were provided by user
+                if not current_tags_for_entry: 
+                    try:
+                        task_result = suggest_tags_for_entry_task.delay(entry_id)
+                        self.object.ai_tags_task_id = task_result.id
+                        task_ids['tags_task_id'] = task_result.id
+                        logger.info(f"Dispatched suggest_tags_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to dispatch suggest_tags_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                else:
+                    self.object.ai_tags_processed = True # User set tags
+                    logger.info(f"Tag suggestion skipped for entry {entry_id} as tags were set by user.")
+            else:
+                self.object.ai_tags_processed = True 
+                logger.info(f"Tag suggestion skipped for entry {entry_id} as per user preference.")
             
             self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id', 
-                                            'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed'])
+                                           'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
+                                           'ai_quote', 'mood']) 
         
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'status': 'success', 
-                'message': 'Journal entry saved. AI processing started.',
+                'message': _('Journal entry saved. AI processing initiated based on your preferences.'),
                 'entry_id': self.object.id,
                 'task_ids': task_ids, 
                 'redirect_url': self.object.get_absolute_url() 
@@ -260,13 +253,9 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
         logger.warning(f"CreateView form_invalid. Form errors: {form.errors.as_json()}")
         if attachment_formset and not attachment_formset.is_valid():
             logger.warning(f"  Attachment formset errors: {attachment_formset.errors} {attachment_formset.non_form_errors()}")
-        
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'error', 'form_errors': form.errors.as_json(), 'formset_errors': attachment_formset.errors}, status=400)
-            
-        return self.render_to_response(
-            self.get_context_data(form=form, attachment_formset=attachment_formset)
-        )
+        return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
 class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = JournalEntry
@@ -281,15 +270,11 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
         data = super().get_context_data(**kwargs)
         if not hasattr(self, 'object') and self.kwargs.get(self.pk_url_kwarg):
             self.object = self.get_object()
-
         if self.request.method == 'POST':
-             if 'attachment_formset' not in data:
-                data['attachment_formset'] = JournalAttachmentInlineFormSet(
-                    self.request.POST, self.request.FILES, instance=self.object, prefix='attachments'
-                )
+            if 'attachment_formset' not in data:
+                data['attachment_formset'] = JournalAttachmentInlineFormSet(self.request.POST, self.request.FILES, instance=self.object, prefix='attachments')
         elif 'attachment_formset' not in data: 
             data['attachment_formset'] = JournalAttachmentInlineFormSet(instance=self.object, prefix='attachments')
-        
         data['predefined_tags'] = Tag.objects.all().order_by('name')
         if self.object and hasattr(self.object, 'tags'):
             initial_tag_names = [tag.name for tag in self.object.tags.all().order_by('name')]
@@ -301,9 +286,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
-        attachment_formset = JournalAttachmentInlineFormSet(
-            request.POST, request.FILES, instance=self.object, prefix='attachments'
-        )
+        attachment_formset = JournalAttachmentInlineFormSet(request.POST, request.FILES, instance=self.object, prefix='attachments')
         if form.is_valid() and attachment_formset.is_valid():
             logger.info(f"Main form and attachment formset are valid for update (entry ID: {self.object.pk}).")
             return self.form_valid(form, attachment_formset)
@@ -312,7 +295,6 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
             if not attachment_formset.is_valid():
                 logger.error(f"UpdateView - Attachment formset invalid: {attachment_formset.errors}")
                 logger.error(f"UpdateView - Attachment formset non-form errors: {attachment_formset.non_form_errors()}")
-            
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'form_errors': form.errors.as_json(), 'formset_errors': attachment_formset.errors}, status=400)
             return self.form_invalid(form, attachment_formset)
@@ -320,19 +302,29 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     def form_valid(self, form, attachment_formset):
         with transaction.atomic():
             content_changed = 'content' in form.changed_data
-            mood_provided_by_user_in_this_update = 'mood' in form.changed_data and form.cleaned_data.get('mood')
-            tags_provided_by_user_in_this_update = 'tags' in form.changed_data 
+            mood_is_being_set_by_user = 'mood' in form.changed_data and form.cleaned_data.get('mood')
+            tags_are_being_set_by_user = 'tags' in form.changed_data and form.cleaned_data.get('tags')
             
             self.object = form.save(commit=False)
             
+            # Always reset AI processed flags if relevant content changed,
+            # so AI can re-evaluate if enabled by user.
             if content_changed:
                 self.object.ai_quote_processed = False
                 self.object.ai_quote_task_id = None
-            if 'mood' in form.changed_data: 
-                self.object.ai_mood_processed = False
+                self.object.ai_mood_processed = False # Mood might change with content
                 self.object.ai_mood_task_id = None
+                self.object.ai_tags_processed = False # Tags might change with content
+                self.object.ai_tags_task_id = None
+
+            # If mood is explicitly changed by user, AI for mood is considered "processed" by user action
+            if 'mood' in form.changed_data: 
+                self.object.ai_mood_processed = True # User has taken control of mood
+                self.object.ai_mood_task_id = None
+            
+            # If tags are explicitly changed by user, AI for tags is considered "processed" by user action
             if 'tags' in form.changed_data:
-                self.object.ai_tags_processed = False
+                self.object.ai_tags_processed = True # User has taken control of tags
                 self.object.ai_tags_task_id = None
 
             self.object.save()
@@ -343,10 +335,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
-                        tag, created = Tag.objects.get_or_create(
-                            name__iexact=tag_name_stripped, 
-                            defaults={'name': tag_name_stripped.capitalize()}
-                        )
+                        tag, created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
 
@@ -356,15 +345,14 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
             entry_id = self.object.id
             task_ids = {}
-            logger.info(f"Attempting to dispatch AI tasks for updated entry ID: {entry_id}")
             
-            # try: # Debug task removed
-            #     debug_task.delay()
-            #     logger.info(f"Dispatched LifeLedger.celery.debug_task for updated entry ID: {entry_id}")
-            # except Exception as e:
-            #     logger.error(f"Failed to dispatch debug_task (updated entry ID {entry_id}): {e}", exc_info=True)
+            user_profile = self.request.user.profile
 
-            if content_changed or not self.object.ai_quote:
+            logger.info(f"Attempting to dispatch AI tasks for updated entry ID: {entry_id} based on user preferences.")
+            
+            # Conditional Quote Generation: Run if enabled and content changed OR if no quote exists yet
+            if user_profile.ai_enable_quotes and (content_changed or not self.object.ai_quote):
+                self.object.ai_quote_processed = False # Reset for new processing
                 try:
                     task_result = generate_quote_for_entry_task.delay(entry_id)
                     self.object.ai_quote_task_id = task_result.id
@@ -372,8 +360,16 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
                     logger.info(f"Dispatched generate_quote_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
                 except Exception as e:
                     logger.error(f"Failed to dispatch quote task (updated entry ID {entry_id}): {e}", exc_info=True)
-            
-            if not mood_provided_by_user_in_this_update or (content_changed and not self.object.mood):
+                    self.object.ai_quote_processed = True # Mark processed on error to avoid re-queue
+            elif not user_profile.ai_enable_quotes:
+                self.object.ai_quote_processed = True
+                self.object.ai_quote_task_id = None
+                self.object.ai_quote = None 
+                logger.info(f"Quote generation skipped for updated entry {entry_id} (user preference).")
+
+            # Conditional Mood Detection: Run if enabled AND mood was NOT set by user in this update AND (content changed OR no mood exists)
+            if user_profile.ai_enable_mood_detection and not mood_is_being_set_by_user and (content_changed or not self.object.mood):
+                self.object.ai_mood_processed = False # Reset for new processing
                 try:
                     task_result = detect_mood_for_entry_task.delay(entry_id)
                     self.object.ai_mood_task_id = task_result.id
@@ -381,8 +377,15 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
                     logger.info(f"Dispatched detect_mood_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
                 except Exception as e:
                     logger.error(f"Failed to dispatch mood task (updated entry ID {entry_id}): {e}", exc_info=True)
+                    self.object.ai_mood_processed = True # Mark processed on error
+            elif not user_profile.ai_enable_mood_detection or mood_is_being_set_by_user:
+                self.object.ai_mood_processed = True # User preference or user set it
+                self.object.ai_mood_task_id = None
+                logger.info(f"Mood detection skipped for updated entry {entry_id} (user preference or user set mood).")
 
-            if not tags_provided_by_user_in_this_update or (content_changed and not self.object.tags.exists()):
+            # Conditional Tag Suggestion: Run if enabled AND tags were NOT set by user in this update AND (content changed OR no tags exist)
+            if user_profile.ai_enable_tag_suggestion and not tags_are_being_set_by_user and (content_changed or not self.object.tags.exists()):
+                self.object.ai_tags_processed = False # Reset for new processing
                 try:
                     task_result = suggest_tags_for_entry_task.delay(entry_id)
                     self.object.ai_tags_task_id = task_result.id
@@ -390,14 +393,20 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
                     logger.info(f"Dispatched suggest_tags_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
                 except Exception as e:
                     logger.error(f"Failed to dispatch tag task (updated entry ID {entry_id}): {e}", exc_info=True)
+                    self.object.ai_tags_processed = True # Mark processed on error
+            elif not user_profile.ai_enable_tag_suggestion or tags_are_being_set_by_user:
+                self.object.ai_tags_processed = True # User preference or user set tags
+                self.object.ai_tags_task_id = None
+                logger.info(f"Tag suggestion skipped for updated entry {entry_id} (user preference or user set tags).")
             
             self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id', 
-                                            'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed'])
+                                           'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
+                                           'ai_quote', 'mood']) 
             
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'status': 'success', 
-                'message': 'Journal entry updated. AI processing initiated if applicable.',
+                'message': _('Journal entry updated. AI processing initiated based on your preferences.'),
                 'entry_id': self.object.id,
                 'task_ids': task_ids,
                 'redirect_url': self.object.get_absolute_url()
@@ -408,38 +417,21 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
         logger.error(f"UpdateView.form_invalid. Form errors: {form.errors.as_json()}")
         if attachment_formset and not attachment_formset.is_valid():
             logger.error(f"  UpdateView - Attachment formset errors: {attachment_formset.errors}")
-        
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'error', 'form_errors': form.errors.as_json(), 'formset_errors': attachment_formset.errors}, status=400)
-            
-        return self.render_to_response(
-            self.get_context_data(form=form, attachment_formset=attachment_formset)
-        )
+        return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
     def test_func(self):
         entry = self.get_object()
         return entry.user == self.request.user
 
-# New View for AI Task Status Polling
 class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
-    """
-    Provides the status of AI processing tasks for a given journal entry.
-    Accessible via GET request by the entry owner.
-    """
     def test_func(self):
-        """
-        Check if the current user is the owner of the journal entry
-        identified by 'entry_id' in the URL kwargs.
-        This method is called by UserPassesTestMixin.
-        """
         try:
             entry_id = self.kwargs.get('entry_id') 
             if not entry_id:
                 logger.warning("AIServiceStatusView.test_func: entry_id not found in URL kwargs.")
                 return False
-            
-            # Fetch the entry to check ownership.
-            # Using JournalEntry.objects.only('user') can be slightly more efficient if only user is needed.
             entry = JournalEntry.objects.get(pk=entry_id)
             is_owner = entry.user == self.request.user
             if not is_owner:
@@ -453,33 +445,34 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
             return False
 
     def get(self, request, entry_id, *args, **kwargs):
-        # Ownership is already checked by test_func via UserPassesTestMixin.
-        # If test_func returns False, dispatch will raise PermissionDenied or redirect.
         try:
             entry = JournalEntry.objects.get(pk=entry_id) 
         except JournalEntry.DoesNotExist:
-            logger.error(f"AIServiceStatusView.get: Entry ID {entry_id} not found (should have been caught by test_func or URL resolver).")
+            logger.error(f"AIServiceStatusView.get: Entry ID {entry_id} not found.")
             return JsonResponse({'status': 'error', 'message': 'Entry not found.'}, status=404)
 
         statuses = {}
         needs_db_update_flags = [] 
+        user_profile = request.user.profile # Get user profile for AI preferences
 
         task_info_map = {
-            'quote': (entry.ai_quote_task_id, entry.ai_quote_processed, 'ai_quote_processed'),
-            'mood': (entry.ai_mood_task_id, entry.ai_mood_processed, 'ai_mood_processed'),
-            'tags': (entry.ai_tags_task_id, entry.ai_tags_processed, 'ai_tags_processed'),
+            'quote': (entry.ai_quote_task_id, entry.ai_quote_processed, 'ai_quote_processed', user_profile.ai_enable_quotes),
+            'mood': (entry.ai_mood_task_id, entry.ai_mood_processed, 'ai_mood_processed', user_profile.ai_enable_mood_detection),
+            'tags': (entry.ai_tags_task_id, entry.ai_tags_processed, 'ai_tags_processed', user_profile.ai_enable_tag_suggestion),
         }
         
-        # Iterate over a copy of values if you might modify the dict, but here we are fine.
-        for task_type_key, (task_id, processed_flag_value, processed_flag_name) in task_info_map.items():
+        for task_type_key, (task_id, processed_flag_value, processed_flag_name, ai_enabled_by_user) in task_info_map.items():
             current_task_api_status = "PENDING" 
-            
-            if processed_flag_value: 
+            if not ai_enabled_by_user:
+                current_task_api_status = "DISABLED_BY_USER"
+                if not processed_flag_value: # If not already marked as processed (e.g. disabled)
+                    setattr(entry, processed_flag_name, True)
+                    needs_db_update_flags.append(processed_flag_name)
+            elif processed_flag_value: 
                 current_task_api_status = "SUCCESS" 
             elif task_id:
                 task_result = AsyncResult(task_id)
                 current_task_api_status = task_result.state.upper() 
-                
                 if task_result.successful(): 
                     current_task_api_status = "SUCCESS"
                     if not getattr(entry, processed_flag_name):
@@ -488,10 +481,9 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
                 elif task_result.failed():
                     current_task_api_status = "FAILURE"
                     if not getattr(entry, processed_flag_name): 
-                        setattr(entry, processed_flag_name, True)
+                        setattr(entry, processed_flag_name, True) 
                         needs_db_update_flags.append(processed_flag_name)
                     logger.warning(f"Celery task {task_id} ({task_type_key}) for entry {entry.id} reported FAILURE. Traceback: {task_result.traceback}")
-            
             statuses[f'{task_type_key}_status'] = current_task_api_status
         
         if needs_db_update_flags:
@@ -500,18 +492,17 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
                 entry.save(update_fields=unique_flags_to_update)
                 logger.info(f"Updated AI processed flags for entry {entry.id} from AIServiceStatusView: {unique_flags_to_update}")
 
-        all_done_now = entry.ai_quote_processed and entry.ai_mood_processed and entry.ai_tags_processed
+        all_done_now = (not user_profile.ai_enable_quotes or entry.ai_quote_processed) and \
+                       (not user_profile.ai_enable_mood_detection or entry.ai_mood_processed) and \
+                       (not user_profile.ai_enable_tag_suggestion or entry.ai_tags_processed)
+
 
         return JsonResponse({
-            'status': 'ok',
-            'entry_id': entry.id,
-            'task_statuses': statuses,
-            'all_done': all_done_now,
-            'ai_quote': entry.ai_quote or "", 
-            'mood': entry.mood or "",
-            'tags': [tag.name for tag in entry.tags.all()] 
+            'status': 'ok', 'entry_id': entry.id, 'task_statuses': statuses, 'all_done': all_done_now,
+            'ai_quote': entry.ai_quote if user_profile.ai_enable_quotes else "", 
+            'mood': entry.mood, # Mood can be user-set or AI-set, display regardless of AI pref for mood detection
+            'tags': [tag.name for tag in entry.tags.all()] # Tags are user-set or AI-suggested, display regardless
         })
-
 
 class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = JournalEntry
@@ -528,7 +519,7 @@ class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView
 
 class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = JournalEntry
-    http_method_names = ['post']
+    http_method_names = ['post'] 
 
     def dispatch(self, request, *args, **kwargs):
         try:
@@ -543,8 +534,11 @@ class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, Delete
             raise
 
     def test_func(self):
-        self.object = self.get_object() 
-        return self.object.user == self.request.user
+        try:
+            self.object = self.get_object() 
+            return self.object.user == self.request.user
+        except Http404: 
+            return False
 
     def handle_no_permission(self):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -553,13 +547,16 @@ class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, Delete
 
     def post(self, request, *args, **kwargs):
         try:
-            if not hasattr(self, 'object') or not self.object:
-                 self.object = self.get_object() 
+            self.object = self.get_object() 
             entry_pk = self.object.pk
+            entry_title = self.object.title or "Untitled Entry" 
             self.object.delete()
-            return JsonResponse({'status': 'success', 'message': 'Entry deleted successfully.', 'entry_id': entry_pk})
+            logger.info(f"User {request.user.username} successfully deleted journal entry PK: {entry_pk}, Title: '{entry_title}' via AJAX.")
+            return JsonResponse({'status': 'success', 'message': _('Entry deleted successfully.'), 'entry_id': entry_pk})
         except Http404: 
-            return JsonResponse({'status': 'error', 'message': 'Entry not found in POST.'}, status=404)
+            logger.warning(f"JournalEntryAjaxDeleteView: Entry not found in POST for pk={kwargs.get('pk')} by user {request.user.username}.")
+            return JsonResponse({'status': 'error', 'message': _('Entry not found.')}, status=404)
         except Exception as e:
-            logger.error(f"Unexpected error in JournalEntryAjaxDeleteView POST for pk={kwargs.get('pk')}: {e}", exc_info=True)
-            return JsonResponse({'status': 'error', 'message': 'An unexpected server error occurred.'}, status=500)
+            logger.error(f"Unexpected error in JournalEntryAjaxDeleteView POST for pk={kwargs.get('pk')} by user {request.user.username}: {e}", exc_info=True)
+            return JsonResponse({'status': 'error', 'message': _('An unexpected server error occurred.')}, status=500)
+

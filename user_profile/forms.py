@@ -1,29 +1,29 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import SetPasswordForm # For setting the new password
+from django.contrib.auth.forms import SetPasswordForm 
 from django.utils.translation import gettext_lazy as _
 from .models import UserProfile
 
-User = get_user_model() # This gets your accounts.CustomUser model
+User = get_user_model() 
 
 class UserUpdateForm(forms.ModelForm):
     """
     Form for updating core user information like first name and last name.
-    Email and username changes are typically handled separately due to their sensitivity
-    and potential need for verification or uniqueness checks beyond simple updates.
     """
     class Meta:
         model = User
-        fields = ['first_name', 'last_name'] # Add 'email' here if you want to allow direct editing without re-verification for now
+        fields = ['first_name', 'last_name']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add placeholders or classes if needed for styling
-        self.fields['first_name'].widget.attrs.update({'placeholder': 'Enter your first name'})
-        self.fields['last_name'].widget.attrs.update({'placeholder': 'Enter your last name'})
-        # if 'email' in self.fields:
-        #     self.fields['email'].widget.attrs.update({'placeholder': 'Enter your email address'})
-
+        self.fields['first_name'].widget.attrs.update({
+            'placeholder': _('Enter your first name'),
+            'class': 'profile-input' 
+        })
+        self.fields['last_name'].widget.attrs.update({
+            'placeholder': _('Enter your last name'),
+            'class': 'profile-input' 
+        })
 
 class UserProfileUpdateForm(forms.ModelForm):
     """
@@ -39,51 +39,57 @@ class UserProfileUpdateForm(forms.ModelForm):
             'ai_enable_quotes', 'ai_enable_mood_detection', 'ai_enable_tag_suggestion'
         ]
         widgets = {
-            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Tell us a little about yourself...'}),
-            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'profile-input flatpickr-input'}), # Added profile-input for consistent styling
-            'location': forms.TextInput(attrs={'placeholder': 'e.g., Tehran, Iran'}),
-            'website_url': forms.URLInput(attrs={'placeholder': 'https://your-website.com'}),
-            'linkedin_url': forms.URLInput(attrs={'placeholder': 'https://linkedin.com/in/yourprofile'}),
-            'github_url': forms.URLInput(attrs={'placeholder': 'https://github.com/yourusername'}),
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': _('Tell us a little about yourself...'), 'class': 'profile-textarea'}),
+            'date_of_birth': forms.DateInput(attrs={'type': 'text', 'class': 'profile-input flatpickr-input', 'placeholder': _('YYYY-MM-DD')}),
+            'location': forms.TextInput(attrs={'placeholder': _('e.g., Tehran, Iran'), 'class': 'profile-input'}),
+            'website_url': forms.URLInput(attrs={'placeholder': 'https://your-website.com', 'class': 'profile-input'}),
+            'linkedin_url': forms.URLInput(attrs={'placeholder': 'https://linkedin.com/in/yourprofile', 'class': 'profile-input'}),
+            'github_url': forms.URLInput(attrs={'placeholder': 'https://github.com/yourusername', 'class': 'profile-input'}),
         }
-        help_texts = { # Example of custom help texts if model help_texts are not enough
-            'profile_picture': ('Upload a new profile picture. Current picture will be replaced. '
-                                'Leave blank to keep the current picture or remove it below.'),
-            'show_email_publicly': ('If checked, your email address will be visible on your public profile page.'),
+        help_texts = { 
+            'profile_picture': _('Upload a new profile picture. Current picture will be replaced. Leave blank to keep the current picture.'),
+            'show_email_publicly': _('If checked, your email address will be visible on your public profile page.'),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Apply 'profile-input' class to all fields for consistent styling,
-        # except for checkboxes and the profile picture (which gets special handling in template).
         for field_name, field in self.fields.items():
+            # Apply base styling class if not already present and not a checkbox/file input
             if not isinstance(field.widget, forms.CheckboxInput) and field_name != 'profile_picture':
                 current_class = field.widget.attrs.get('class', '')
-                # Ensure 'profile-input' is added without duplicating it
-                if 'profile-input' not in current_class:
-                    field.widget.attrs['class'] = f'{current_class} profile-input'.strip()
-            if field_name == 'date_of_birth': # Ensure flatpickr-input is also there
-                if 'flatpickr-input' not in field.widget.attrs.get('class', ''):
+                # Determine correct base class
+                base_class_to_apply = 'profile-input'
+                if isinstance(field.widget, forms.Textarea):
+                    base_class_to_apply = 'profile-textarea'
+                
+                if base_class_to_apply not in current_class:
+                    field.widget.attrs['class'] = f'{current_class} {base_class_to_apply}'.strip()
+                
+                # Ensure flatpickr-input is on date_of_birth
+                if field_name == 'date_of_birth' and 'flatpickr-input' not in field.widget.attrs.get('class', ''):
                      field.widget.attrs['class'] = f"{field.widget.attrs.get('class', '')} flatpickr-input".strip()
-
 
         if self.instance and self.instance.pk and self.instance.profile_picture:
             self.fields['profile_picture'].required = False
 
     def clean_profile_picture(self):
-        """
-        Custom validation for the profile picture if needed.
-        For example, checking file size or type (though Django's ImageField handles basic type checks).
-        """
         picture = self.cleaned_data.get('profile_picture', False)
-        if picture:
-            # Example: Check file size (e.g., max 2MB)
-            # if picture.size > 2 * 1024 * 1024:
-            #     raise forms.ValidationError("Image file too large ( > 2MB )")
-            pass # Add more validation if needed
+        if picture and hasattr(picture, 'content_type'):  # Check if picture is a file object
+            # Validate file size (max 2MB)
+            max_size = 2 * 1024 * 1024  # 2MB in bytes
+            if picture.size > max_size:
+                raise forms.ValidationError(
+                    _("File size exceeds the maximum limit of 2MB."),
+                    code='file_too_large'
+                )
+            # Validate file type
+            allowed_types = ['image/png', 'image/jpeg', 'image/gif']
+            if picture.content_type not in allowed_types:
+                raise forms.ValidationError(
+                    _("Only PNG, JPG, and GIF files are supported."),
+                    code='invalid_file_type'
+                )
         return picture
-
-# --- Added Password Change Forms ---
 
 class CurrentPasswordConfirmForm(forms.Form):
     """
@@ -91,41 +97,37 @@ class CurrentPasswordConfirmForm(forms.Form):
     """
     current_password = forms.CharField(
         label=_("Current Password"),
-        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password', 'class': 'profile-input'}), # Using your .profile-input class
-        strip=False, # Do not strip whitespace, as passwords can have it
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'current-password', 
+            'class': 'profile-input', 
+            'placeholder': _('Enter your current password')
+        }), 
+        strip=False,
     )
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None) # Expect a 'user' instance to be passed
-        super().__init__(*args, **kwargs)
+        self.user = kwargs.pop('user', None)
         if not self.user:
-            # This form should only be instantiated with a user.
-            # Raising an error here helps catch incorrect usage during development.
             raise ValueError("CurrentPasswordConfirmForm requires a 'user' argument to be passed during instantiation.")
+        super().__init__(*args, **kwargs)
 
     def clean_current_password(self):
-        """
-        Validates that the entered password matches the user's current password.
-        """
         current_password = self.cleaned_data.get("current_password")
-        # self.user should be set in __init__
-        if not self.user.check_password(current_password):
+        if self.user and not self.user.check_password(current_password):
             raise forms.ValidationError(
                 _("Your current password was entered incorrectly. Please enter it again."),
-                code='password_mismatch', # Standard error code
+                code='password_mismatch',
             )
         return current_password
 
 class NewPasswordSetForm(SetPasswordForm):
     """
     A form that lets a user set their new password.
-    Inherits from Django's SetPasswordForm, which handles validation
-    for new_password1 and new_password2 (e.g., matching, complexity).
     We customize widget attributes here for consistent styling.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Apply consistent styling to password fields
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        
         self.fields['new_password1'].widget.attrs.update({
             'class': 'profile-input', 
             'autocomplete': 'new-password',
@@ -136,5 +138,5 @@ class NewPasswordSetForm(SetPasswordForm):
             'autocomplete': 'new-password',
             'placeholder': _('Confirm new password')
         })
-        # Remove default Django help text for new_password1, as we might use an info button.
+        # Remove default Django help text for new_password1, as we use an info button in the template.
         self.fields['new_password1'].help_text = None

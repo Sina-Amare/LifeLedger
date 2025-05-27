@@ -7,77 +7,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}LifeLedger{% endblock %}</title>
     <link href="{% static 'css/output.css' %}" rel="stylesheet" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
     <link href="{% static 'css/base_styles.css' %}" rel="stylesheet" />
     {% block extra_head %}{% endblock %}
     <style>
-        /* Ensure navbar is always on top and clickable */
         #main-navbar {
-            z-index: 20000 !important;
+            z-index: 20000;
             position: sticky;
             top: 0;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-bottom: 1px solid var(--border-light-theme);
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: background 0.3s ease;
         }
         .dark #main-navbar {
-            background: rgba(17, 24, 39, 0.9);
+            background: rgba(17, 24, 39, 0.95);
             border-bottom: 1px solid var(--border-dark-theme);
         }
         #main-navbar * {
-            pointer-events: auto !important;
+            pointer-events: auto;
         }
     </style>
 </head>
-<body class="flex flex-col min-h-screen bg-background-light text-text-light dark:bg-background-dark dark:text-text-dark font-sans antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-slate-900">
-    <div id="page-preloader" class="preloader">
-        <i class="fas fa-feather-alt preloader-icon"></i>
+<body class="flex flex-col min-h-screen bg-background-light text-text-light dark:bg-background-dark dark:text-text-dark font-inter antialiased selection:bg-primary-light selection:text-white dark:selection:bg-primary-dark dark:selection:text-slate-900">
+    <div id="page-preloader" class="fixed inset-0 flex items-center justify-center bg-white/90 dark:bg-gray-900/90 z-50 hidden">
+        <i class="fas fa-feather-alt animate-spin text-4xl text-primary-light dark:text-primary-dark"></i>
     </div>
-    <nav id="main-navbar" class="sticky top-0 z-50 bg-card-light/90 dark:bg-card-dark/90 shadow-md border-b border-border-light/60 dark:border-border-dark/60 transition-colors duration-150 ease-in-out">
-        <div class="container mx-auto flex justify-between items-center py-3.5 px-4 sm:px-6">
-            <a href="{% url 'accounts:home' %}" class="text-2xl md:text-3xl font-bold text-primary-light dark:text-primary-dark transition-opacity duration-150 flex items-center group">
-                <i class="fas fa-feather-alt mr-2.5 text-xl md:text-2xl transition-all duration-150 ease-out group-hover:rotate-[10deg] group-hover:scale-110"></i>
+    <nav id="main-navbar" class="sticky top-0 z-50 bg-card-light/95 dark:bg-card-dark/95 shadow-sm border-b border-border-light/50 dark:border-border-dark/50 transition-all duration-300 ease-in-out">
+        <div class="container mx-auto flex justify-between items-center py-3 px-4 sm:px-6 lg:px-8">
+            <a href="{% url 'accounts:home' %}" class="text-2xl lg:text-3xl font-bold text-primary-light dark:text-primary-dark flex items-center group transition-all duration-200">
+                <i class="fas fa-feather-alt mr-2 text-xl lg:text-2xl transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110"></i>
                 <span class="tracking-tight">LifeLedger</span>
             </a>
-            <div class="flex items-center space-x-2.5 sm:space-x-4">
+            <div class="flex items-center space-x-2 sm:space-x-4">
                 {% if user.is_authenticated %}
-                    <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hidden md:inline">
-                        {% trans "Hello" %}, <strong class="font-semibold text-text-light dark:text-text-dark">{{ user.username|truncatechars:15 }}</strong>!
+                    <span class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 hidden md:inline">
+                        {% trans "Hello" %}, <strong class="font-semibold">{{ user.username|truncatechars:15 }}</strong>
                     </span>
-                    
-                    <a href="{% url 'user_profile:profile_update' %}" aria-label="{% trans 'User profile' %}" class="group flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-primary-light/10 dark:hover:bg-primary-dark-theme/20 hover:text-primary-light dark:hover:text-primary-dark-theme transition-all duration-150 relative overflow-hidden">
-                        <i class="fas fa-user-circle text-xl sm:text-2xl transition-transform duration-150 group-hover:scale-110 relative z-10"></i>
-                        <span class="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 bg-gradient-to-tr from-primary-light/20 to-transparent transition-opacity duration-150 pointer-events-none"></span>
+                    {% trans "User profile" as user_profile_label %}
+                    <a href="{% url 'user_profile:profile_update' %}" aria-label="{{ user_profile_label }}" class="group flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-primary-light/15 dark:hover:bg-primary-dark/15 transition-all duration-200 relative">
+                        <i class="fas fa-user-circle text-xl sm:text-2xl transition-transform group-hover:scale-110"></i>
+                        <span class="absolute inset-0 rounded-full bg-gradient-to-tr from-primary-light/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
                     </a>
-                    <a href="{% url 'accounts:logout_confirm' %}"
-                       class="group relative inline-flex items-center px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 dark:focus-visible:ring-offset-card-dark transition-all duration-150 transform hover:-translate-y-0.5 overflow-hidden">
-                        <span class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-150 transform scale-150 group-hover:scale-100 pointer-events-none"></span>
-                        <i class="fas fa-sign-out-alt mr-0 sm:mr-2 relative z-10 transition-transform duration-150 group-hover:rotate-[4deg]"></i>
-                        <span class="hidden sm:inline relative z-10">{% trans "Logout" %}</span>
+                    <a href="{% url 'accounts:logout_confirm' %}" class="group inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-sign-out-alt mr-1 sm:mr-2 transition-transform group-hover:rotate-6"></i>
+                        <span class="hidden sm:inline">{% trans "Logout" %}</span>
                     </a>
                 {% else %}
-                    <a href="{% url 'accounts:login' %}"
-                       class="px-3.5 py-2 sm:px-4 text-xs sm:text-sm font-medium text-primary-light dark:text-primary-dark-theme hover:bg-primary-light/10 dark:hover:bg-primary-dark-theme/20 rounded-lg transition-all duration-150 hover:shadow-lg dark:hover:shadow-primary-dark-theme/20">
+                    <a href="{% url 'accounts:login' %}" class="px-3 py-2 text-xs sm:text-sm font-medium text-primary-light dark:text-primary-dark hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 rounded-lg transition-colors duration-200">
                         {% trans "Login" %}
                     </a>
-                    <a href="{% url 'accounts:signup' %}"
-                       class="group relative inline-flex items-center px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium bg-gradient-to-r from-primary-light to-indigo-600 hover:from-indigo-600 hover:to-primary-light dark:from-primary-dark-theme dark:to-indigo-500 dark:hover:from-indigo-500 dark:hover:to-primary-dark-theme text-white rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-light dark:focus-visible:ring-offset-card-dark transition-all duration-150 transform hover:-translate-y-0.5">
-                        <span class="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-pink-purple via-secondary-light to-accent-light opacity-0 group-hover:opacity-75 blur transition-opacity duration-150 pointer-events-none"></span>
-                        <i class="fas fa-user-plus mr-0 sm:mr-2 relative z-10 transition-transform duration-150 group-hover:scale-110"></i>
-                        <span class="hidden sm:inline relative z-10">{% trans "Get Started" %}</span>
-                        <span class="sm:hidden relative z-10">{% trans "Sign Up" %}</span> 
+                    <a href="{% url 'accounts:signup' %}" class="inline-flex items-center px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium bg-gradient-to-r from-primary-light to-indigo-600 dark:from-primary-dark dark:to-indigo-500 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-user-plus mr-1 sm:mr-2 transition-transform group-hover:scale-110"></i>
+                        <span>{% trans "Sign Up" %}</span>
                     </a>
                 {% endif %}
-                <button id="theme-toggle"
-                        class="group flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-primary-light/10 dark:hover:bg-primary-dark-theme/20 hover:text-primary-light dark:hover:text-primary-dark-theme transition-all duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light dark:focus-visible:ring-primary-dark-theme relative"
-                        title="{% trans 'Toggle theme' %}"
-                        aria-label="{% trans 'Toggle theme' %}">
-                    <i class="fas fa-sun text-lg sm:text-xl transition-all duration-150 ease-out transform group-hover:rotate-[360deg] group-hover:scale-125 relative z-10"></i>
-                    <span class="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 border-2 border-primary-light dark:border-primary-dark-theme scale-50 group-hover:scale-100 transition-all duration-150 pointer-events-none"></span>
+                {% trans "Toggle theme" as toggle_theme_label %}
+                <button id="theme-toggle" class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-primary-light/15 dark:hover:bg-primary-dark/15 transition-all duration-200 focus:outline-none" title="{{ toggle_theme_label }}" aria-label="{{ toggle_theme_label }}">
+                    <i class="fas fa-sun text-lg sm:text-xl transition-transform duration-200 group-hover:rotate-180"></i>
                 </button>
             </div>
         </div>
@@ -86,9 +77,9 @@
         {% block content %}
         {% endblock %}
     </main>
-    <footer class="bg-card-light/85 dark:bg-card-dark/85 border-t border-gray-200/60 dark:border-gray-700/60 mt-auto py-4 sm:py-5 md:py-6 transition-colors duration-150 ease-in-out">
+    <footer class="bg-card-light/90 dark:bg-card-dark/90 border-t border-border-light/50 dark:border-border-dark/50 py-4 sm:py-5 md:py-6 transition-colors duration-300 ease-in-out">
         <div class="container mx-auto px-4 text-center">
-            <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark-theme hover:opacity-80 transition-opacity mb-2 inline-block">
+            <a href="{% url 'accounts:home' %}" class="text-2xl font-bold text-primary-light dark:text-primary-dark hover:opacity-90 transition-opacity mb-2 inline-block">
                 LifeLedger
             </a>
             <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -97,44 +88,46 @@
             <p class="text-xs text-gray-500 dark:text-gray-500 mb-3">
                 {% trans "Cherish your memories, discover your emotions." %}
             </p>
-            <div class="space-x-4">
-                <a href="#" aria-label="{% trans 'Our GitHub page' %}" class="group text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark-theme transition-all duration-150 text-lg sm:text-xl transform hover:scale-125 inline-block">
-                    <i class="fab fa-github transition-transform duration-150 group-hover:-translate-y-1"></i>
+            <div class="flex justify-center space-x-4">
+                {% trans "Our GitHub page" as github_label %}
+                <a href="#" aria-label="{{ github_label }}" class="text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl">
+                    <i class="fab fa-github"></i>
                 </a>
-                <a href="#" aria-label="{% trans 'Our Twitter profile' %}" class="group text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark-theme transition-all duration-150 text-lg sm:text-xl transform hover:scale-125 inline-block">
-                    <i class="fab fa-twitter transition-transform duration-150 group-hover:-translate-y-1"></i>
+                {% trans "Our Twitter profile" as twitter_label %}
+                <a href="#" aria-label="{{ twitter_label }}" class="text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl">
+                    <i class="fab fa-twitter"></i>
                 </a>
-                <a href="#" aria-label="{% trans 'Our LinkedIn profile' %}" class="group text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark-theme transition-all duration-150 text-lg sm:text-xl transform hover:scale-125 inline-block">
-                    <i class="fab fa-linkedin transition-transform duration-150 group-hover:-translate-y-1"></i>
+                {% trans "Our LinkedIn profile" as linkedin_label %}
+                <a href="#" aria-label="{{ linkedin_label }}" class="text-gray-400 dark:text-gray-500 hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 text-xl">
+                    <i class="fab fa-linkedin"></i>
                 </a>
             </div>
         </div>
     </footer>
-    <div id="delete-modal" class="fixed inset-0 bg-gray-900/70 dark:bg-black/80 backdrop-blur-md overflow-y-auto h-full w-full hidden z-[60] flex items-center justify-center px-4 transition-opacity duration-150 ease-in-out opacity-0" aria-labelledby="modal-title-global" role="dialog" aria-modal="true">
-        <div class="modal-dialog-box relative p-6 sm:p-8 w-full max-w-lg shadow-2xl rounded-xl bg-card-light dark:bg-card-dark">
+    <div id="delete-modal" class="fixed inset-0 bg-gray-900/70 dark:bg-black/80 backdrop-blur-md flex items-center justify-center px-4 z-60 hidden opacity-0 transition-opacity duration-300 ease-in-out" role="dialog" aria-modal="true">
+        <div class="modal-dialog-box relative p-6 sm:p-8 w-full max-w-md bg-card-light dark:bg-card-dark rounded-xl shadow-xl transform scale-95 transition-transform duration-300 ease-in-out">
             <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-red-100 dark:bg-red-900/40 mb-5 sm:mb-6">
+                <div class="mx-auto flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-100 dark:bg-red-900/40 mb-5">
                     <i class="fas fa-exclamation-triangle text-red-500 dark:text-red-400 text-3xl sm:text-4xl animate-pulse"></i>
                 </div>
-                <h3 id="modal-title-global" class="text-lg sm:text-xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
-                <div class="mt-2.5 px-2 py-3">
-                    <p id="modal-message-content" class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                        {% trans "Are you sure you want to delete the journal entry titled" %}:<br>"<strong id="modal-entry-title" class="font-medium text-primary-light dark:text-primary-dark-theme"></strong>"?
+                <h3 id="modal-title-global" class="text-lg sm:text-xl font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
+                <div class="mt-2 px-2 py-3">
+                    <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                        {% trans "Are you sure you want to delete the journal entry titled" %}:
+                        <strong id="modal-entry-title" class="font-medium text-primary-light dark:text-primary-dark"></strong>?
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-3">{% trans "This action cannot be undone." %}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
                 </div>
-                <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row-reverse gap-3.5">
-                    <button id="confirm-delete-button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-lg px-6 py-2.5 bg-red-600 text-sm sm:text-base font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500 dark:focus-visible:ring-offset-card-dark transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-red-500/50">
+                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3">
+                    <button id="confirm-delete-button" class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
                         {% trans "Yes, Delete" %}
                     </button>
-                    <button id="cancel-delete-button" type="button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-2.5 bg-white dark:bg-gray-700 text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-light dark:focus-visible:ring-offset-card-dark transition-all duration-150 ease-in-out transform hover:scale-105 hover:shadow-md">
+                    <button id="cancel-delete-button" type="button" class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
                         {% trans "Cancel" %}
                     </button>
                 </div>
             </div>
-            <button id="close-modal-x-button" type="button" class="absolute top-3.5 right-3.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-150 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-light" aria-label="{% trans 'Close modal' %}">
+            <button id="close-modal-x-button" type="button" class="absolute top-3 right-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 focus:outline-none">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
