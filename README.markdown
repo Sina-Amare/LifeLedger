@@ -11,23 +11,15 @@ LifeLedger is a Django-based web application designed to help users document and
 - **Dashboard**: Provides an overview of recent journal entries and mood trends.
 - **Responsive Design**: Ensures a seamless experience across various devices using Tailwind CSS.
 - **Dark Mode**: Supports a dark theme for user preference.
-
-## Screenshots
-
-_(This is where you can add screenshots of your application. See the "How to Add Screenshots to Your README" section below for instructions.)_
-
-<!-- Example:
-![Login Page](path/to/your/screenshot/login_page.png)
-![Dashboard View](path/to/your/screenshot/dashboard.png)
--->
+- **AJAX Operations**: Enhances user experience with asynchronous updates for actions like deleting journal entries without full page reloads.
 
 ## Technologies Used
 
 - **Backend**: Django, Python
-- **Frontend**: HTML, CSS, JavaScript, Tailwind CSS
-- **Database**: SQLite (default, configurable)
-- **Asynchronous Tasks**: Celery (with a broker like Redis or RabbitMQ - please specify which one you are using if not the default for Celery) for AI processing.
-- **AI**: _(Specify the AI model/library used, e.g., NLTK, spaCy, or a cloud-based service like OpenAI GPT. From your `ai_services/tasks.py` it seems you might be using an external API, possibly OpenAI. Please update this section with the specific service.)_
+- **Frontend**: HTML, CSS, JavaScript (including **AJAX** for dynamic content), Tailwind CSS
+- **Database**: PostgreSQL
+- **Asynchronous Tasks**: Celery (with **Redis** as the message broker) for AI processing and other background tasks.
+- **AI**: _(Specify the AI model/library used, e.g., NLTK, spaCy, or a cloud-based service like OpenAI GPT. From your `ai_services/tasks.py`)_
 
 ## Setup and Installation
 
@@ -49,7 +41,7 @@ _(This is where you can add screenshots of your application. See the "How to Add
     ```
 
 3.  **Install dependencies**:
-    _(Ensure you have a `requirements.txt` file for Python dependencies)_
+    _(Ensure you have a `requirements.txt` file for Python dependencies, including `redis` and `celery`)_
 
     ```bash
     pip install -r requirements.txt
@@ -58,13 +50,13 @@ _(This is where you can add screenshots of your application. See the "How to Add
 
 4.  **Configure environment variables**:
     Create a `.env` file in the root directory by copying `.env.example` (if you create one) or by adding the necessary configurations manually.
-    Key variables include: `SECRET_KEY`, `DEBUG`, `DATABASE_URL`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and any AI service API keys.
+    Key variables include: `SECRET_KEY`, `DEBUG`, `DATABASE_URL`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `CELERY_BROKER_URL`, and any AI service API keys.
     Example `.env` structure:
 
     ```env
     SECRET_KEY='your_super_secret_key_here'
     DEBUG=True
-    DATABASE_URL='sqlite:///db.sqlite3' # Or your preferred database connection string
+    DATABASE_URL='postgresql://USER:PASSWORD@HOST:PORT/DB_NAME' # Example for PostgreSQL
 
     EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST='smtp.example.com'
@@ -72,6 +64,10 @@ _(This is where you can add screenshots of your application. See the "How to Add
     EMAIL_USE_TLS=True
     EMAIL_HOST_USER='your_email@example.com'
     EMAIL_HOST_PASSWORD='your_email_app_password'
+
+    # Celery with Redis Broker
+    CELERY_BROKER_URL='redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND='redis://localhost:6379/0' # Optional: if you store Celery results
 
     # Example for OpenAI API Key (if used)
     # OPENAI_API_KEY='your_openai_api_key'
@@ -113,86 +109,10 @@ _(This is where you can add screenshots of your application. See the "How to Add
     The application will typically be available at `http://127.0.0.1:8000/`.
 
 9.  **Run Celery worker** (for asynchronous AI tasks, in a separate terminal):
-    Ensure your message broker (e.g., Redis or RabbitMQ) is running and configured in `settings.py`.
+    Ensure your Redis server is running.
     ```bash
     celery -A LifeLedger worker -l info
     ```
-
-## Project Structure
-
-LifeLedger/
-├── LifeLedger/ # Django project configuration (settings, main urls, wsgi, asgi, celery)
-├── accounts/ # Handles user registration, login, authentication
-├── ai_services/ # Manages AI-powered features like mood analysis
-├── journal/ # Core application for journal entries
-├── user_profile/ # Manages user profiles
-├── static/ # Project-wide static files (CSS, JS, images for frontend)
-├── staticfiles_collected/ # For production, collected by collectstatic
-├── templates/ # Base HTML templates for the project
-├── venv/ # Python virtual environment (typically gitignored)
-├── .env # Environment variables (gitignored)
-├── .env.example # Example for environment variables
-├── .gitignore # Specifies intentionally untracked files that Git should ignore
-├── manage.py # Django's command-line utility
-├── package.json # Lists frontend dependencies and scripts (npm)
-├── package-lock.json # Records exact versions of frontend dependencies
-├── postcss.config.js # Configuration for PostCSS (used by Tailwind)
-├── README.md # This file
-├── requirements.txt # Python dependencies (pip)
-└── tailwind.config.js # Configuration for Tailwind CSS
-
-## How to Add Screenshots to Your README
-
-You can easily add images and screenshots to your README file to showcase your application. Here's how:
-
-1.  **Take a Screenshot**: Capture an image of your application. You can use built-in OS tools (e.g., Snipping Tool on Windows, Shift+Command+4 on macOS) or other preferred software.
-
-2.  **Place the Screenshot in Your Repository**:
-
-    - Create a dedicated folder for images in your repository, for example, `docs/images/` or `screenshots/`. This helps keep your project organized.
-    - Add your screenshot files (e.g., `login_page.png`, `dashboard_view.gif`) to this folder.
-
-3.  **Commit and Push the Images**:
-    Add the image folder and its contents to your Git repository, commit the changes, and push them to GitHub.
-
-    ```bash
-    git add docs/images/your_screenshot.png
-    # or add the whole folder
-    git add docs/images/
-    git commit -m "Add application screenshots"
-    git push
-    ```
-
-4.  **Embed the Image in Your README.md**:
-    Use Markdown's image syntax to display the image. The syntax is:
-    `![Alt text](path/to/image.png)`
-
-    - **`Alt text`**: This is a descriptive text for the image, which is important for accessibility (e.g., for screen readers) and will be displayed if the image cannot be loaded.
-    - **`path/to/image.png`**: This is the relative path to your image file _from the root of your repository_.
-
-    **Example**:
-    If you created a folder named `docs/images/` in the root of your `LifeLedger` repository and added `login_page.png` to it, the Markdown would be:
-
-    ```markdown
-    ![LifeLedger Login Page](docs/images/login_page.png)
-    ```
-
-    You can also use animated GIFs for short demos:
-
-    ```markdown
-    ![LifeLedger Feature Demo](docs/images/feature_demo.gif)
-    ```
-
-5.  **Using Absolute URLs (e.g., from GitHub Issues or external hosting)**:
-    Alternatively, you can upload your image to a GitHub issue comment (then copy the generated image URL) or an image hosting service and use the absolute URL:
-
-    ```markdown
-    ![Alt text](https://absolute_url_to_your_image.png)
-    ```
-
-    However, keeping images within the repository is generally preferred for longevity and to ensure they are always available with your project code.
-
-6.  **Preview**: After adding the Markdown syntax to your `README.md` file, commit and push the changes. GitHub will render the images directly in your repository's main page. You can also preview Markdown files locally using various editors (like VS Code) that have Markdown preview capabilities.
 
 ## Contributing
 
@@ -207,12 +127,3 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the MIT License. (Consider adding a `LICENSE` file to your repository with the MIT License text if you haven't already).
-
-## Contact
-
-Sina Amare
-
-- Email: sina.amare.dev@gmail.com
-- GitHub: [Sina-Amare](https://github.com/Sina-Amare)
-
-Project Link: [https://github.com/Sina-Amare/LifeLedger](https://github.com/Sina-Amare/LifeLedger)
