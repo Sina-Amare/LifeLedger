@@ -2,284 +2,223 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "My Journal Entries" %}{% endblock %}
+{% block title %}{% trans "MY Journal Entries" %}{% endblock %}
 
 {% block extra_head %}
-<style>
-    /* Custom styles for select arrow, if needed, beyond Tailwind's appearance-none */
-    .custom-select-arrow {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        padding-right: 2.5rem; /* Make space for the arrow */
-    }
-    .dark .custom-select-arrow {
-       background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    }
-
-    /* Ensure consistent focus styles for form elements */
-    select:focus, input[type="text"]:focus, input[type="checkbox"]:focus {
-        outline: none !important;
-        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important;
-        border-color: #60a5fa !important;
-    }
-    .dark select:focus, .dark input[type="text"]:focus, .dark input[type="checkbox"]:focus {
-        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important;
-        border-color: #93c5fd !important;
-    }
-    input[type="checkbox"]:focus {
-         box-shadow: 0 0 0 0.2rem var(--tw-ring-color, rgba(96, 165, 250, 0.25)) !important;
-         border-color: var(--tw-ring-color, #60a5fa) !important;
-    }
-    .dark input[type="checkbox"]:focus {
-         box-shadow: 0 0 0 0.2rem var(--tw-ring-color, rgba(147, 197, 253, 0.25)) !important;
-         border-color: var(--tw-ring-color, #93c5fd) !important;
-    }
-    .entry-card {
-        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    }
-    .entry-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.08);
-    }
-    .dark .entry-card:hover {
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3), 0 6px 6px rgba(0,0,0,0.25);
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/journal_list_styles.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <header class="flex flex-col sm:flex-row justify-between items-center mb-10 pb-6 border-b border-border-light dark:border-border-dark">
-        <h1 class="text-4xl sm:text-5xl font-bold text-text-light dark:text-text-dark mb-4 sm:mb-0">
-            {% trans "My Journal Entries" %}
-        </h1>
-        <a href="{% url 'journal:journal_create' %}"
-           class="inline-flex items-center px-6 py-3 bg-primary-light text-white rounded-lg shadow-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark dark:focus:ring-offset-gray-800 transition-all duration-300 font-semibold text-base transform hover:scale-105">
-            <i class="fas fa-feather-alt mr-2"></i>{% trans "Write New Entry" %}
-        </a>
-    </header>
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <header class="flex flex-col sm:flex-row justify-between items-center mb-12">
+    <h1 class="text-4xl sm:text-5xl font-bold mb-4 sm:mb-0 fade-in-element" style="animation-delay: 0.1s;">
+      {% trans "MY Journal Entries" %}
+    </h1>
+    <a href="{% url 'journal:journal_create' %}" class="write-new-button fade-in-element" style="animation-delay: 0.2s;">
+      <i class="fas fa-feather-alt mr-2"></i>{% trans "Write New Entry" %}
+    </a>
+  </header>
 
-    <form method="get" class="mb-12 p-6 sm:p-8 bg-card-light dark:bg-card-dark rounded-2xl shadow-custom-light dark:shadow-custom-dark">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5 items-end">
-            <div>
-                <label for="mood" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">{% trans "Filter by Mood" %}:</label>
-                <div class="relative">
-                    <select id="mood" name="mood" class="custom-select-arrow block w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-150 ease-in-out">
-                        {% for value, label in mood_options %}
-                            <option value="{{ value }}" {% if current_mood == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div>
-                <label for="time_period" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">{% trans "Filter by Time" %}:</label>
-                <div class="relative">
-                    <select id="time_period" name="time_period" class="custom-select-arrow block w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-150 ease-in-out">
-                        {% for value, label in time_period_options %}
-                            <option value="{{ value }}" {% if current_time_period == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="flex items-center self-center pt-5 sm:pt-7">
-                <input id="is_favorite" name="is_favorite" type="checkbox" class="h-5 w-5 text-primary-light border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-2 focus:ring-offset-0" {% if current_is_favorite %}checked{% endif %}>
-                <label for="is_favorite" class="ml-2.5 block text-sm font-medium text-text-light dark:text-text-dark">{% trans "Favorites Only" %}</label>
-            </div>
-            <div>
-                <label for="q" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">{% trans "Search Entries" %}:</label>
-                <input type="text" id="q" name="q" value="{{ current_search_query }}" placeholder="{% trans 'Keywords...' %}" class="block w-full px-3.5 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm transition duration-150 ease-in-out">
-            </div>
-        </div>
-        <div class="flex flex-col sm:flex-row justify-end mt-6 pt-6 border-t border-border-light dark:border-border-dark space-y-3 sm:space-y-0 sm:space-x-3">
-            {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query %}
-                <a href="{% url 'journal:journal_list' %}" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-offset-gray-800 transition-colors shadow-sm hover:shadow-md">
-                    <i class="fas fa-times mr-2"></i>{% trans "Clear Filters" %}
-                </a>
+  <form method="get" class="filter-form mb-12 fade-in-element" style="animation-delay: 0.3s;" id="filter-form">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div>
+        <label for="mood-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Mood" %}</label>
+        <select id="mood-filter" name="mood" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+          <option value="">{% trans "Select Mood" %}</option>
+          {% for value, label in mood_options %}
+            {% if value != "" and label != "Select Mood" %}
+              <option value="{{ value }}" {% if current_mood == value %}selected{% endif %}>{{ label }}</option>
             {% endif %}
-            <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-secondary-light text-white rounded-lg hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-dark dark:focus:ring-offset-gray-800 transition-all duration-300 font-semibold shadow-md hover:shadow-lg">
-                <i class="fas fa-search mr-2"></i>{% trans "Apply & Search" %}
-            </button>
-        </div>
-    </form>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="time-period-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Time" %}</label>
+        <select id="time-period-filter" name="time_period" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+          <option value="all">{% trans "All Time" %}</option>
+          {% for value, label in time_period_options %}
+            {% if value != "all" and label != "All Time" %}
+              <option value="{{ value }}" {% if current_time_period == value %}selected{% endif %}>{{ label }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="tag-filter-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Tag" %}</label>
+        <select id="tag-filter-select" name="tag_filter" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+          <option value="">{% trans "All Tags" %}</option>
+          {% for tag in all_tags_for_filter %}
+            <option value="{{ tag.name }}" {% if current_tag_filter == tag.name %}selected{% endif %}>{{ tag }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex items-center gap-3">
+        <input id="is_favorite_filter" name="is_favorite" type="checkbox" class="h-5 w-5 border-gray-300 dark:border-gray-600" {% if current_is_favorite %}checked{% endif %}>
+        <label for="is_favorite_filter" class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "Favorites Only" %}</label>
+      </div>
+      <div class="sm:col-span-2 lg:col-span-4">
+        <label for="search-query-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Search Entries" %}</label>
+        <input type="text" id="search-query-input" name="q" value="{{ current_search_query }}" placeholder="{% trans 'Keywords...' %}" class="w-full p-2 border rounded-lg focus:outline-none bg-white dark:bg-gray-800">
+      </div>
+    </div>
+    <div class="flex flex-col sm:flex-row justify-end mt-6 gap-3">
+      {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query or current_tag_filter != '' %}
+        <a href="{% url 'journal:journal_list' %}" class="clear-filters">
+          <i class="fas fa-times mr-1"></i>{% trans "Clear Filters" %}
+        </a>
+      {% endif %}
+      <button type="submit" class="filter-submit">
+        <i class="fas fa-search mr-1"></i>{% trans "Apply & Search" %}
+      </button>
+    </div>
+  </form>
 
-    {% if entries %}
-        <div id="journal-entries-list" class="grid gap-x-6 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-            {% for entry in entries %}
-                <article id="entry-{{ entry.pk }}" class="entry-card bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg dark:shadow-custom-dark flex flex-col group">
-                    <header class="mb-4">
-                        <a href="{% url 'journal:journal_detail' pk=entry.pk %}" class="block">
-                            <h2 class="text-2xl font-semibold text-primary-light dark:text-primary-dark group-hover:text-primary-dark dark:group-hover:text-primary-light group-hover:underline decoration-2 underline-offset-4 truncate transition-colors" title="{{ entry.title|default:_('Untitled Entry') }}">
-                                {{ entry.title|default:_("Untitled Entry") }}
-                            </h2>
-                        </a>
-                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center">
-                            <i class="far fa-calendar-alt mr-1.5 opacity-75"></i>
-                            {{ entry.created_at|date:"F j, Y" }}
-                        </p>
-                    </header>
-
-                    <div class="text-sm text-text-light dark:text-text-dark mb-5 flex-grow prose prose-sm dark:prose-invert max-w-none">
-                        <p>{{ entry.content|striptags|truncatewords_html:25|safe }}</p>
-                    </div>
-
-                    <footer class="mt-auto pt-4 border-t border-border-light dark:border-border-dark">
-                        <div class="text-xs text-gray-600 dark:text-gray-400 space-y-1.5 mb-4">
-                            {% if entry.mood %}
-                                <p class="flex items-center">
-                                    <i class="far fa-smile w-4 mr-2 text-center opacity-75"></i>
-                                    <span>{% trans "Mood" %}: <span class="font-medium text-text-light dark:text-text-dark">{{ entry.get_mood_display|default:entry.mood }}</span></span>
-                                </p>
-                            {% endif %}
-                            {% if entry.location %}
-                                <p class="flex items-center">
-                                    <i class="fas fa-map-marker-alt w-4 mr-2 text-center opacity-75"></i>
-                                    <span class="truncate" title="{{entry.location}}">{% trans "Location" %}: <span class="font-medium text-text-light dark:text-text-dark">{{ entry.location|truncatechars:22 }}</span></span>
-                                </p>
-                            {% endif %}
-                            {% if entry.is_favorite %}
-                                <p class="text-yellow-500 dark:text-yellow-400 flex items-center font-semibold">
-                                    <i class="fas fa-star w-4 mr-2 text-center"></i>
-                                    <span>{% trans "Favorite" %}</span>
-                                </p>
-                            {% endif %}
-                        </div>
-
-                        <div class="flex space-x-2.5">
-                            <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="flex-1 inline-flex items-center justify-center px-3.5 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-300 font-medium text-xs shadow-sm hover:shadow-md">
-                                <i class="fas fa-edit mr-1.5"></i>{% trans "Edit" %}
-                            </a>
-                            <button
-                                class="delete-entry-button flex-1 inline-flex items-center justify-center px-3.5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-300 font-medium text-xs shadow-sm hover:shadow-md"
-                                data-entry-id="{{ entry.pk }}"
-                                data-entry-title="{{ entry.title|default:_('Untitled Entry') }}">
-                                <i class="fas fa-trash-alt mr-1.5"></i>{% trans "Delete" %}
-                            </button>
-                        </div>
-                    </footer>
-                </article>
-            {% endfor %}
-        </div>
-
-        {% if is_paginated %}
-            <nav aria-label="Page navigation" class="mt-12 flex justify-center">
-                <ul class="inline-flex items-center -space-x-px shadow-md rounded-lg overflow-hidden">
-                    {% if page_obj.has_previous %}
-                        <li>
-                            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
-                               class="py-2.5 px-4 leading-tight text-gray-600 bg-white border-r border-gray-200 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors duration-200">
-                                <span class="sr-only">{% trans "Previous" %}</span><i class="fas fa-chevron-left text-sm"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li>
-                            <span class="py-2.5 px-4 leading-tight text-gray-400 bg-gray-100 border-r border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-500">
-                                <span class="sr-only">{% trans "Previous" %}</span><i class="fas fa-chevron-left text-sm"></i>
-                            </span>
-                        </li>
-                    {% endif %}
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li><span aria-current="page" class="py-2.5 px-4 leading-tight text-white border-r border-primary-dark bg-primary-light dark:border-gray-600 dark:bg-primary-dark dark:text-white z-10 font-semibold">{{ num }}</span></li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li><a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="py-2.5 px-4 leading-tight text-gray-600 bg-white border-r border-gray-200 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors duration-200">{{ num }}</a></li>
-                        {% elif num == page_obj.paginator.page_range.0 or num == page_obj.paginator.page_range.1 and page_obj.number > page_obj.paginator.page_range.0|add:'3' %}
-                            {% if num == page_obj.paginator.page_range.1 and page_obj.number > page_obj.paginator.page_range.0|add:'3' %}<li><span class="py-2.5 px-4 leading-tight text-gray-500 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">...</span></li>{% endif %}
-                            <li><a href="?page={{ page_obj.paginator.page_range.0 }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="py-2.5 px-4 leading-tight text-gray-600 bg-white border-r border-gray-200 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors duration-200">{{ page_obj.paginator.page_range.0 }}</a></li>
-                        {% elif num == page_obj.paginator.num_pages or num == page_obj.paginator.num_pages|add:'-1' and page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
-                            {% if num == page_obj.paginator.num_pages|add:'-1' and page_obj.number < page_obj.paginator.num_pages|add:'-3' %}<li><span class="py-2.5 px-4 leading-tight text-gray-500 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">...</span></li>{% endif %}
-                            <li><a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="py-2.5 px-4 leading-tight text-gray-600 bg-white border-r border-gray-200 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors duration-200">{{ page_obj.paginator.num_pages }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    {% if page_obj.has_next %}
-                        <li>
-                            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
-                               class="py-2.5 px-4 leading-tight text-gray-600 bg-white rounded-r-lg border-gray-200 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors duration-200">
-                                <span class="sr-only">{% trans "Next" %}</span><i class="fas fa-chevron-right text-sm"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                         <li>
-                            <span class="py-2.5 px-4 leading-tight text-gray-400 bg-gray-100 rounded-r-lg border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-500">
-                                <span class="sr-only">{% trans "Next" %}</span><i class="fas fa-chevron-right text-sm"></i>
-                            </span>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            <p class="text-sm text-gray-600 dark:text-gray-400 text-center mt-4">
-                {% blocktrans with current_page=page_obj.number total_pages=page_obj.paginator.num_pages count=page_obj.paginator.count %}
-                Page {{ current_page }} of {{ total_pages }} ({{ count }} entries)
-                {% endblocktrans %}
-            </p>
-        {% endif %}
-
-    {% else %}
-        <div id="no-entries-message" class="text-center text-text-light dark:text-text-dark py-16">
-            <svg class="mx-auto h-20 w-20 text-gray-300 dark:text-gray-600 mb-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M16.5 18.75h-9M16.5 21H7.5m9-3H7.5M3 18.75V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-            </svg>
-            <h3 class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
-                {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query %}
-                    {% trans "No Entries Match Your Filters" %}
-                {% else %}
-                    {% trans "Your Journal is Empty" %}
-                {% endif %}
-            </h3>
-            <p class="mt-2 text-md text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query %}
-                    {% trans "Try adjusting your search or filter criteria, or clear them to see all entries." %}
-                {% else %}
-                    {% trans "Why not start by writing your first entry? Let your thoughts flow!" %}
-                {% endif %}
-            </p>
-            <div class="mt-8">
-                {% if current_mood != '' or current_time_period != 'all' or current_is_favorite or current_search_query %}
-                     <a href="{% url 'journal:journal_list' %}" class="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                        <i class="fas fa-undo mr-2"></i>{% trans "Clear All Filters" %}
-                    </a>
-                {% else %}
-                    <a href="{% url 'journal:journal_create' %}" class="inline-flex items-center px-6 py-3 border border-transparent shadow-lg text-base font-medium rounded-lg text-white bg-primary-light hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark transform hover:scale-105">
-                        <i class="fas fa-feather-alt mr-2"></i>{% trans "Create Your First Entry" %}
-                    </a>
-                {% endif %}
+  {% if entries %}
+    <div class="timeline-container">
+      {% for entry in entries %}
+        <div class="journal-group" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
+          <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
+            <div class="date-badge">
+              {{ entry.created_at|date:"F j, Y" }}
             </div>
+            <article class="entry-card {% if entry.is_favorite %}favorite{% endif %} {% if entry.mood %}mood-{{ entry.mood }}{% endif %} {% if not is_filtered and forloop.first or entry in new_entries %}latest{% endif %}">
+              <div class="flex items-start mb-4">
+                <i class="fas fa-book entry-icon mr-4"></i>
+                <div class="entry-content">
+                  <div style="display: none;" class="debug-info">
+                    Raw Content: {{ entry.content|safe }}<br>
+                    Raw Content Length: {{ entry.content|length }}<br>
+                    Stripped Content: {{ entry.content|striptags }}<br>
+                    Stripped Content Length: {{ entry.content|striptags|length }}<br>
+                    Truncated Content: {{ entry.content|striptags|truncatewords_html:20|safe }}<br>
+                    Truncated Content Length: {{ entry.content|striptags|truncatewords_html:20|length }}<br>
+                    Should Show Read More: {% if entry.content|length > 20 %}Yes{% else %}No{% endif %}
+                  </div>
+                  <a href="{% url 'journal:journal_detail' pk=entry.pk %}">
+                    <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200">
+                      {{ entry.title|default:_("Untitled Entry") }}
+                    </h2>
+                  </a>
+                  <div class="content-preview">
+                    <p class="short-content text-base text-gray-600 dark:text-gray-400 mt-2">
+                      {{ entry.content|striptags|truncatewords_html:20|safe }}
+                    </p>
+                  </div>
+                  <p class="full-content" style="display: none;">
+                    {{ entry.content|striptags|safe }}
+                  </p>
+                  {% if entry.content|length > 20 %}
+                    <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">Read More</div>
+                  {% else %}
+                    <div style="display: none;" class="debug-no-read-more">
+                      Read More not rendered for entry {{ entry.pk }} because content length ({{ entry.content|length }}) is not greater than 20.
+                    </div>
+                  {% endif %}
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    {{ entry.created_at|time:"H:i" }}
+                  </p>
+                </div>
+              </div>
+              <div class="entry-meta">
+                {% if entry.tags.all %}
+                  <div class="flex flex-wrap gap-3 mb-3">
+                    {% for tag in entry.tags.all %}
+                      <span class="tag-pill-list-item">
+                        {{ tag }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if entry.mood %}
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    {% if mood_visuals.entry.mood.emoji %}<span class="mr-2">{{ mood_visuals.entry.mood.emoji }}</span>{% endif %}
+                    {{ entry.get_mood_display }}
+                  </p>
+                {% endif %}
+              </div>
+              <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                  <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
+                    <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
+                  </a>
+                  <button class="delete-entry-button" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}" onclick="window.showDeleteModal(); document.getElementById('modal-entry-title').textContent = this.dataset.entryTitle;">
+                    <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
+                  </button>
+                </div>
+              </footer>
+            </article>
+          </div>
+          {% if entry.attachments.exists %}
+            {% for attachment in entry.attachments.all %}
+              {% if attachment.file_type == 'image' %}
+                <div class="timeline-image fade-in-element" style="animation-delay: {{ forloop.parentloop.counter|add:0.4 }}s;">
+                  <img src="{{ attachment.file.url }}" alt="{{ entry.title|default:'Journal Image' }}" loading="lazy">
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
         </div>
+      {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+      <nav class="mt-10 flex justify-center" aria-label="{% trans 'Pagination for journal entries' %}">
+        <ul class="pagination-ul flex gap-3">
+          {% if page_obj.has_previous %}
+            <li>
+              <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
+                <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
+              </a>
+            </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li><span class="active-page">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:-2 and num < page_obj.number|add:2 %}
+              <li>
+                <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li>
+              <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
+                {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
     {% endif %}
 
-    {# Delete Confirmation Modal #}
-    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center px-4 transition-opacity duration-300 ease-in-out">
-        {# Ensure this inner div has the class 'modal-dialog-box' #}
-        <div class="modal-dialog-box relative p-6 w-full max-w-lg shadow-xl rounded-xl bg-card-light dark:bg-card-dark transform transition-all duration-300 ease-in-out scale-95 opacity-0"
-             role="alertdialog" aria-modal="true" aria-labelledby="modal-title-list-page">
-            <div class="text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
-                    <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-4xl"></i>
-                </div>
-                <h3 id="modal-title-list-page" class="text-2xl leading-6 font-semibold text-text-light dark:text-text-dark">{% trans "Confirm Deletion" %}</h3>
-                <div class="mt-3 px-4 py-3">
-                    <p class="text-md text-gray-600 dark:text-gray-400">
-                        {% trans "Are you sure you want to delete the journal entry titled" %}:<br> "<strong id="modal-entry-title" class="text-primary-light dark:text-primary-dark font-medium"></strong>"?
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">{% trans "This action cannot be undone." %}</p>
-                </div>
-                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3 px-4">
-                    <button id="confirm-delete-button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-3 bg-button-red text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
-                        {% trans "Yes, Delete" %}
-                    </button>
-                    <button id="cancel-delete-button" type="button"
-                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-6 py-3 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition duration-150 ease-in-out">
-                        {% trans "Cancel" %}
-                    </button>
-                </div>
-            </div>
-        </div>
+  {% else %}
+    <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
+      <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">{% trans "No journal entries found." %}</p>
+      <p class="text-base text-gray-600 dark:text-gray-400 mt-3">{% trans "Start by writing a new entry!" %}</p>
+      <a href="{% url 'journal:journal_create' %}" class="write-new-button mt-8">
+        <i class="fas fa-feather-alt mr-1"></i>{% trans "Write New Entry" %}
+      </a>
     </div>
+  {% endif %}
+
+  <button class="back-to-top fade-in-element" style="animation-delay: 0.5s;" aria-label="{% trans 'Back to top' %}" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+    <i class="fas fa-arrow-up"></i>
+  </button>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
+<script src="{% static 'js/journal_list_scripts.js' %}"></script>
+<script>
+  /* Toggle visibility of the Back to Top button based on scroll position */
+  window.addEventListener('scroll', function() {
+    const backToTopButton = document.querySelector('.back-to-top');
+    if (window.scrollY > 300) {
+      backToTopButton.classList.add('visible');
+    } else {
+      backToTopButton.classList.remove('visible');
+    }
+  });
+</script>
 {% endblock %}

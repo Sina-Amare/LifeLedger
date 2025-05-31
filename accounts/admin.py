@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin # Import UserAdmin
-from .models import CustomUser, UserProfile # Import your models
+from .models import CustomUser
 
 # Register your models here.
 
@@ -23,6 +23,4 @@ class CustomUserAdmin(UserAdmin):
 # Register CustomUser with the custom admin class
 admin.site.register(CustomUser, CustomUserAdmin)
 
-# Register UserProfile
-admin.site.register(UserProfile)
 

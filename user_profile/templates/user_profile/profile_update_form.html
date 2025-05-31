@@ -1,0 +1,618 @@
+{% extends "user_profile/profile_base.html" %}
+{% load static %}
+{% load i18n %}
+{% load widget_tweaks %}
+
+{% block profile_page_title %}{{ page_title|default:_("Edit Profile") }}{% endblock profile_page_title %}
+
+{% block profile_page_specific_extra_head %}
+    {{ block.super }}
+    <style>
+        /* Header specific to this form page inside the content area */
+        .profile-form-page-header { 
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 1rem; 
+            margin-bottom: 1.5rem; 
+            text-align: center;
+        }
+        .dark .profile-form-page-header { border-color: var(--border-dark); }
+
+        .profile-form-page-header h1 {
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 600; /* semibold */
+            color: var(--text-light);
+        }
+        .dark .profile-form-page-header h1 {
+            color: var(--text-dark);
+        }
+        .profile-form-page-header p {
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* text-gray-500 */
+            margin-top: 0.25rem; /* mt-1 */
+        }
+        .dark .profile-form-page-header p {
+            color: #9ca3af; /* dark:text-gray-400 */
+        }
+        
+        /* Enhanced Modern Section Styling */
+        .profile-fieldset {
+            position: relative;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            background-color: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid transparent;
+            border-image: linear-gradient(to bottom, var(--gradient-blue), var(--gradient-purple));
+            border-image-slice: 1;
+            overflow: hidden;
+        }
+        
+        .dark .profile-fieldset {
+            background-color: rgba(31, 41, 55, 0.7);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            border-image: linear-gradient(to bottom, var(--gradient-blue-dark), var(--gradient-purple-dark));
+        }
+        
+        .profile-fieldset:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+        }
+        
+        .dark .profile-fieldset:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+        }
+        
+        /* Section background pattern */
+        .profile-fieldset::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-image: radial-gradient(circle at 10% 20%, rgba(var(--gradient-blue-rgb), 0.03) 0%, transparent 60%),
+                              radial-gradient(circle at 90% 80%, rgba(var(--gradient-purple-rgb), 0.03) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .dark .profile-fieldset::before {
+            background-image: radial-gradient(circle at 10% 20%, rgba(var(--gradient-blue-dark-rgb), 0.05) 0%, transparent 60%),
+                              radial-gradient(circle at 90% 80%, rgba(var(--gradient-purple-dark-rgb), 0.05) 0%, transparent 60%);
+        }
+        
+        /* Enhanced Section Headers with Icons */
+        .profile-legend {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .dark .profile-legend {
+            background: linear-gradient(90deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-color: var(--border-dark);
+        }
+        
+        .section-icon {
+            font-size: 1.75rem;
+            background: linear-gradient(135deg, var(--gradient-blue), var(--gradient-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        
+        .dark .section-icon {
+            background: linear-gradient(135deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Modern Section dividers */
+        .section-divider {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gradient-blue), var(--gradient-purple), transparent);
+            margin: 3rem 0;
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .dark .section-divider {
+            background: linear-gradient(90deg, transparent, var(--gradient-blue-dark), var(--gradient-purple-dark), transparent);
+        }
+        
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, var(--gradient-blue), var(--gradient-purple));
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(var(--gradient-blue-rgb), 0.5);
+        }
+        
+        .dark .section-divider::before {
+            background: linear-gradient(135deg, var(--gradient-blue-dark), var(--gradient-purple-dark));
+            box-shadow: 0 0 10px rgba(var(--gradient-blue-dark-rgb), 0.5);
+        }
+        
+        /* Profile Picture Clear Button */
+        .profile-picture-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .clear-picture-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(to right, #f87171, #ef4444);
+            color: white;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 8px rgba(239, 68, 68, 0.2);
+        }
+        
+        .clear-picture-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .clear-picture-button i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Profile Picture Preview */
+        .profile-picture-preview {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            display: inline-block;
+            background-color: rgba(249, 250, 251, 0.7);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 2px dashed rgba(var(--gradient-blue-rgb), 0.3);
+        }
+        
+        .dark .profile-picture-preview {
+            background-color: rgba(31, 41, 55, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            border-color: rgba(var(--gradient-blue-dark-rgb), 0.3);
+        }
+        
+        .profile-picture-preview img {
+            height: 6rem;
+            width: 6rem;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark .profile-picture-preview img {
+            border-color: rgba(31, 41, 55, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+{% endblock profile_page_specific_extra_head %}
+
+{% block profile_content_area %}
+    <header class="profile-form-page-header">
+        <h1>{{ page_title|default:_("Edit Profile Information") }}</h1>
+        <p>{% trans "Manage your personal details, privacy, and AI preferences." %}</p>
+    </header>
+
+    {% if messages %}
+        <div class="mb-6 space-y-3">
+            {% for message in messages %}
+                <div class="message-container {% if message.tags == 'success' %}success{% elif message.tags == 'error' %}error{% else %}info{% endif %}" role="alert">
+                    <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate class="space-y-10" id="profileUpdateForm">
+        {% csrf_token %}
+
+        <fieldset class="profile-fieldset space-y-6">
+            <legend class="profile-legend">
+                <i class="fas fa-user-circle section-icon"></i>
+                {% trans "Basic Information" %}
+            </legend>
+            {% for field in user_form %}
+                <div class="profile-field-wrapper">
+                    <label for="{{ field.id_for_label }}" class="profile-label">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
+                    </label>
+                    {% render_field field class+="profile-input" placeholder=field.label %}
+                    {% if field.help_text %}
+                        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            
+            <!-- Location field moved to Basic Information section -->
+            {% with location_field=profile_form.location %}
+                <div class="profile-field-wrapper">
+                    <label for="{{ location_field.id_for_label }}" class="profile-label">
+                        {{ location_field.label }}
+                        {% if location_field.field.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
+                    </label>
+                    <div class="location-input-wrapper">
+                        {% render_field location_field class+="profile-input location-input" placeholder=location_field.label %}
+                        <i class="fas fa-map-marker-alt location-icon"></i>
+                    </div>
+                    {% if location_field.help_text %}
+                        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ location_field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in location_field.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endwith %}
+        </fieldset>
+
+        <div class="section-divider"></div>
+
+        <fieldset class="profile-fieldset space-y-6">
+            <legend class="profile-legend">
+                <i class="fas fa-id-card section-icon"></i>
+                {% trans "Profile Details" %}
+            </legend>
+            {% for field in profile_form %}
+                {% if field.name not in "show_email_publicly,show_location_publicly,show_socials_publicly,show_dob_publicly,ai_enable_quotes,ai_enable_mood_detection,ai_enable_tag_suggestion,location" %}
+                <div class="profile-field-wrapper">
+                    <label for="{{ field.id_for_label }}" class="profile-label">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
+                    </label>
+                    
+                    {% if field.name == 'profile_picture' %}
+                        {% if request.user.profile.profile_picture %}
+                            <div class="profile-picture-preview">
+                                <img src="{{ request.user.profile.profile_picture.url }}" alt="{% trans 'Current profile picture' %}" class="h-24 w-24 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-600">
+                            </div>
+                        {% endif %}
+                        <div class="profile-picture-actions">
+                            <label for="{{ field.id_for_label }}" class="form-action-link">
+                                <i class="fas fa-camera"></i><span class="link-text-content">{% trans "Change Profile Picture" %}</span>
+                            </label>
+                            {% if request.user.profile.profile_picture %}
+                            <a href="#" class="clear-picture-button" id="clearProfilePicture">
+                                <i class="fas fa-trash-alt"></i>{% trans "Clear Picture" %}
+                            </a>
+                            <!-- Hidden checkbox for backend processing -->
+                            <input type="checkbox" name="profile_picture-clear" id="profile_picture-clear_id" class="hidden">
+                            {% endif %}
+                            {% render_field field class+="hidden profile-file-input" id=field.id_for_label %}
+                        </div>
+                        <div id="profile-picture-filename" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400"></div>
+                        {% if not field.help_text %}
+                        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{% trans "Max file size: 2MB. PNG, JPG, GIF supported." %}</p>
+                        {% endif %}
+                    {% elif field.name == 'date_of_birth' %}
+                        <div class="flatpickr-input-wrapper">
+                            {% render_field field class+="profile-input flatpickr-input" placeholder="YYYY-MM-DD" %}
+                            <i class="fas fa-calendar-alt calendar-icon"></i>
+                        </div>
+                    {% elif field.widget_type == 'textarea' %}
+                        {% render_field field class+="profile-textarea" placeholder=field.label %}
+                    {% else %}
+                       {% render_field field class+="profile-input" placeholder=field.label %}
+                    {% endif %}
+
+                    {% if field.help_text %}
+                        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <div class="section-divider"></div>
+
+        <fieldset class="profile-fieldset space-y-6" id="privacy-settings-section">
+             <span class="profile-section-anchor" id="privacy-settings-anchor"></span>
+            <legend class="profile-legend">
+                <i class="fas fa-user-shield section-icon"></i>
+                {% trans "Privacy Settings" %}
+            </legend>
+            {% for field in profile_form %}
+                {% if field.name in "show_email_publicly,show_socials_publicly,show_dob_publicly" %}
+                    <div class="profile-field-wrapper">
+                        <div class="profile-checkbox-wrapper">
+                            {% render_field field class="profile-checkbox-input" %}
+                            <label for="{{ field.id_for_label }}" class="profile-checkbox-label">
+                                {{ field.label }}
+                            </label>
+                        </div>
+                        {% if field.help_text %}
+                            <p class="ml-8 text-xs text-gray-500 dark:text-gray-400 -mt-1">{{ field.help_text|safe }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <div class="section-divider"></div>
+
+        <fieldset class="profile-fieldset space-y-6" id="ai-preferences-section">
+            <span class="profile-section-anchor" id="ai-preferences-anchor"></span>
+            <legend class="profile-legend">
+                <i class="fas fa-robot section-icon"></i>
+                {% trans "AI Preferences" %}
+            </legend>
+            {% for field in profile_form %}
+                {% if field.name in "ai_enable_quotes,ai_enable_mood_detection,ai_enable_tag_suggestion" %}
+                     <div class="profile-field-wrapper">
+                        <div class="profile-checkbox-wrapper">
+                            {% render_field field class="profile-checkbox-input" %}
+                            <label for="{{ field.id_for_label }}" class="profile-checkbox-label">
+                                {{ field.label }}
+                            </label>
+                        </div>
+                        {% if field.help_text %}
+                            <p class="ml-8 text-xs text-gray-500 dark:text-gray-400 -mt-1">{{ field.help_text|safe }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <div class="profile-submit-button-wrapper">
+            <a href="#" id="cancelProfileUpdate" class="form-action-link">
+                <i class="fas fa-times"></i><span class="link-text-content">{% trans "Cancel" %}</span>
+            </a>
+            <button type="submit" class="profile-submit-button">
+                <i class="fas fa-save mr-2.5"></i> {% trans "Save Changes" %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<div id="modal-backdrop" class="modal-backdrop"></div>
+<div id="discard-changes-modal" class="discard-modal-content" aria-labelledby="discard-modal-title" role="dialog" aria-modal="true">
+    <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/40 mb-5 sm:mb-6">
+            <i class="fas fa-exclamation-triangle text-yellow-500 dark:text-yellow-400 text-3xl sm:text-4xl"></i>
+        </div>
+        <h3 id="discard-modal-title" class="text-lg sm:text-xl leading-6 font-semibold discard-modal-title">{% trans "Discard Changes?" %}</h3>
+        <div class="mt-2.5 px-2 py-3">
+            <p class="text-sm sm:text-base discard-modal-text">
+                {% trans "You have unsaved changes. Are you sure you want to leave? Your changes will be lost." %}
+            </p>
+        </div>
+        <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row-reverse gap-3.5">
+            <button id="confirm-discard-button" class="discard-modal-button-yes w-full sm:w-auto inline-flex justify-center">
+                {% trans "Yes, Discard" %}
+            </button>
+            <button id="cancel-discard-button" type="button" class="discard-modal-button-no w-full sm:w-auto inline-flex justify-center">
+                {% trans "No, Keep Editing" %}
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock profile_content_area %}
+
+{% block profile_page_specific_extra_js %}
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // JavaScript for Flatpickr and Discard Modal
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("Profile Update (profile_content) DOMContentLoaded");
+
+            flatpickr(".flatpickr-input", {
+                dateFormat: "Y-m-d", 
+                altInput: true,      
+                altFormat: "F j, Y", 
+                maxDate: "today",
+                position: "auto right", 
+                disableMobile: true, 
+            });
+
+            // Clear profile picture functionality
+            const clearPictureBtn = document.getElementById('clearProfilePicture');
+            const clearPictureCheckbox = document.getElementById('profile_picture-clear_id');
+            
+            if (clearPictureBtn && clearPictureCheckbox) {
+                clearPictureBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    clearPictureCheckbox.checked = true;
+                    
+                    // Visual feedback
+                    const picturePreview = document.querySelector('.profile-picture-preview');
+                    if (picturePreview) {
+                        picturePreview.style.opacity = '0.3';
+                    }
+                    
+                    this.innerHTML = '<i class="fas fa-check"></i>{% trans "Picture will be removed" %}';
+                    this.style.background = 'linear-gradient(to right, #10b981, #059669)';
+                });
+            }
+
+            const profileForm = document.getElementById('profileUpdateForm');
+            if (profileForm) {
+                console.log("Profile form element (profileUpdateForm) found in profile_content.");
+                let initialFormDataString = getFormDataAsString(profileForm);
+                console.log("Initial form data string (profile_content):", initialFormDataString);
+                
+                let formInteractedByUser = false; 
+
+                function getFormDataAsString(form) {
+                    const formData = new FormData(form);
+                    const data = {};
+                    for (const element of form.elements) {
+                        if (element.name) { 
+                            if (element.type === 'file') {
+                                data[element.name] = element.files.length > 0 ? element.files[0].name : null;
+                            } else if (element.type === 'checkbox') {
+                                data[element.name] = element.checked; 
+                            } else if (element.type === 'radio') {
+                                if (element.checked) {
+                                    data[element.name] = element.value;
+                                }
+                            } else if (element.type === 'select-multiple') {
+                                data[element.name] = Array.from(element.selectedOptions).map(option => option.value);
+                            }
+                            else { 
+                                data[element.name] = element.value;
+                            }
+                        }
+                    }
+                    const sortedData = {};
+                    Object.keys(data).sort().forEach(key => {
+                        sortedData[key] = data[key];
+                    });
+                    return JSON.stringify(sortedData);
+                }
+                
+                function hasFormContentChanged() {
+                    const currentFormDataString = getFormDataAsString(profileForm);
+                    const changed = initialFormDataString !== currentFormDataString;
+                    console.log("--- Debug (profile_content): hasFormContentChanged() ---"); 
+                    console.log("Initial Data:", initialFormDataString);  
+                    console.log("Current Data:", currentFormDataString);  
+                    console.log("Form content actually changed:", changed); 
+                    console.log("--- End Debug (profile_content) ---"); 
+                    return changed;
+                }
+
+                function markFormAsInteracted(event) {
+                    if (!formInteractedByUser) {
+                        console.log("Form interacted (profile_content). Event type:", event.type, "Target:", event.target.name); 
+                        formInteractedByUser = true;
+                    }
+                }
+                profileForm.addEventListener('input', markFormAsInteracted);
+                profileForm.addEventListener('change', markFormAsInteracted);
+
+                const fileInputs = profileForm.querySelectorAll('input[type="file"]');
+                fileInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        if (this.id === '{{ profile_form.profile_picture.id_for_label }}') {
+                            const fileNameDisplay = document.getElementById('profile-picture-filename');
+                            if (fileNameDisplay) {
+                                if (this.files.length > 0) {
+                                    fileNameDisplay.textContent = `{% trans "Selected:" %} ${this.files[0].name}`;
+                                } else {
+                                    fileNameDisplay.textContent = '';
+                                }
+                            }
+                        }
+                    });
+                });
+
+                const cancelBtn = document.getElementById('cancelProfileUpdate');
+                const modalBackdrop = document.getElementById('modal-backdrop'); 
+                const discardModal = document.getElementById('discard-changes-modal');
+                const confirmDiscardBtn = document.getElementById('confirm-discard-button');
+                const cancelDiscardBtn = document.getElementById('cancel-discard-button');
+                
+                let modalCurrentlyActive = false; 
+
+                function showDiscardModal() {
+                    if(discardModal && modalBackdrop && !modalCurrentlyActive) {
+                        modalCurrentlyActive = true;
+                        console.log("Attempting to show discard modal (profile_content)."); 
+                        modalBackdrop.style.display = 'block';
+                        modalBackdrop.style.opacity = '1';
+                        discardModal.style.display = 'block'; 
+                        setTimeout(() => {
+                            discardModal.style.opacity = '1';
+                            discardModal.style.transform = 'translate(-50%, -50%) scale(1)';
+                        }, 10); 
+                    } else if (!discardModal || !modalBackdrop) {
+                        console.error("Discard modal or backdrop element not found (profile_content)!"); 
+                    }
+                }
+                function hideDiscardModal() {
+                     if(discardModal && modalBackdrop && modalCurrentlyActive) {
+                        console.log("Attempting to hide discard modal (profile_content)."); 
+                        modalBackdrop.style.opacity = '0';
+                        discardModal.style.opacity = '0';
+                        discardModal.style.transform = 'translate(-50%, -50%) scale(0.95)';
+                        setTimeout(() => {
+                            discardModal.style.display = 'none'; 
+                            modalBackdrop.style.display = 'none'; 
+                            modalCurrentlyActive = false;
+                        }, 150); 
+                    }
+                }
+                
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        const formHasChanged = hasFormContentChanged();
+                        console.log("Cancel button clicked (profile_content). formInteractedByUser:", formInteractedByUser, "hasFormContentChanged:", formHasChanged); 
+                        
+                        if (formHasChanged) { 
+                            console.log("Form content has changed, showing modal (profile_content)."); 
+                            showDiscardModal();
+                        } else {
+                            console.log("Form content has NOT changed (or reverted to initial), redirecting after 3s delay (profile_content)..."); 
+                            setTimeout(function() { 
+                                window.location.href = "{% url 'accounts:home' %}";
+                            }, 3000); 
+                        }
+                    });
+                } else {
+                    console.error("Cancel button (cancelProfileUpdate) not found (profile_content)!"); 
+                }
+
+                if (confirmDiscardBtn) {
+                    confirmDiscardBtn.addEventListener('click', function() {
+                        console.log("Confirm discard clicked. Redirecting (profile_content)..."); 
+                        window.location.href = "{% url 'accounts:home' %}"; 
+                    });
+                }
+                if (cancelDiscardBtn) {
+                    cancelDiscardBtn.addEventListener('click', function() {
+                        console.log("Cancel discard clicked (keep editing) (profile_content)."); 
+                        hideDiscardModal();
+                    });
+                }
+                if (modalBackdrop) { 
+                    modalBackdrop.addEventListener('click', function(event) {
+                        console.log("Clicked on modal backdrop (profile_content)."); 
+                        hideDiscardModal();
+                    });
+                }
+            } else {
+                console.error("Profile form (profileUpdateForm) element not found (profile_content)!"); 
+            }
+        });
+    </script>
+{% endblock profile_page_specific_extra_js %}

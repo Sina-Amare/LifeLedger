@@ -1,0 +1,245 @@
+/* static/css/base_styles.css */
+/* Global CSS Custom Properties (Theme Variables) & Base Styles */
+:root {
+  --primary-light: #3b82f6;
+  --primary-dark-theme: #60a5fa;
+  --secondary-light: #10b981;
+  --secondary-dark-theme: #34d399;
+  --accent-light: #8b5cf6;
+  --accent-dark-theme: #a78bfa;
+  --background-light: #f9fafb;
+  --background-dark-theme: #111827;
+  --card-light-bg: #ffffff;
+  --card-dark-bg: #1f2937;
+  --border-light-theme: #d1d5db;
+  --border-dark-theme: #374151;
+  --focus-ring-color: var(--primary-light);
+  --focus-ring-shadow-color: rgba(59, 130, 246, 0.35);
+  --scrollbar-thumb-bg-start: rgba(59, 130, 246, 0.6);
+  --scrollbar-thumb-bg-end: rgba(96, 165, 250, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(59, 130, 246, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(96, 165, 250, 0.9);
+  --scrollbar-track-color: rgba(249, 250, 251, 0.3);
+  --preloader-bg: var(--background-light);
+  --preloader-icon-color: var(--primary-light);
+  --footer-height: 120px; /* Adjusted for shorter footer */
+}
+
+.dark {
+  --focus-ring-color: var(--primary-dark-theme);
+  --focus-ring-shadow-color: rgba(96, 165, 250, 0.35);
+  --scrollbar-thumb-bg-start: rgba(96, 165, 250, 0.6);
+  --scrollbar-thumb-bg-end: rgba(59, 130, 246, 0.7);
+  --scrollbar-thumb-hover-bg-start: rgba(96, 165, 250, 0.8);
+  --scrollbar-thumb-hover-bg-end: rgba(59, 130, 246, 0.9);
+  --scrollbar-track-color: rgba(17, 24, 39, 0.3);
+  --preloader-bg: var(--background-dark-theme);
+  --preloader-icon-color: var(--primary-dark-theme);
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  opacity: 0;
+  animation: fadeInPage 0.3s ease-out 0.2s forwards;
+}
+
+@keyframes fadeInPage {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Focus Visible: Enhanced focus styling for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-shadow-color);
+  border-radius: 2px;
+}
+
+/* Custom Scrollbar Styling (WebKit browsers) */
+@keyframes scrollbarGradientAnim {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    45deg,
+    var(--scrollbar-thumb-bg-start),
+    var(--scrollbar-thumb-bg-end)
+  );
+  background-size: 200% 200%;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  animation: scrollbarGradientAnim 10s ease infinite;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    45deg,
+    var(--scrollbar-thumb-hover-bg-start),
+    var(--scrollbar-thumb-hover-bg-end)
+  );
+}
+/* Custom Scrollbar Styling (Firefox) */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-bg-start) var(--scrollbar-track-color);
+}
+
+/* Navbar Entrance Animation */
+@keyframes fadeInDownSmooth {
+  from {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.navbar-animate-on-load {
+  animation: fadeInDownSmooth 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s
+    forwards;
+}
+
+/* Navbar Styling */
+#main-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20000; /* Match the value in base.html */
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid var(--border-light-theme);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+}
+.dark #main-navbar {
+  background: rgba(17, 24, 39, 0.9);
+  border-bottom: 1px solid var(--border-dark-theme);
+}
+#main-navbar .fa-feather-alt {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: transform 0.15s ease;
+}
+#main-navbar .group:hover .fa-feather-alt {
+  transform: rotate(10deg) scale(1.1);
+}
+
+/* Modal Animations */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modalBackdropFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes modalDialogBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes modalDialogBounceOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+}
+#delete-modal.modal-entering {
+  animation: modalBackdropFadeIn 0.2s ease-out forwards;
+}
+#delete-modal.modal-exiting {
+  animation: modalBackdropFadeOut 0.15s ease-in forwards;
+}
+#delete-modal.modal-entering .modal-dialog-box {
+  animation: modalDialogBounceIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+#delete-modal.modal-exiting .modal-dialog-box {
+  animation: modalDialogBounceOut 0.15s cubic-bezier(0.47, 0, 0.75, 0.72)
+    forwards;
+}
+
+/* Preloader Styles */
+.preloader {
+  position: fixed;
+  inset: 0;
+  background-color: var(--preloader-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+}
+.preloader.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+.preloader-icon {
+  font-size: 3rem;
+  color: var(--preloader-icon-color);
+  animation: preloaderPulse 1s infinite ease-in-out;
+}
+@keyframes preloaderPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}

@@ -1,0 +1,340 @@
+:root {
+  --primary-light: #1e40af; /* Deep Blue */
+  --primary-dark: #4c51bf; /* Indigo */
+  --secondary-light: #065f46; /* Deep Green */
+  --secondary-dark: #14b8a6; /* Teal */
+  --accent-color: #facc15; /* Softer Yellow */
+  --accent-dark-color: #fef08a; /* Light Yellow */
+  --card-light: #ffffff;
+  --card-dark: #1f2937;
+  --text-light: #1f2937;
+  --text-dark: #f3f4f6;
+  --border-light: #e5e7eb;
+  --border-dark: #374151;
+}
+
+/* Article Container */
+article {
+  background: var(--card-light);
+  border: 1px solid var(--border-light);
+  border-radius: 2rem;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05),
+    0 5px 15px rgba(139, 92, 246, 0.05), 0 0 0 2px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.3s ease;
+}
+article:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08),
+    0 8px 20px rgba(139, 92, 246, 0.08);
+}
+.dark article {
+  background: var(--card-dark);
+  border-color: var(--border-dark);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(96, 165, 250, 0.1),
+    0 0 0 2px rgba(0, 0, 0, 0.03);
+}
+.dark article:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15),
+    0 8px 20px rgba(96, 165, 250, 0.15);
+}
+
+/* Tag Pills */
+.tag-pill-detail {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1.2rem;
+  border-radius: 2rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #ffffff;
+  border: none;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.tag-pill-detail:not(.removing) {
+  opacity: 1;
+  transform: scale(1);
+}
+.tag-pill-detail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+.dark .tag-pill-detail {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+}
+.dark .tag-pill-detail:hover {
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+/* Attachment Cards */
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 2rem;
+}
+.attachment-card {
+  background: var(--card-light);
+  border: 1px solid var(--border-light);
+  border-radius: 2rem;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform: perspective(500px) translateZ(0);
+  padding: 1.5rem;
+}
+.attachment-card:hover {
+  transform: perspective(500px) translateY(-4px) translateZ(6px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+.dark .attachment-card {
+  background: var(--card-dark);
+  border-color: var(--border-dark);
+}
+.dark .attachment-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.attachment-thumbnail-link {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding-top: 66.66%;
+  background: #e5e7eb;
+  border-bottom: 1px solid #d1d5db;
+  overflow: hidden;
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+}
+.dark .attachment-thumbnail-link {
+  background: #4b5563;
+  border-bottom-color: #374151;
+}
+.attachment-thumbnail-link img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease-in-out;
+}
+.attachment-thumbnail-link:hover img {
+  transform: scale(1.1);
+}
+.attachment-thumbnail-link .overlay-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+.attachment-thumbnail-link:hover .overlay-icon {
+  opacity: 1;
+}
+.attachment-thumbnail-link .overlay-icon i {
+  font-size: 2.5rem;
+  color: #ffffff;
+  transition: transform 0.3s ease-out;
+}
+.attachment-thumbnail-link:hover .overlay-icon i {
+  transform: scale(1.1);
+}
+
+.attachment-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+}
+.attachment-icon-lg {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease-out;
+}
+.attachment-card:hover .attachment-icon-lg {
+  transform: scale(1.05);
+}
+
+.attachment-info {
+  padding: 1rem 1.5rem 1.5rem;
+  margin-top: auto;
+}
+.attachment-filename {
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.5rem;
+}
+.dark .attachment-filename {
+  color: #f3f4f6;
+}
+.attachment-meta {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+.dark .attachment-meta {
+  color: #9ca3af;
+}
+.attachment-download-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--primary-light);
+  transition: all 0.3s ease;
+}
+.dark .attachment-download-link {
+  color: var(--primary-dark);
+}
+.attachment-download-link:hover {
+  text-decoration: underline;
+  color: #4338ca;
+}
+.dark .attachment-download-link:hover {
+  color: #6366f1;
+}
+
+/* AI Quote Blockquote */
+blockquote {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+blockquote:hover {
+  transform: none;
+}
+blockquote::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 4px;
+  background: linear-gradient(
+    to bottom,
+    var(--primary-light),
+    var(--primary-dark)
+  );
+}
+.dark blockquote::before {
+  background: linear-gradient(
+    to bottom,
+    var(--primary-dark),
+    var(--primary-light)
+  );
+}
+
+/* Header and Title */
+header {
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 1.5rem;
+  padding-top: 1rem;
+  position: relative;
+  margin-bottom: 2rem;
+}
+.dark header {
+  border-color: var(--border-dark);
+}
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  margin-top: 0;
+  text-align: left;
+}
+.dark h1 {
+  color: #d1d5db;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(96, 165, 250, 0.1);
+}
+
+/* Content Section */
+.content-section h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+.dark .content-section h3 {
+  color: #f3f4f6;
+}
+
+/* Footer Links */
+footer a,
+footer button {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #3b82f6;
+  line-height: 1.2;
+  padding-bottom: 2px;
+}
+.dark footer a {
+  color: #60a5fa;
+}
+footer button.delete-entry-button {
+  display: inline-flex;
+  align-items: center;
+  color: #ffffff;
+  background: linear-gradient(45deg, #ef4444, #dc2626);
+  padding: 0.9rem 1.5rem;
+  border-radius: 2rem;
+  box-shadow: 0 6px 15px rgba(239, 68, 68, 0.1),
+    0 3px 6px rgba(220, 38, 38, 0.1);
+  transition: box-shadow 0.4s ease, transform 0.4s ease;
+  transform: perspective(500px) translateZ(0);
+}
+.dark footer button.delete-entry-button {
+  color: #ffffff;
+  background: linear-gradient(45deg, #f87171, #dc2626);
+}
+footer button.delete-entry-button:hover {
+  transform: perspective(500px) translateY(-6px) translateZ(8px) rotateX(2deg);
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2),
+    0 5px 10px rgba(220, 38, 38, 0.2);
+}
+.dark footer button.delete-entry-button:hover {
+  box-shadow: 0 10px 25px rgba(248, 113, 113, 0.2),
+    0 5px 10px rgba(220, 38, 38, 0.2);
+}
+footer a::after,
+footer button:not(.delete-entry-button)::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+.dark footer a::after,
+.dark footer button:not(.delete-entry-button)::after {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+}
+footer a:hover::after,
+footer button:not(.delete-entry-button):hover::after {
+  width: 100%;
+}
+footer button.delete-entry-button::after {
+  display: none;
+}

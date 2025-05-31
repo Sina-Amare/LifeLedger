@@ -1,137 +1,142 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-{% load widget_tweaks %} {# Ensure widget_tweaks is loaded #}
+{% load widget_tweaks %}
+{% load journal_tags %}
 
 {% block title %}
     {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Write New Journal Entry" %}{% endif %}
 {% endblock %}
 
 {% block extra_head %}
-<style>
-    /* Force consistent focus styles for text inputs, textareas, and selects */
-    input[type="text"]:focus,
-    textarea:focus,
-    select:focus {
-        outline: none !important;
-        box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25) !important; /* Tailwind blue-400 equivalent */
-        border-color: #60a5fa !important; /* Tailwind blue-400 */
-    }
-
-    .dark input[type="text"]:focus,
-    .dark textarea:focus,
-    .dark select:focus {
-        box-shadow: 0 0 0 0.2rem rgba(147, 197, 253, 0.25) !important; /* Tailwind blue-300 equivalent */
-        border-color: #93c5fd !important; /* Tailwind blue-300 */
-    }
-
-    /* Custom styling for the file input button using Tailwind-like classes */
-    .custom-file-input::file-selector-button {
-        margin-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;
-        padding-left: 1rem; padding-right: 1rem; border-radius: 0.375rem;
-        border-width: 0; font-size: 0.875rem; font-weight: 600;
-        background-color: #3b82f6; color: #ffffff; cursor: pointer;
-        transition: background-color 150ms ease-in-out;
-    }
-    .custom-file-input:hover::file-selector-button { background-color: #2563eb; }
-    .dark .custom-file-input::file-selector-button { background-color: #60a5fa; }
-    .dark .custom-file-input:hover::file-selector-button { background-color: #3b82f6; }
-
-    /* Styling for attachment items */
-    .attachment-item {
-        transition: box-shadow 0.3s ease-in-out;
-    }
-    .attachment-item:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .dark .attachment-item:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .custom-select-arrow { /* For custom select arrow if appearance-none is used */
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
-        /* padding-right: 2.5rem; Ensure this is compatible with your select's padding */
-    }
-    .dark .custom-select-arrow {
-         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    }
-</style>
+    <link rel="stylesheet" href="{% static 'css/journal_form_styles.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark w-full max-w-3xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark">
-                {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Create New Entry" %}{% endif %}
+<div class="container mx-auto px-4 py-12">
+    <div class="form-container">
+        <header class="text-center mb-10">
+            <h1>
+                {% if form.instance.pk %}{% trans "Edit Journal Entry" %}{% else %}{% trans "Write New Journal Entry" %}{% endif %}
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p class="text-base text-gray-500 dark:text-gray-400 mt-2 font-medium">
                 {% if form.instance.pk %}{% trans "Refine your thoughts and memories." %}{% else %}{% trans "Let your thoughts flow onto the page." %}{% endif %}
             </p>
         </header>
 
-        <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-8" id="journal-entry-form" 
+              action="{% if form.instance.pk %}{% url 'journal:journal_update' pk=form.instance.pk %}{% else %}{% url 'journal:journal_create' %}{% endif %}">
             {% csrf_token %}
 
-            {% if form.non_field_errors %}
-                <div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700" role="alert">
-                    {% for error in form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
+            <div id="form-errors-container" class="error-container hidden">
+                <h4 class="font-semibold text-red-700 dark:text-red-300 text-lg">{% trans "Please correct the errors below:" %}</h4>
+                <ul id="form-error-list" class="list-disc list-inside text-sm text-red-600 dark:text-red-400 mt-3">
+                </ul>
+            </div>
+            
             {% for field in form %}
                 {% if field.name != 'shared_details' and field.name != 'is_favorite' %}
-                    <div>
-                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">
-                            {{ field.label }} {% if field.field.required %}<span class="text-red-500 font-semibold">*</span>{% endif %}
+                    <div class="field-wrapper group">
+                        <label for="{{ field.id_for_label }}" class="block text-base font-semibold text-text-light dark:text-text-dark mb-2 transition-all duration-300 group-hover:text-primary-light dark:group-hover:text-primary-dark">
+                            {{ field.label }} {% if field.field.required %}<span class="text-red-500 font-bold">*</span>{% endif %}
                         </label>
-                        {% if "Textarea" in field.field.widget|stringformat:"s" %}
-                            {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm transition duration-150 ease-in-out focus:ring-primary-light focus:border-primary-light" rows=field.field.widget.attrs.rows placeholder=field.field.widget.attrs.placeholder %}
-                        {% elif "Select" in field.field.widget|stringformat:"s" %}
-                            <div class="relative">
-                                {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 sm:text-sm appearance-none transition duration-150 ease-in-out focus:ring-primary-light focus:border-primary-light custom-select-arrow pr-10" %}
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-400">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        
+                        {% if field.name == "tags" %}
+                            <input type="hidden" name="{{ field.html_name }}" id="{{ field.id_for_label }}" 
+                                   value="{% if form.instance.pk %}{{ initial_tags_str|default_if_none:'' }}{% else %}{{ field.value|default_if_none:'' }}{% endif %}">
+                            <div id="selected-tags-container" class="flex flex-wrap gap-2 mb-3 empty:mb-0"></div>
+                            {% if predefined_tags %}
+                                <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{% trans "Suggestions (click to add/remove):" %}</p>
+                                    <div class="flex flex-wrap gap-3 items-center">
+                                        {% for tag_obj in predefined_tags %}
+                                            <button type="button" 
+                                                    class="tag-suggestion-btn px-4 py-2 text-sm font-medium transition-all duration-300"
+                                                    data-tag-name="{{ tag_obj.name }}"
+                                                    data-tag-emoji="{{ tag_obj.emoji|default:'' }}">
+                                                {% if tag_obj.emoji %}<span class="mr-2">{{ tag_obj.emoji }}</span>{% endif %}{{ tag_obj.name }}
+                                            </button>
+                                        {% endfor %}
+                                    </div>
                                 </div>
+                            {% endif %}
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" id="{{ field.id_for_label }}-helptext">{{ field.help_text|safe }}</p>
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% elif "Textarea" in field.field.widget|stringformat:"s" %}
+                            {% render_field field class="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 text-base focus:border-primary-light transition-all duration-200" rows=field.field.widget.attrs.rows placeholder=field.field.widget.attrs.placeholder %}
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% elif "Select" in field.field.widget|stringformat:"s" and field.name == "mood" %}
+                            <div class="custom-select">
+                                {% render_field field class="block w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-base appearance-none focus:border-primary-light transition-all duration-200" %}
+                            </div>
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% elif "Select" in field.field.widget|stringformat:"s" and field.name == "privacy_level" %}
+                            <div class="custom-select">
+                                {% render_field field class="block w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-base appearance-none focus:border-primary-light transition-all duration-200" %}
+                            </div>
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
                             </div>
                         {% else %}
-                             {% render_field field class="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 sm:text-sm transition duration-150 ease-in-out focus:ring-primary-light focus:border-primary-light" placeholder=field.field.widget.attrs.placeholder %}
+                            {% render_field field class="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 text-base focus:border-primary-light transition-all duration-200" placeholder=field.field.widget.attrs.placeholder %}
+                            <div id="errors-{{ field.auto_id }}" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
                         {% endif %}
-                        {% if field.help_text %}
-                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
+
+                        {% if field.name != "tags" and field.help_text %}
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ field.help_text|safe }}</p>
                         {% endif %}
-                        {% for error in field.errors %}
-                            <p class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                        {% endfor %}
                     </div>
                 {% endif %}
             {% endfor %}
 
-            {# --- Attachment Formset --- #}
-            <div class="pt-6 border-t border-border-light dark:border-border-dark">
-                <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{% trans "Attachments" %}</h3>
-                {{ attachment_formset.management_form }}
-                {% if attachment_formset.non_form_errors %}
-                    <div class="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700" role="alert">
-                        {% for error in attachment_formset.non_form_errors %}
-                            <p>{% trans "Attachment Error" %}: {{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+            <div class="pt-8 border-t border-border-light dark:border-border-dark">
+                <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-4">{% trans "Attachments" %}</h3>
+                {{ attachment_formset.management_form }} 
+                
+                <div id="formset-non-form-errors" class="p-4 mb-4 text-sm text-red-700 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 rounded-xl {% if not attachment_formset.non_form_errors %}hidden{% endif %}" role="alert">
+                    {% for error in attachment_formset.non_form_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
 
-                <div id="attachments-container" class="space-y-5">
+                <div id="attachments-container" class="space-y-6">
                     {% for formset_form in attachment_formset %}
-                        <div class="attachment-item p-4 border border-gray-300 dark:border-gray-600 rounded-lg 
-                                    {% if formset_form.instance.pk and formset_form.instance.file %}bg-gray-50 dark:bg-gray-800{% else %}bg-white dark:bg-gray-700 shadow-sm{% endif %}">
-                            {{ formset_form.id }}
-                            {% if formset_form.instance and formset_form.instance.pk and formset_form.instance.file %}
-                                <div class="existing-attachment-info mb-3">
-                                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">{% trans "Current file" %}</p>
-                                    <div class="flex items-center space-x-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+                        <div class="attachment-item">
+                            {% for hidden_field in formset_form.hidden_fields %} {{ hidden_field }} {% endfor %}
+                            
+                            {% for visible_field in formset_form.visible_fields %}
+                                {% if visible_field.name == 'file' %}
+                                    <div class="mb-4">
+                                        <label for="{{ visible_field.id_for_label }}" class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                                            {{ visible_field.label }}
+                                            {% if formset_form.instance.pk and formset_form.instance.file %}
+                                                <span class="text-gray-500 dark:text-gray-400"> ({% trans "Add more files" %})</span>
+                                            {% endif %}
+                                        </label>
+                                        <a href="#" class="file-choose-link" onclick="document.getElementById('{{ visible_field.id_for_label }}').click(); return false;">
+                                            {% trans "Choose Files" %}
+                                        </a>
+                                        {% render_field visible_field class="hidden" onchange="handleFilePreview(this)" multiple="multiple" %}
+                                        <div id="preview-{{ visible_field.id_for_label }}" class="preview-container mt-3"></div>
+                                        <div id="errors-{{ visible_field.auto_id }}" class="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                                            {% for error in visible_field.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if formset_form.instance.pk and formset_form.instance.file %}
+                                <div class="existing-attachment-info mt-4 mb-4">
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{% trans "Current file" %}:</p>
+                                    <div class="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-xl">
                                         <i class="fas fa-paperclip text-gray-500 dark:text-gray-400"></i>
                                         <a href="{{ formset_form.instance.file.url }}" target="_blank" class="text-sm text-primary-light dark:text-primary-dark hover:underline break-all" title="{{ formset_form.instance.file.name }}">
                                             {{ formset_form.instance.get_file_name|truncatechars:40 }}
@@ -139,68 +144,92 @@
                                     </div>
                                     {% with file_url=formset_form.instance.file.url|lower %}
                                         {% if ".jpg" in file_url or ".jpeg" in file_url or ".png" in file_url or ".gif" in file_url or ".webp" in file_url %}
-                                            <img src="{{ formset_form.instance.file.url }}" alt="{% trans 'Preview' %}" class="mt-2 max-w-full sm:max-w-[150px] max-h-24 rounded-md border dark:border-gray-500 object-contain bg-gray-100 dark:bg-gray-600 p-0.5">
+                                            <img src="{{ formset_form.instance.file.url }}" alt="{% trans 'Preview' %}" class="mt-3 max-w-full sm:max-w-[250px] max-h-40 rounded-xl border dark:border-gray-600 object-contain bg-gray-100 dark:bg-gray-700 p-1">
                                         {% endif %}
                                     {% endwith %}
                                 </div>
-                                <div class="mb-2">
-                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{% trans "Replace file (optional)" %}:</label>
-                                    {% render_field formset_form.file class="custom-file-input text-sm" %}
-                                </div>
-                                {% if attachment_formset.can_delete and formset_form.instance.pk %}
-                                <div class="flex items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                    {% render_field formset_form.DELETE class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-600 dark:border-gray-500 dark:checked:bg-red-500" %}
-                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="ml-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
+                            {% endif %}
+                                
+                            {% if attachment_formset.can_delete and formset_form.instance.pk %}
+                                <div class="flex items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                    {% render_field formset_form.DELETE class="h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-red-500 transition-all duration-300" %}
+                                    <label for="{{ formset_form.DELETE.id_for_label }}" class="mark-for-deletion ml-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer">
                                         {% trans "Mark for deletion" %}
                                     </label>
                                 </div>
-                                {% endif %}
-                            {% else %}
-                                <div>
-                                    <label for="{{ formset_form.file.id_for_label }}" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1.5">{% trans "Add new attachment" %}:</label>
-                                    {% render_field formset_form.file class="custom-file-input text-sm" %}
-                                </div>
                             {% endif %}
-                            {% for error_field in formset_form %} 
-                                {% for error in error_field.errors %}
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error_field.label }}: {{ error }}</p>
-                                {% endfor %}
-                            {% endfor %}
-                            {% for error in formset_form.non_field_errors %}
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ error }}</p>
-                            {% endfor %}
+                            <div id="formset-form-{{ forloop.counter0 }}-non-field-errors" class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {% for error in formset_form.non_field_errors %}{{ error }}{% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
-            {# --- End Attachment Formset --- #}
 
             {% with is_favorite_field=form.is_favorite %}
-                <div class="pt-6 border-t border-border-light dark:border-border-dark flex items-center">
-                    {% render_field is_favorite_field class="h-5 w-5 text-primary-light border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark" %}
-                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-2.5 block text-sm font-medium text-text-light dark:text-text-dark">
+                <div class="pt-8 border-t border-border-light dark:border-border-dark flex items-center">
+                    {% render_field is_favorite_field class="h-6 w-6 text-primary-light border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-primary-dark dark:checked:border-primary-dark focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-300" %}
+                    <label for="{{ is_favorite_field.id_for_label }}" class="ml-3 block text-base font-semibold text-text-light dark:text-text-dark">
                         {{ is_favorite_field.label }}
                     </label>
                 </div>
                 {% if is_favorite_field.help_text %}
-                    <p class="ml-7 text-xs text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
+                    <p class="ml-9 text-sm text-gray-500 dark:text-gray-400">{{ is_favorite_field.help_text|safe }}</p>
                 {% endif %}
-                {% for error in is_favorite_field.errors %}
-                    <p class="ml-7 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-                {% endfor %}
+                <div id="errors-{{ is_favorite_field.auto_id }}" class="ml-9 text-sm text-red-600 dark:text-red-400">
+                    {% for error in is_favorite_field.errors %}{{ error }}{% endfor %}
+                </div>
             {% endwith %}
 
-            <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 mt-8">
+            <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-6 space-y-4 sm:space-y-0 mt-10">
                 <a href="{% if form.instance.pk %}{{ form.instance.get_absolute_url }}{% else %}{% url 'journal:journal_list' %}{% endif %}"
-                   class="w-full sm:w-auto order-2 sm:order-1 px-6 py-2.5 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-offset-gray-800 transition-colors">
+                   class="button w-full sm:w-auto order-2 sm:order-1 px-8 py-3 text-center text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105">
                     {% trans "Cancel" %}
                 </a>
-                <button type="submit"
-                        class="w-full sm:w-auto order-1 sm:order-2 px-6 py-2.5 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark dark:focus:ring-offset-gray-800 transition-all duration-150 ease-in-out font-semibold shadow-md hover:shadow-lg">
+                <button type="submit" id="save-entry-button"
+                        class="w-full sm:w-auto order-1 sm:order-2 px-8 py-3 bg-gradient-to-r from-primary-light to-primary-dark text-white rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-primary-dark dark:focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
                     <i class="fas fa-save mr-2"></i>{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Save Entry" %}{% endif %}
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<div id="full-screen-modal" class="full-screen-modal">
+    <button class="close-btn">×</button>
+    <img id="full-screen-image" src="" alt="Full Screen Image">
+</div>
+
+<div id="ai-progress-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4 py-6 sm:px-0">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-md"></div>
+    <div id="ai-progress-modal-content" class="modal-content rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-auto transform opacity-0">
+        <div class="text-center">
+            <div id="ai-spinner" class="spinner w-16 h-16 mx-auto mb-6"></div>
+            <h3 id="ai-progress-title" class="text-2xl font-semibold text-text-light dark:text-text-dark mb-3">
+                {% trans "Crafting your insights..." %}
+            </h3>
+            <p id="ai-progress-message" class="text-base text-gray-500 dark:text-gray-400 mb-6">
+                {% trans "Please wait a moment while we enhance your journal entry." %}
+            </p>
+            <div id="ai-progress-bar-container" class="w-full mb-3">
+                <div id="ai-progress-bar"></div>
+            </div>
+            <p id="ai-progress-percentage" class="text-sm text-gray-500 dark:text-gray-400 mb-2">0%</p>
+            <ul id="ai-task-status-list" class="text-sm text-left text-gray-500 dark:text-gray-400 space-y-2 mt-4 list-none">
+            </ul>
+            <div id="ai-success-message" class="hidden mt-6 p-4 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-xl">
+                <i class="fas fa-check-circle mr-2"></i><span>{% trans "Your entry has been beautifully enhanced!" %}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // Pass initial_tags_str from Django to JavaScript
+        const initialTagsFromDjango = "{{ initial_tags_str|escapejs|default_if_none:'' }}";
+    </script>
+    <script src="{% static 'js/journal_form_scripts.js' %}"></script>
+    <script src="{% static 'js/journal_form_ai_progress.js' %}"></script>
 {% endblock %}

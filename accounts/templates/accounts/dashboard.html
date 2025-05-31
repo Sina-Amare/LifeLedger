@@ -2,93 +2,170 @@
 {% load i18n %}
 {% load static %}
 
-{% block title %}{% trans "Dashboard" %}{% endblock %}
+{% block title %}{% trans "Dashboard" %} - LifeLedger{% endblock %}
+
+{% block extra_head %}
+{# Link to the new CSS file specific to dashboard.html #}
+<link rel="stylesheet" href="{% static 'css/dashboard_styles.css' %}">
+{% endblock %}
 
 {% block content %}
-<section class="py-12 md:py-20 bg-background-light dark:bg-background-dark">
-    <div class="container mx-auto px-4">
+<section class="py-12 md:py-20 bg-background-light dark:bg-background-dark min-h-full">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        {# Header Section #}
         <header class="text-center mb-12 md:mb-16">
-            <h1 class="text-4xl sm:text-5xl font-bold text-text-light dark:text-text-dark mb-4">
+            <h1 class="text-4xl sm:text-5xl font-bold text-text-light dark:text-text-dark mb-3 tracking-tight">
                 {% blocktrans with username=user.username %}Welcome, <span class="text-primary-light dark:text-primary-dark">{{ username }}</span>!{% endblocktrans %}
             </h1>
-            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                {% trans "This is your personal space. Here you'll find quick access to your journal, insights, and more features as they arrive." %}
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                {% trans "Your personal space to reflect, grow, and manage your life's ledger." %}
+            </p>
+            <p id="dashboard-welcome-quote" class="text-sm italic text-gray-500 dark:text-gray-400 mt-4">
+                {% trans "Every entry is a step toward self-discovery." %}
             </p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {# Recent Journal Entry Section #}
+        <div class="mb-12 md:mb-16">
+            <h2 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Your Latest Reflection" %}</h2>
+            <div class="dashboard-card fade-in-element" style="animation-delay: 0.2s;">
+                {% if latest_entry %}
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between">
+                        <div class="flex items-start mb-4">
+                            <i class="fas fa-feather-alt reflection-icon mr-4"></i>
+                            <div>
+                                <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">
+                                    {{ latest_entry.title|truncatechars:50 }}
+                                </h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                    {% trans "Written on" %} {{ latest_entry.created_at|date:"F j, Y" }}
+                                </p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                                    {{ latest_entry.content|truncatewords:20 }}
+                                </p>
+                            </div>
+                        </div>
+                        <a href="{% url 'journal:journal_detail' pk=latest_entry.pk %}"
+                           class="card-action mt-4 sm:mt-0">
+                            {% trans "Read More" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                        {% trans "No journal entries yet. Start your journey by writing your first reflection!" %}
+                    </p>
+                    <a href="{% url 'journal:journal_create' %}"
+                       class="card-action mt-4">
+                        {% trans "Write Your First Entry" %} <i class="fas fa-pencil-alt icon-btn ml-2 text-sm"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Main Action Cards Section #}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-16 md:mb-20">
             {# My Journal Card #}
-            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
-                <div class="flex items-center text-primary-light dark:text-primary-dark mb-4">
-                    <i class="fas fa-book-open fa-2x mr-4"></i>
-                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "My Journal" %}</h3>
+            <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.3s;">
+                <div class="flex items-start text-primary-light dark:text-primary-dark mb-4 relative">
+                    <i class="fas fa-book-open fa-2x mr-4 card-icon pt-1"></i>
+                    <div>
+                        <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "My Journal" %}</h3>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Entries" %}</p>
+                    </div>
+                    <i class="fas fa-info-circle help-icon ml-2 text-gray-500 dark:text-gray-400 absolute right-0 top-0" data-target="popover-journal" aria-label="Journal information"></i>
                 </div>
-                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                    {% trans "Write new entries, revisit your past memories, and reflect on your journey." %}
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                    {% trans "Write new entries, revisit your past memories, and reflect on your journey. Your stories await." %}
                 </p>
                 <a href="{% url 'journal:journal_list' %}"
-                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-primary-light text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
-                    {% trans "Go to Journal" %} <i class="fas fa-arrow-right ml-2"></i>
+                   class="card-action mt-auto">
+                    {% trans "Go to Journal" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
                 </a>
+                <div class="help-popover" id="popover-journal" aria-describedby="journal-help">
+                    <p class="text-xs text-gray-900 dark:text-gray-100">
+                        {% trans "Create and view your journal entries here. Reflect on your thoughts and memories." %}
+                    </p>
+                </div>
             </div>
 
-            {# Analytics Card (Placeholder) #}
-            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
-                <div class="flex items-center text-secondary-light dark:text-secondary-dark mb-4">
-                    <i class="fas fa-chart-line fa-2x mr-4"></i>
-                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "AI Insights" %}</h3>
+            {# AI Insights Card #}
+            <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.4s;">
+                <div class="flex items-start text-secondary-light dark:text-secondary-dark mb-4">
+                    <i class="fas fa-brain fa-2x mr-4 card-icon pt-1"></i>
+                    <div>
+                        <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "AI Insights" %}</h3>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Discover Yourself" %}</p>
+                    </div>
                 </div>
-                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                    {% trans "Discover patterns and insights about your emotions and activities with upcoming AI analysis." %}
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                    {% trans "Uncover patterns in your emotions and experiences with upcoming AI-powered analysis." %}
                 </p>
-                <a href="#" {# Replace with actual URL when ready #}
-                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-secondary-light text-white rounded-md hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-secondary-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg opacity-50 cursor-not-allowed"
-                   aria-disabled="true" title="{% trans 'Coming Soon' %}">
-                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2"></i>
-                </a>
+                <span class="card-action-disabled mt-auto" aria-disabled="true" title="{% trans 'Coming Soon' %}">
+                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-sm"></i>
+                </span>
             </div>
 
-            {# Settings/Profile Card (More useful than Public Timeline for a personal dashboard) #}
-            <div class="group bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-xl shadow-custom-light dark:shadow-custom-dark hover:shadow-xl dark:hover:shadow-custom-dark-hover transform hover:-translate-y-1 transition-all duration-300 ease-in-out">
-                <div class="flex items-center text-accent-light dark:text-accent-dark mb-4">
-                    <i class="fas fa-user-cog fa-2x mr-4"></i>
-                    <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{% trans "Profile & Settings" %}</h3>
+            {# Profile & Settings Card #}
+            <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.5s;">
+                <div class="flex items-start text-accent-light dark:text-accent-dark mb-4">
+                    <i class="fas fa-user-cog fa-2x mr-4 card-icon pt-1"></i>
+                    <div>
+                        <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Profile & Settings" %}</h3>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Account" %}</p>
+                    </div>
                 </div>
-                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                    {% trans "Manage your account details, preferences, and application settings." %}
+                <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                    {% trans "Manage your account details, preferences, and application settings to tailor your experience." %}
                 </p>
-                <a href="{}" {# Assuming you have a profile URL #}
-                   class="inline-flex items-center justify-center w-full px-6 py-3 bg-accent-light text-white rounded-md hover:bg-yellow-500 dark:hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-accent-dark focus:ring-opacity-50 transition-colors duration-300 font-medium shadow-md group-hover:shadow-lg">
-                    {% trans "Manage Account" %} <i class="fas fa-sliders-h ml-2"></i>
+                {% comment %} UPDATED: Link for "Manage Account" now points to the profile update page {% endcomment %}
+                <a href="{% url 'user_profile:profile_update' %}" class="card-action mt-auto">
+                    {% trans "Manage Account" %} <i class="fas fa-sliders-h icon-btn ml-2 text-sm"></i>
                 </a>
             </div>
         </div>
 
-        {# Quick Actions / Recent Activity (Future Enhancement) #}
-        <div class="mt-16 md:mt-20 text-left">
-            <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark mb-6">{% trans "Quick Actions" %}</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                 <a href="{% url 'journal:journal_create' %}" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div class="flex items-center">
-                        <i class="fas fa-pencil-alt text-primary-light dark:text-primary-dark text-xl mr-3"></i>
-                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Write New Entry" %}</span>
+        {# Quick Actions Section #}
+        <div class="mt-12 md:mt-16">
+            <h3 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6 md:mb-8 text-center sm:text-left">{% trans "Quick Actions" %}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <a href="{% url 'journal:journal_create' %}" class="quick-action fade-in-element relative block p-5 rounded-lg shadow-md bg-card-light dark:bg-card-dark hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg" style="animation-delay: 0.6s;">
+                    <i class="fas fa-pencil-alt quick-action-icon quick-action-icon-pencil"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title text-base font-semibold text-text-light dark:text-text-dark">{% trans "Write New Entry" %}</h4>
+                        <p class="quick-action-subtitle text-xs text-gray-500 dark:text-gray-400">{% trans "Start a new reflection." %}</p>
+                    </div>
+                    <i class="fas fa-info-circle help-icon absolute right-4 top-4 text-gray-400 dark:text-gray-400" data-target="popover-write-entry" aria-label="Write entry information"></i>
+                    <div class="help-popover" id="popover-write-entry" aria-describedby="write-entry-help">
+                        <p class="text-xs text-gray-900 dark:text-gray-100">
+                            {% trans "Capture your thoughts and memories in a new journal entry." %}
+                        </p>
                     </div>
                 </a>
-                 <a href="#" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors opacity-50 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}">
-                    <div class="flex items-center">
-                        <i class="fas fa-calendar-check text-secondary-light dark:text-secondary-dark text-xl mr-3"></i>
-                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Review Today's Entry" %}</span>
+                
+                <div class="quick-action-disabled fade-in-element block p-5 rounded-lg shadow-md bg-card-light dark:bg-card-dark" style="animation-delay: 0.7s;" title="{% trans 'Coming Soon' %}">
+                    <i class="fas fa-calendar-check quick-action-icon-disabled text-gray-400 dark:text-gray-500"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title-disabled text-base font-semibold text-gray-400 dark:text-gray-500">{% trans "Review Today's Entry" %}</h4>
+                        <p class="quick-action-subtitle-disabled text-xs text-gray-400 dark:text-gray-400">{% trans "Coming soon." %}</p>
                     </div>
-                </a>
-                 <a href="#" class="block p-4 bg-card-light dark:bg-card-dark rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors opacity-50 cursor-not-allowed" title="{% trans 'Feature Coming Soon' %}">
-                    <div class="flex items-center">
-                        <i class="fas fa-lightbulb text-accent-light dark:text-accent-dark text-xl mr-3"></i>
-                        <span class="font-medium text-text-light dark:text-text-dark">{% trans "Get a Writing Prompt" %}</span>
+                </div>
+                
+                <button onclick="showWritingPrompt()" class="quick-action fade-in-element block p-5 rounded-lg shadow-md bg-card-light dark:bg-card-dark hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ease-in-out hover:translate-y-[-2px] hover:shadow-lg text-left" style="animation-delay: 0.8s;" aria-label="{% trans 'Get a Writing Prompt' %}">
+                    <i class="fas fa-lightbulb quick-action-icon quick-action-icon-bulb"></i>
+                    <div class="flex flex-col">
+                        <h4 class="quick-action-title text-base font-semibold text-text-light dark:text-text-dark">{% trans "Get a Writing Prompt" %}</h4>
+                        <div class="quick-action-subtitle-container bg-background-light dark:bg-background-dark p-2 rounded mt-2">
+                            <p id="writing-prompt-text" class="quick-action-subtitle text-xs text-gray-500 dark:text-gray-400"></p>
+                        </div>
                     </div>
-                </a>
+                </button>
             </div>
         </div>
-
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+{# Link to the new JS file specific to dashboard.html #}
+<script src="{% static 'js/dashboard_scripts.js' %}"></script>
 {% endblock %}

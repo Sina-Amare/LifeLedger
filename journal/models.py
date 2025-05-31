@@ -6,37 +6,50 @@ from django.utils import timezone
 from django.urls import reverse
 import os
 import logging
-from uuid import uuid4 # For generating unique filenames
+from uuid import uuid4
 
-# Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+class Tag(models.Model):
+    """
+    Represents a predefined tag that can be associated with journal entries.
+    Includes an optional emoji for visual representation.
+    """
+    name = models.CharField(
+        max_length=50, 
+        unique=True, 
+        help_text="The name of the tag (e.g., Work, Personal, Ideas)."
+    )
+    emoji = models.CharField(
+        max_length=20, 
+        blank=True,
+        null=True,
+        help_text="An optional emoji to represent the tag visually (e.g., 📚, 😊, 👨‍👩‍👧‍👦)."
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+
+    def __str__(self):
+        return f"{self.emoji} {self.name}" if self.emoji else self.name
+
+
 def user_directory_path(instance, filename):
-    """
-    File will be uploaded to MEDIA_ROOT/user_<id>/journal_attachments/<year>/<month>/<day>/<filename>
-    A unique filename is generated using UUID to prevent overwrites and keep original extension.
-    """
-    # instance is the JournalAttachment instance.
-    # We need to get the user from the related JournalEntry instance.
     user_id = instance.journal_entry.user.id
-    
-    # Get current date for path
     now = timezone.now()
     year = now.strftime('%Y')
     month = now.strftime('%m')
     day = now.strftime('%d')
     
-    # Generate a unique filename using UUID and preserve the original extension
-    ext = filename.split('.')[-1]
-    unique_filename = f"{uuid4().hex}.{ext}"
+    _name, ext = os.path.splitext(filename) 
+    unique_filename = f"{uuid4().hex}{ext}"
     
     return f'user_{user_id}/journal_attachments/{year}/{month}/{day}/{unique_filename}'
 
 
 class JournalEntry(models.Model):
-    """
-    Represents a single journal entry for a user.
-    """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -45,12 +58,27 @@ class JournalEntry(models.Model):
     )
     title = models.CharField(max_length=255, blank=True, verbose_name="Title")
     content = models.TextField(verbose_name="Content")
-    mood = models.CharField(max_length=50, blank=True, null=True, verbose_name="Mood")
+
+    MOOD_CHOICES = [ 
+        ('happy', 'Happy'),
+        ('sad', 'Sad'),
+        ('angry', 'Angry'),
+        ('calm', 'Calm'),
+        ('neutral', 'Neutral'),
+        ('excited', 'Excited'),
+    ]
+    mood = models.CharField(
+        max_length=50,
+        choices=MOOD_CHOICES, 
+        blank=True,
+        null=True,
+        verbose_name="Mood"
+    )
     location = models.CharField(max_length=255, blank=True, null=True, verbose_name="Location")
 
     PRIVACY_CHOICES = [
         ('private', 'Private (Only You)'),
-        ('ai_only', 'AI Analysis Only'),
+        ('ai_only', 'AI Analysis Only'), # If AI analysis is stored separately
         ('public', 'Public (Shared)'),
     ]
     privacy_level = models.CharField(
@@ -59,16 +87,29 @@ class JournalEntry(models.Model):
         default='private',
         verbose_name="Privacy Level"
     )
-    shared_details = models.JSONField(
-        default=dict,
-        blank=True,
-        null=True,
-        verbose_name="Shared Details"
-    )
+    shared_details = models.JSONField(default=dict, blank=True, null=True, verbose_name="Shared Details")
     ai_quote = models.TextField(blank=True, null=True, verbose_name="AI Quote")
     is_favorite = models.BooleanField(default=False, verbose_name="Is Favorite")
+    
+    tags = models.ManyToManyField(
+        Tag, 
+        blank=True, 
+        related_name="journal_entries", 
+        verbose_name="Tags"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+
+    # --- Fields for AI Task Progress Tracking ---
+    ai_quote_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI quote generation.")
+    ai_mood_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI mood detection.")
+    ai_tags_task_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for AI tag suggestion.")
+
+    ai_quote_processed = models.BooleanField(default=False, help_text="True if AI quote generation has been processed for this version.")
+    ai_mood_processed = models.BooleanField(default=False, help_text="True if AI mood detection has been processed for this version.")
+    ai_tags_processed = models.BooleanField(default=False, help_text="True if AI tag suggestion has been processed for this version.")
+    # --- End AI Task Progress Tracking Fields ---
 
     class Meta:
         ordering = ['-created_at']
@@ -78,21 +119,13 @@ class JournalEntry(models.Model):
     def __str__(self):
         if self.title:
             return f"Entry for {self.user.username}: {self.title}"
-        elif self.content:
-            return f"Entry for {self.user.username}: {self.content[:50]}..."
-        else:
-            return f"Entry for {self.user.username}: (No content)"
+        return f"Entry for {self.user.username}: {self.content[:50]}..."
 
     def get_absolute_url(self):
         return reverse('journal:journal_detail', kwargs={'pk': self.pk})
 
-    def is_ai_accessible(self):
-        return self.privacy_level in ['ai_only', 'public']
-
-    def is_public(self):
-        return self.privacy_level == 'public'
-
     def delete(self, *args, **kwargs):
+        # ... (delete method remains the same) ...
         entry_pk = self.pk
         logger.info(f"Attempting to delete JournalEntry with ID: {entry_pk}")
         try:
@@ -106,33 +139,21 @@ class JournalEntry(models.Model):
 
 
 class JournalAttachment(models.Model):
-    """
-    Represents a file attachment for a journal entry.
-    Files are stored in a user-specific directory structure.
-    """
+    # ... (JournalAttachment model remains the same) ...
     journal_entry = models.ForeignKey(
         JournalEntry,
         on_delete=models.CASCADE, 
         related_name='attachments',
         verbose_name="Journal Entry"
     )
-    # Use the custom function for upload_to
     file = models.FileField(
-        upload_to=user_directory_path, # <--- CUSTOM UPLOAD PATH FUNCTION
+        upload_to=user_directory_path,
         verbose_name="File",
     )
     FILE_TYPE_CHOICES = [
-        ('image', 'Image'),
-        ('audio', 'Audio'),
-        ('video', 'Video'),
-        ('other', 'Other'),
+        ('image', 'Image'), ('audio', 'Audio'), ('video', 'Video'), ('other', 'Other'),
     ]
-    file_type = models.CharField(
-        max_length=10,
-        choices=FILE_TYPE_CHOICES,
-        default='other',
-        verbose_name="File Type"
-    )
+    file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default='other', verbose_name="File Type")
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Uploaded At")
 
     class Meta:
@@ -150,6 +171,7 @@ class JournalAttachment(models.Model):
         return ""
 
     def delete(self, *args, **kwargs):
+        # ... (delete method remains the same) ...
         attachment_pk = self.pk 
         original_file_name = None
         original_file_path = None
@@ -158,8 +180,6 @@ class JournalAttachment(models.Model):
             original_file_name = self.file.name
             if hasattr(self.file, 'path'):
                 original_file_path = self.file.path
-            else: 
-                logger.warning(f"JournalAttachment ID {attachment_pk}: self.file exists but has no 'path' attribute.")
         
         logger.info(f"Attempting to delete JournalAttachment instance with ID: {attachment_pk}")
         logger.info(f"  - Associated file (if any): {original_file_name}")
@@ -178,4 +198,3 @@ class JournalAttachment(models.Model):
 
         super().delete(*args, **kwargs) 
         logger.info(f"JournalAttachment instance (original ID: {attachment_pk}) deleted from database.")
-
