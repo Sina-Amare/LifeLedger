@@ -179,6 +179,37 @@
         .clear-picture-button i {
             margin-right: 0.5rem;
         }
+        
+        /* Profile Picture Preview */
+        .profile-picture-preview {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            display: inline-block;
+            background-color: rgba(249, 250, 251, 0.7);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 2px dashed rgba(var(--gradient-blue-rgb), 0.3);
+        }
+        
+        .dark .profile-picture-preview {
+            background-color: rgba(31, 41, 55, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            border-color: rgba(var(--gradient-blue-dark-rgb), 0.3);
+        }
+        
+        .profile-picture-preview img {
+            height: 6rem;
+            width: 6rem;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark .profile-picture-preview img {
+            border-color: rgba(31, 41, 55, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
     </style>
 {% endblock profile_page_specific_extra_head %}
 
@@ -261,18 +292,19 @@
                     
                     {% if field.name == 'profile_picture' %}
                         {% if request.user.profile.profile_picture %}
-                            <div class="mb-3 p-3 border-dashed rounded-xl inline-block bg-gray-50 dark:bg-gray-700/30 profile-picture-preview">
+                            <div class="profile-picture-preview">
                                 <img src="{{ request.user.profile.profile_picture.url }}" alt="{% trans 'Current profile picture' %}" class="h-24 w-24 rounded-full object-cover shadow-lg border-2 border-white dark:border-gray-600">
                             </div>
                         {% endif %}
                         <div class="profile-picture-actions">
                             <label for="{{ field.id_for_label }}" class="form-action-link">
-                                <i class="fas fa-camera"></i><span class="link-text-content">{% trans "Choose New Picture" %}</span>
+                                <i class="fas fa-camera"></i><span class="link-text-content">{% trans "Change Profile Picture" %}</span>
                             </label>
                             {% if request.user.profile.profile_picture %}
                             <a href="#" class="clear-picture-button" id="clearProfilePicture">
                                 <i class="fas fa-trash-alt"></i>{% trans "Clear Picture" %}
                             </a>
+                            <!-- Hidden checkbox for backend processing -->
                             <input type="checkbox" name="profile_picture-clear" id="profile_picture-clear_id" class="hidden">
                             {% endif %}
                             {% render_field field class+="hidden profile-file-input" id=field.id_for_label %}
