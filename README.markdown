@@ -123,7 +123,3 @@ Contributions are welcome! Please follow these steps:
 3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4.  Push to the Branch (`git push origin feature/AmazingFeature`)
 5.  Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License. (Consider adding a `LICENSE` file to your repository with the MIT License text if you haven't already).
