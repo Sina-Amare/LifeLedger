@@ -23,6 +23,11 @@
   }
 }
 
+/* Hide timeline line when no entries */
+.timeline-container:empty::before {
+  display: none;
+}
+
 /* Grouping for journal entries */
 .journal-group {
   position: relative;
@@ -414,7 +419,7 @@
 header {
   border-bottom: 1px solid #bfdbfe;
   padding-bottom: 1.5rem; /* Increased padding to give more space */
-  padding-top: 1rem; /* Added padding-top to ensure text is not cut off from the top */
+  padding-top: 1rem $\pi$padding-top: 1rem; /* Added padding-top to ensure text is not cut off from the top */
   position: relative;
   margin-bottom: 2rem;
 }

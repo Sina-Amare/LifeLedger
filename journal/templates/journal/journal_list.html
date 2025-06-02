@@ -10,6 +10,14 @@
 
 {% block content %}
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <!-- Hidden div to store translated messages for JavaScript -->
+  <div id="translated-messages" style="display: none;">
+    <span id="msg-no-entries">{% trans "No journal entries found." %}</span>
+    <span id="msg-start-writing">{% trans "Start by writing a new entry!" %}</span>
+    <span id="msg-write-new">{% trans "Write New Entry" %}</span>
+    <span id="url-write-new">{% url 'journal:journal_create' %}</span>
+  </div>
+
   <header class="flex flex-col sm:flex-row justify-between items-center mb-12">
     <h1 class="text-4xl sm:text-5xl font-bold mb-4 sm:mb-0 fade-in-element" style="animation-delay: 0.1s;">
       {% trans "MY Journal Entries" %}
@@ -73,132 +81,133 @@
     </div>
   </form>
 
-  {% if entries %}
-    <div class="timeline-container">
-      {% for entry in entries %}
-        <div class="journal-group" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
-          <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
-            <div class="date-badge">
-              {{ entry.created_at|date:"F j, Y" }}
-            </div>
-            <article class="entry-card {% if entry.is_favorite %}favorite{% endif %} {% if entry.mood %}mood-{{ entry.mood }}{% endif %} {% if not is_filtered and forloop.first or entry in new_entries %}latest{% endif %}">
-              <div class="flex items-start mb-4">
-                <i class="fas fa-book entry-icon mr-4"></i>
-                <div class="entry-content">
-                  <div style="display: none;" class="debug-info">
-                    Raw Content: {{ entry.content|safe }}<br>
-                    Raw Content Length: {{ entry.content|length }}<br>
-                    Stripped Content: {{ entry.content|striptags }}<br>
-                    Stripped Content Length: {{ entry.content|striptags|length }}<br>
-                    Truncated Content: {{ entry.content|striptags|truncatewords_html:20|safe }}<br>
-                    Truncated Content Length: {{ entry.content|striptags|truncatewords_html:20|length }}<br>
-                    Should Show Read More: {% if entry.content|length > 20 %}Yes{% else %}No{% endif %}
-                  </div>
-                  <a href="{% url 'journal:journal_detail' pk=entry.pk %}">
-                    <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200">
-                      {{ entry.title|default:_("Untitled Entry") }}
-                    </h2>
-                  </a>
-                  <div class="content-preview">
-                    <p class="short-content text-base text-gray-600 dark:text-gray-400 mt-2">
-                      {{ entry.content|striptags|truncatewords_html:20|safe }}
+  <div class="timeline-container-wrapper">
+    {% if entries %}
+      <div class="timeline-container">
+        {% for entry in entries %}
+          <div class="journal-group" id="entry-{{ entry.pk }}" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
+            <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
+              <div class="date-badge">
+                {{ entry.created_at|date:"F j, Y" }}
+              </div>
+              <article class="entry-card {% if entry.is_favorite %}favorite{% endif %} {% if entry.mood %}mood-{{ entry.mood }}{% endif %} {% if not is_filtered and forloop.first or entry in new_entries %}latest{% endif %}">
+                <div class="flex items-start mb-4">
+                  <i class="fas fa-book entry-icon mr-4"></i>
+                  <div class="entry-content">
+                    <div style="display: none;" class="debug-info">
+                      Raw Content: {{ entry.content|safe }}<br>
+                      Raw Content Length: {{ entry.content|length }}<br>
+                      Stripped Content: {{ entry.content|striptags }}<br>
+                      Stripped Content Length: {{ entry.content|striptags|length }}<br>
+                      Truncated Content: {{ entry.content|striptags|truncatewords_html:20|safe }}<br>
+                      Truncated Content Length: {{ entry.content|striptags|truncatewords_html:20|length }}<br>
+                      Should Show Read More: {% if entry.content|length > 20 %}Yes{% else %}No{% endif %}
+                    </div>
+                    <a href="{% url 'journal:journal_detail' pk=entry.pk %}">
+                      <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200">
+                        {{ entry.title|default:_("Untitled Entry") }}
+                      </h2>
+                    </a>
+                    <div class="content-preview">
+                      <p class="short-content text-base text-gray-600 dark:text-gray-400 mt-2">
+                        {{ entry.content|striptags|truncatewords_html:20|safe }}
+                      </p>
+                    </div>
+                    <p class="full-content" style="display: none;">
+                      {{ entry.content|striptags|safe }}
+                    </p>
+                    {% if entry.content|length > 20 %}
+                      <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">Read More</div>
+                    {% else %}
+                      <div style="display: none;" class="debug-no-read-more">
+                        Read More not rendered for entry {{ entry.pk }} because content length ({{ entry.content|length }}) is not greater than 20.
+                      </div>
+                    {% endif %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      {{ entry.created_at|time:"H:i" }}
                     </p>
                   </div>
-                  <p class="full-content" style="display: none;">
-                    {{ entry.content|striptags|safe }}
-                  </p>
-                  {% if entry.content|length > 20 %}
-                    <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">Read More</div>
-                  {% else %}
-                    <div style="display: none;" class="debug-no-read-more">
-                      Read More not rendered for entry {{ entry.pk }} because content length ({{ entry.content|length }}) is not greater than 20.
+                </div>
+                <div class="entry-meta">
+                  {% if entry.tags.all %}
+                    <div class="flex flex-wrap gap-3 mb-3">
+                      {% for tag in entry.tags.all %}
+                        <span class="tag-pill-list-item">
+                          {{ tag }}
+                        </span>
+                      {% endfor %}
                     </div>
                   {% endif %}
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    {{ entry.created_at|time:"H:i" }}
-                  </p>
+                  {% if entry.mood %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                      {% if mood_visuals.entry.mood.emoji %}<span class="mr-2">{{ mood_visuals.entry.mood.emoji }}</span>{% endif %}
+                      {{ entry.get_mood_display }}
+                    </p>
+                  {% endif %}
                 </div>
-              </div>
-              <div class="entry-meta">
-                {% if entry.tags.all %}
-                  <div class="flex flex-wrap gap-3 mb-3">
-                    {% for tag in entry.tags.all %}
-                      <span class="tag-pill-list-item">
-                        {{ tag }}
-                      </span>
-                    {% endfor %}
+                <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                    <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
+                      <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
+                    </a>
+                    <button class="delete-entry-button" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}" onclick="window.showDeleteModal(); document.getElementById('modal-entry-title').textContent = this.dataset.entryTitle;">
+                      <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+            {% if entry.attachments.exists %}
+              {% for attachment in entry.attachments.all %}
+                {% if attachment.file_type == 'image' %}
+                  <div class="timeline-image fade-in-element" style="animation-delay: {{ forloop.parentloop.counter|add:0.4 }}s;">
+                    <img src="{{ attachment.file.url }}" alt="{{ entry.title|default:'Journal Image' }}" loading="lazy">
                   </div>
                 {% endif %}
-                {% if entry.mood %}
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    {% if mood_visuals.entry.mood.emoji %}<span class="mr-2">{{ mood_visuals.entry.mood.emoji }}</span>{% endif %}
-                    {{ entry.get_mood_display }}
-                  </p>
-                {% endif %}
-              </div>
-              <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex flex-col sm:flex-row gap-3 mt-4">
-                  <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
-                    <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
-                  </a>
-                  <button class="delete-entry-button" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}" onclick="window.showDeleteModal(); document.getElementById('modal-entry-title').textContent = this.dataset.entryTitle;">
-                    <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
-                  </button>
-                </div>
-              </footer>
-            </article>
-          </div>
-          {% if entry.attachments.exists %}
-            {% for attachment in entry.attachments.all %}
-              {% if attachment.file_type == 'image' %}
-                <div class="timeline-image fade-in-element" style="animation-delay: {{ forloop.parentloop.counter|add:0.4 }}s;">
-                  <img src="{{ attachment.file.url }}" alt="{{ entry.title|default:'Journal Image' }}" loading="lazy">
-                </div>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
-
-    {% if is_paginated %}
-      <nav class="mt-10 flex justify-center" aria-label="{% trans 'Pagination for journal entries' %}">
-        <ul class="pagination-ul flex gap-3">
-          {% if page_obj.has_previous %}
-            <li>
-              <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
-                <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
-              </a>
-            </li>
-          {% endif %}
-          {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-              <li><span class="active-page">{{ num }}</span></li>
-            {% elif num > page_obj.number|add:-2 and num < page_obj.number|add:2 %}
-              <li>
-                <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}">{{ num }}</a>
-              </li>
+              {% endfor %}
             {% endif %}
-          {% endfor %}
-          {% if page_obj.has_next %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
+        <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">{% trans "No journal entries found." %}</p>
+        <p class="text-base text-gray-600 dark:text-gray-400 mt-3">{% trans "Start by writing a new entry!" %}</p>
+        <a href="{% url 'journal:journal_create' %}" class="write-new-button mt-8">
+          <i class="fas fa-feather-alt mr-1"></i>{% trans "Write New Entry" %}
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if is_paginated %}
+    <nav class="mt-10 flex justify-center" aria-label="{% trans 'Pagination for journal entries' %}">
+      <ul class="pagination-ul flex gap-3">
+        {% if page_obj.has_previous %}
+          <li>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
+              <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
+            </a>
+          </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li><span class="active-page">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:-2 and num < page_obj.number|add:2 %}
             <li>
-              <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
-                {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
-              </a>
+              <a href="?page={{ num }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}">{{ num }}</a>
             </li>
           {% endif %}
-        </ul>
-      </nav>
-    {% endif %}
-
-  {% else %}
-    <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
-      <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">{% trans "No journal entries found." %}</p>
-      <p class="text-base text-gray-600 dark:text-gray-400 mt-3">{% trans "Start by writing a new entry!" %}</p>
-      <a href="{% url 'journal:journal_create' %}" class="write-new-button mt-8">
-        <i class="fas fa-feather-alt mr-1"></i>{% trans "Write New Entry" %}
-      </a>
-    </div>
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <li>
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.mood %}&mood={{ request.GET.mood }}{% endif %}{% if request.GET.time_period %}&time_period={{ request.GET.time_period }}{% endif %}{% if request.GET.is_favorite %}&is_favorite={{ request.GET.is_favorite }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tag_filter %}&tag_filter={{ request.GET.tag_filter|urlencode }}{% endif %}" class="pagination-ul a">
+              {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
   {% endif %}
 
   <button class="back-to-top fade-in-element" style="animation-delay: 0.5s;" aria-label="{% trans 'Back to top' %}" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">

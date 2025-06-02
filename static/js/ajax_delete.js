@@ -1,15 +1,30 @@
 // static/js/ajax_delete.js
 document.addEventListener("DOMContentLoaded", function () {
-  const deleteModal = document.getElementById("delete-modal"); // This is your global modal from base.html
+  const deleteModal = document.getElementById("delete-modal"); // Global modal from base.html
   const modalDialogBox = deleteModal
-    ? deleteModal.querySelector(".modal-dialog-box") // Assuming this class exists on your dialog
+    ? deleteModal.querySelector(".modal-dialog-box")
     : null;
   const confirmDeleteButton = document.getElementById("confirm-delete-button");
   const cancelDeleteButton = document.getElementById("cancel-delete-button");
-  const closeModalButton = document.getElementById("close-modal-x-button"); // Assuming this is your 'X' close button
+  const closeModalButton = document.getElementById("close-modal-x-button"); // 'X' close button
   const modalEntryTitle = document.getElementById("modal-entry-title");
 
   const pageModalBackdrop = document.getElementById("pageModalBackdrop");
+
+  // Retrieve translated messages from DOM
+  const translatedMessages = document.getElementById("translated-messages");
+  const msgNoEntries = translatedMessages
+    ? translatedMessages.querySelector("#msg-no-entries").textContent
+    : "No journal entries found.";
+  const msgStartWriting = translatedMessages
+    ? translatedMessages.querySelector("#msg-start-writing").textContent
+    : "Start by writing a new entry!";
+  const msgWriteNew = translatedMessages
+    ? translatedMessages.querySelector("#msg-write-new").textContent
+    : "Write New Entry";
+  const urlWriteNew = translatedMessages
+    ? translatedMessages.querySelector("#url-write-new").textContent
+    : "/journal/create/";
 
   if (!deleteModal) {
     console.warn(
@@ -105,14 +120,14 @@ document.addEventListener("DOMContentLoaded", function () {
       if (modalEntryTitle) {
         modalEntryTitle.textContent = "";
       }
-    }, 300); // Match duration of your opacity transition
+    }, 300); // Match duration of opacity transition
     console.log("Modal hidden.");
   }
 
   function initializeDeleteButtons() {
     const deleteButtons = document.querySelectorAll(".delete-entry-button");
     deleteButtons.forEach((button) => {
-      // Remove existing listener to prevent multiple attachments if this function is called again
+      // Remove existing listener to prevent multiple attachments
       button.removeEventListener("click", handleDeleteButtonClick);
       button.addEventListener("click", handleDeleteButtonClick);
     });
@@ -121,8 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function handleDeleteButtonClick() {
     const entryId = this.dataset.entryId;
     const entryTitle = this.dataset.entryTitle;
-    // The element ID to remove from the DOM, typically used on list pages
-    const entryElementId = `entry-${entryId}`; // Assuming your list items have IDs like "entry-123"
+    const entryElementId = `entry-${entryId}`; // ID for list or detail page element
 
     console.log("Delete button clicked.");
     console.log("  Entry ID:", entryId);
@@ -133,8 +147,6 @@ document.addEventListener("DOMContentLoaded", function () {
       showModal(entryTitle, entryId, entryElementId);
     } else {
       console.error("Error: Could not get entry ID from delete button.");
-      // Consider using a more user-friendly notification than alert
-      // For example, display a message in a dedicated notification area
       alert("An error occurred. Could not get journal entry ID.");
     }
   }
@@ -153,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      const deleteUrl = `/journal/${entryId}/delete/`; // Ensure this matches your Django URL pattern
+      const deleteUrl = `/journal/${entryId}/delete/`; // Match your Django URL pattern
       console.log(
         "Confirm delete clicked. Sending POST request to:",
         deleteUrl
@@ -187,44 +199,62 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Check if current page is the detail page for the deleted entry
             const currentPath = window.location.pathname;
-            // Regex to match /journal/<id>/ or /journal/<id> (optional trailing slash)
             const detailPagePattern = new RegExp(`^/journal/${entryId}/?$`);
 
             if (detailPagePattern.test(currentPath)) {
-              // If on the detail page of the deleted item, redirect to journal list
-              // You can use a Django reversed URL here if you pass it to your template context
-              // and then to JavaScript, or hardcode it if it's stable.
-              window.location.href = "/journal/";
-              return; // Stop further processing to avoid trying to remove an element
-            }
-
-            // If not on the detail page (e.g., on list page), remove the element
-            const entryElement = document.getElementById(entryElementId);
-            if (entryElement) {
-              entryElement.style.transition = "opacity 0.5s ease";
-              entryElement.style.opacity = "0";
-              setTimeout(() => {
-                entryElement.remove();
-                console.log(`Removed element with ID ${entryElementId}.`);
-                // Check if the list is now empty (relevant for list pages)
-                const listContainer = document.getElementById(
-                  "journal-entries-list" // Assuming this is the ID of your list container
-                );
-                if (listContainer && listContainer.children.length === 0) {
-                  const noEntriesMessage =
-                    document.getElementById("no-entries-message"); // Assuming you have such an element
-                  if (noEntriesMessage)
-                    noEntriesMessage.classList.remove("hidden");
-                }
-              }, 500); // Duration of the fade-out animation
-            } else {
-              // Fallback if element not found on list page but deletion was successful
-              // This might happen if the element ID is incorrect or the structure changed.
-              // Consider a page reload as a robust fallback if specific element removal fails.
-              console.warn(
-                `Element with ID ${entryElementId} not found for removal, but deletion successful. Consider page reload.`
+              // Redirect to journal list without full page refresh
+              window.history.pushState({}, "", "/journal/");
+              const wrapper = document.querySelector(
+                ".timeline-container-wrapper"
               );
-              // window.location.reload(); // Uncomment if you prefer to reload the page in this case
+              if (wrapper) {
+                wrapper.innerHTML = `
+                  <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
+                    <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">${msgNoEntries}</p>
+                    <p class="text-base text-gray-600 dark:text-gray-400 mt-3">${msgStartWriting}</p>
+                    <a href="${urlWriteNew}" class="write-new-button mt-8">
+                      <i class="fas fa-feather-alt mr-1"></i>${msgWriteNew}
+                    </a>
+                  </div>`;
+              }
+            } else {
+              // Remove the element from the list page with fade-out animation
+              const entryElement = document.getElementById(entryElementId);
+              if (entryElement) {
+                entryElement.style.transition = "opacity 0.5s ease";
+                entryElement.style.opacity = "0";
+                setTimeout(() => {
+                  entryElement.remove();
+                  console.log(`Removed element with ID ${entryElementId}.`);
+
+                  // Check if the timeline is now empty
+                  const timelineContainer = document.querySelector(
+                    ".timeline-container"
+                  );
+                  const wrapper = document.querySelector(
+                    ".timeline-container-wrapper"
+                  );
+                  if (
+                    timelineContainer &&
+                    timelineContainer.children.length === 0
+                  ) {
+                    if (wrapper) {
+                      wrapper.innerHTML = `
+                        <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
+                          <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">${msgNoEntries}</p>
+                          <p class="text-base text-gray-600 dark:text-gray-400 mt-3">${msgStartWriting}</p>
+                          <a href="${urlWriteNew}" class="write-new-button mt-8">
+                            <i class="fas fa-feather-alt mr-1"></i>${msgWriteNew}
+                          </a>
+                        </div>`;
+                    }
+                  }
+                }, 500); // Duration of fade-out animation
+              } else {
+                console.warn(
+                  `Element with ID ${entryElementId} not found for removal, but deletion successful.`
+                );
+              }
             }
           } else {
             console.error(
@@ -279,24 +309,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Initial call to attach event listeners to any existing delete buttons on page load
+  // Initial call to attach event listeners to existing delete buttons
   initializeDeleteButtons();
 
-  // If you dynamically add content (e.g., via AJAX pagination or infinite scroll),
-  // you'll need to call initializeDeleteButtons() again after new content is loaded
-  // to attach listeners to new delete buttons.
-  // For example, using MutationObserver:
-  // const observerTarget = document.getElementById('journal-entries-list'); // Or a more global container
-  // if (observerTarget) {
-  //   const observer = new MutationObserver((mutationsList, observer) => {
-  //     for(const mutation of mutationsList) {
-  //       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-  //         // Check if added nodes contain delete buttons or if it's a general content update
-  //         initializeDeleteButtons();
-  //         break;
-  //       }
-  //     }
-  //   });
-  //   observer.observe(observerTarget, { childList: true, subtree: true });
-  // }
+  // Handle dynamic content addition (e.g., AJAX pagination)
+  const observerTarget = document.getElementById("journal-entries-list");
+  if (observerTarget) {
+    const observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          initializeDeleteButtons();
+          break;
+        }
+      }
+    });
+    observer.observe(observerTarget, { childList: true, subtree: true });
+  }
 });
