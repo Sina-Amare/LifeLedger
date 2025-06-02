@@ -318,3 +318,19 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* Custom styles for Latest Reflection text */
+.latest-reflection-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4; /* Limits to 4 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  transition: max-height 0.3s ease;
+}
+
+/* Ensure the card action button aligns well with limited text */
+.dashboard-card .card-action {
+  min-width: 6rem;
+  text-align: right;
+}

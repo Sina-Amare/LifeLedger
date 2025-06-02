@@ -275,6 +275,11 @@ h1 {
 .dark .content-section h3 {
   color: #f3f4f6;
 }
+.content-section .prose {
+  overflow-wrap: break-word;
+  word-break: break-all;
+  white-space: normal;
+}
 
 /* Footer Links */
 footer a,

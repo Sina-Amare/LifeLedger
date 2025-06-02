@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
@@ -75,8 +74,9 @@
   </form>
 
   {% if entries %}
-    <div class="timeline-container" id="journal-entries-list"> {% for entry in entries %}
-        <div class="journal-group" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}" id="entry-{{ entry.pk }}">
+    <div class="timeline-container">
+      {% for entry in entries %}
+        <div class="journal-group" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
           <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
             <div class="date-badge">
               {{ entry.created_at|date:"F j, Y" }}
@@ -92,7 +92,8 @@
                     Stripped Content Length: {{ entry.content|striptags|length }}<br>
                     Truncated Content: {{ entry.content|striptags|truncatewords_html:20|safe }}<br>
                     Truncated Content Length: {{ entry.content|striptags|truncatewords_html:20|length }}<br>
-                    Should Show Read More: {% if entry.content|striptags|wordcount > 20 %}Yes{% else %}No{% endif %} </div>
+                    Should Show Read More: {% if entry.content|length > 20 %}Yes{% else %}No{% endif %}
+                  </div>
                   <a href="{% url 'journal:journal_detail' pk=entry.pk %}">
                     <h2 class="text-xl font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200">
                       {{ entry.title|default:_("Untitled Entry") }}
@@ -106,12 +107,12 @@
                   <p class="full-content" style="display: none;">
                     {{ entry.content|striptags|safe }}
                   </p>
-                  {% if entry.content|striptags|wordcount > 20 %} 
-                  <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">{% trans "Read More" %}</div>
+                  {% if entry.content|length > 20 %}
+                    <div class="read-more" data-debug="Read More button rendered for entry {{ entry.pk }}">Read More</div>
                   {% else %}
-                  <div style="display: none;" class="debug-no-read-more">
-                    Read More not rendered for entry {{ entry.pk }} because content word count ({{ entry.content|striptags|wordcount }}) is not greater than 20.
-                  </div>
+                    <div style="display: none;" class="debug-no-read-more">
+                      Read More not rendered for entry {{ entry.pk }} because content length ({{ entry.content|length }}) is not greater than 20.
+                    </div>
                   {% endif %}
                   <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
                     {{ entry.created_at|time:"H:i" }}
@@ -130,14 +131,7 @@
                 {% endif %}
                 {% if entry.mood %}
                   <p class="text-sm text-gray-600 dark:text-gray-400">
-                    {# Assuming mood_visuals is correctly populated in your context or a templatetag #}
-                    {# You might need to use a more specific way to get emoji if mood_visuals is not directly usable like this #}
-                    {# For example, if you have a dictionary in context: mood_visuals_map.get(entry.mood).emoji #}
-                    {% comment %} Accessing mood_visuals directly like this might be tricky if it's not structured per entry.
-                                      You might need a custom template tag or pass a dictionary keyed by mood value.
-                                      For now, let's assume entry.get_mood_display is sufficient or you have another way to get emoji.
                     {% if mood_visuals.entry.mood.emoji %}<span class="mr-2">{{ mood_visuals.entry.mood.emoji }}</span>{% endif %}
-                    {% endcomment %}
                     {{ entry.get_mood_display }}
                   </p>
                 {% endif %}
@@ -147,10 +141,7 @@
                   <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
                     <i class="fas fa-edit mr-1"></i>{% trans "Edit" %}
                   </a>
-                  <button class="delete-entry-button"
-                          data-entry-id="{{ entry.pk }}"
-                          data-entry-title="{{ entry.title|default:_('Untitled Entry')|escapejs }}"
-                          type="button">
+                  <button class="delete-entry-button" data-entry-id="{{ entry.pk }}" data-entry-title="{{ entry.title|default:_('Untitled Entry') }}" onclick="window.showDeleteModal(); document.getElementById('modal-entry-title').textContent = this.dataset.entryTitle;">
                     <i class="fas fa-trash-alt mr-1"></i>{% trans "Delete" %}
                   </button>
                 </div>
@@ -201,7 +192,7 @@
     {% endif %}
 
   {% else %}
-    <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;" id="no-entries-message">
+    <div class="text-center py-10 fade-in-element" style="animation-delay: 0.4s;">
       <p class="text-xl text-gray-900 dark:text-gray-100 font-medium">{% trans "No journal entries found." %}</p>
       <p class="text-base text-gray-600 dark:text-gray-400 mt-3">{% trans "Start by writing a new entry!" %}</p>
       <a href="{% url 'journal:journal_create' %}" class="write-new-button mt-8">
@@ -213,11 +204,6 @@
   <button class="back-to-top fade-in-element" style="animation-delay: 0.5s;" aria-label="{% trans 'Back to top' %}" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
     <i class="fas fa-arrow-up"></i>
   </button>
-</div>
-
-<div id="pageModalBackdrop"
-     class="hidden fixed inset-0 z-40 bg-black bg-opacity-60 transition-opacity duration-300 ease-in-out"
-     aria-hidden="true">
 </div>
 {% endblock %}
 
@@ -234,30 +220,5 @@
       backToTopButton.classList.remove('visible');
     }
   });
-
-  // Corrected Read More logic from your journal_list_scripts.js
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.read-more').forEach(button => {
-        button.addEventListener('click', function() {
-            const entryCard = this.closest('.entry-content');
-            const shortContent = entryCard.querySelector('.short-content');
-            const fullContent = entryCard.querySelector('.full-content');
-
-            if (shortContent && fullContent) {
-                if (fullContent.style.display === 'none' || fullContent.style.display === '') {
-                    shortContent.style.display = 'none';
-                    fullContent.style.display = 'block';
-                    this.textContent = '{% trans "Read Less" %}';
-                } else {
-                    shortContent.style.display = 'block';
-                    fullContent.style.display = 'none';
-                    this.textContent = '{% trans "Read More" %}';
-                }
-            }
-        });
-    });
-  });
-
 </script>
 {% endblock %}
-

@@ -1,3 +1,5 @@
+// static/js/base_scripts.js
+
 document.addEventListener("DOMContentLoaded", function () {
   // Preloader Hiding Logic
   const preloader = document.getElementById("page-preloader");
@@ -98,6 +100,46 @@ document.addEventListener("DOMContentLoaded", function () {
         window.hideDeleteModal();
       }
     });
+  }
+
+  // Hamburger Menu Logic
+  const hamburgerToggle = document.getElementById("hamburger-toggle");
+  const hamburgerMenu = document.getElementById("hamburger-menu");
+
+  if (hamburgerToggle && hamburgerMenu) {
+    hamburgerToggle.addEventListener("click", function () {
+      const isOpen = hamburgerMenu.classList.contains("open");
+      hamburgerMenu.classList.toggle("open", !isOpen);
+      hamburgerMenu.classList.toggle("hidden", isOpen);
+      hamburgerToggle.setAttribute("aria-expanded", !isOpen);
+      console.log(`Hamburger menu ${!isOpen ? "opened" : "closed"}`);
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener("click", function (event) {
+      if (
+        !hamburgerMenu.contains(event.target) &&
+        !hamburgerToggle.contains(event.target) &&
+        hamburgerMenu.classList.contains("open")
+      ) {
+        hamburgerMenu.classList.remove("open");
+        hamburgerMenu.classList.add("hidden");
+        hamburgerToggle.setAttribute("aria-expanded", "false");
+        console.log("Hamburger menu closed due to outside click");
+      }
+    });
+
+    // Close menu on Escape key
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && hamburgerMenu.classList.contains("open")) {
+        hamburgerMenu.classList.remove("open");
+        hamburgerMenu.classList.add("hidden");
+        hamburgerToggle.setAttribute("aria-expanded", "false");
+        console.log("Hamburger menu closed via Escape key");
+      }
+    });
+  } else {
+    console.warn("Hamburger toggle or menu not found.");
   }
 
   // Debug navbar click events
