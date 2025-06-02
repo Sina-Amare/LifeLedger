@@ -52,25 +52,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (pageModalBackdrop) {
       pageModalBackdrop.classList.remove("hidden");
-      // Ensure backdrop is visually apparent
-      pageModalBackdrop.style.opacity = "1"; // Tailwind's bg-opacity-60 should handle the color
+      pageModalBackdrop.style.opacity = "1";
     }
 
-    // --- DIAGNOSTIC: Force modal visibility ---
-    deleteModal.classList.remove("hidden"); // Standard way
-    deleteModal.style.display = "flex"; // Force display type if 'hidden' didn't set it right
-    deleteModal.style.opacity = "1"; // Force opacity
-    deleteModal.style.zIndex = "50"; // Ensure it's above backdrop (backdrop is z-40)
-    // --- END DIAGNOSTIC ---
+    deleteModal.classList.remove("hidden");
+    deleteModal.style.display = "flex";
+    deleteModal.style.opacity = "1";
+    deleteModal.style.zIndex = "50";
 
     if (modalDialogBox) {
-      // Standard transition classes
       modalDialogBox.classList.remove("opacity-0", "scale-95");
       modalDialogBox.classList.add("opacity-100", "scale-100");
-      // --- DIAGNOSTIC for dialog box ---
       modalDialogBox.style.opacity = "1";
       modalDialogBox.style.transform = "scale(1)";
-      // --- END DIAGNOSTIC ---
     } else {
       console.warn(
         ".modal-dialog-box not found. Only #delete-modal opacity will be directly set."
@@ -82,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function hideModal() {
     if (pageModalBackdrop) {
       pageModalBackdrop.classList.add("hidden");
-      pageModalBackdrop.style.opacity = "0"; // Reset diagnostic style
+      pageModalBackdrop.style.opacity = "0";
     }
 
     if (!deleteModal) {
@@ -90,21 +84,17 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Reset diagnostic styles
     deleteModal.style.display = "";
     deleteModal.style.opacity = "";
-    // deleteModal.style.zIndex = ''; // Or reset to its original if known
 
-    // Standard transition classes for hiding
     if (modalDialogBox) {
       modalDialogBox.classList.remove("opacity-100", "scale-100");
       modalDialogBox.classList.add("opacity-0", "scale-95");
-      // Reset diagnostic styles for dialog box
       modalDialogBox.style.opacity = "";
       modalDialogBox.style.transform = "";
     }
-    deleteModal.classList.remove("opacity-100"); // For class-based fade-out
-    deleteModal.classList.add("opacity-0"); // Ensure it starts fade out if not already
+    deleteModal.classList.remove("opacity-100");
+    deleteModal.classList.add("opacity-0");
 
     setTimeout(() => {
       deleteModal.classList.add("hidden");
@@ -115,13 +105,14 @@ document.addEventListener("DOMContentLoaded", function () {
       if (modalEntryTitle) {
         modalEntryTitle.textContent = "";
       }
-    }, 300);
+    }, 300); // Match duration of your opacity transition
     console.log("Modal hidden.");
   }
 
   function initializeDeleteButtons() {
     const deleteButtons = document.querySelectorAll(".delete-entry-button");
     deleteButtons.forEach((button) => {
+      // Remove existing listener to prevent multiple attachments if this function is called again
       button.removeEventListener("click", handleDeleteButtonClick);
       button.addEventListener("click", handleDeleteButtonClick);
     });
@@ -130,7 +121,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function handleDeleteButtonClick() {
     const entryId = this.dataset.entryId;
     const entryTitle = this.dataset.entryTitle;
-    const entryElementId = `entry-${entryId}`;
+    // The element ID to remove from the DOM, typically used on list pages
+    const entryElementId = `entry-${entryId}`; // Assuming your list items have IDs like "entry-123"
 
     console.log("Delete button clicked.");
     console.log("  Entry ID:", entryId);
@@ -141,6 +133,8 @@ document.addEventListener("DOMContentLoaded", function () {
       showModal(entryTitle, entryId, entryElementId);
     } else {
       console.error("Error: Could not get entry ID from delete button.");
+      // Consider using a more user-friendly notification than alert
+      // For example, display a message in a dedicated notification area
       alert("An error occurred. Could not get journal entry ID.");
     }
   }
@@ -159,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      const deleteUrl = `/journal/${entryId}/delete/`; // Removed "entry/" and changed "ajax_delete/" to "delete/"
+      const deleteUrl = `/journal/${entryId}/delete/`; // Ensure this matches your Django URL pattern
       console.log(
         "Confirm delete clicked. Sending POST request to:",
         deleteUrl
@@ -190,6 +184,21 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log(
               `Journal entry ${data.entry_id || entryId} deleted successfully.`
             );
+
+            // Check if current page is the detail page for the deleted entry
+            const currentPath = window.location.pathname;
+            // Regex to match /journal/<id>/ or /journal/<id> (optional trailing slash)
+            const detailPagePattern = new RegExp(`^/journal/${entryId}/?$`);
+
+            if (detailPagePattern.test(currentPath)) {
+              // If on the detail page of the deleted item, redirect to journal list
+              // You can use a Django reversed URL here if you pass it to your template context
+              // and then to JavaScript, or hardcode it if it's stable.
+              window.location.href = "/journal/";
+              return; // Stop further processing to avoid trying to remove an element
+            }
+
+            // If not on the detail page (e.g., on list page), remove the element
             const entryElement = document.getElementById(entryElementId);
             if (entryElement) {
               entryElement.style.transition = "opacity 0.5s ease";
@@ -197,21 +206,25 @@ document.addEventListener("DOMContentLoaded", function () {
               setTimeout(() => {
                 entryElement.remove();
                 console.log(`Removed element with ID ${entryElementId}.`);
+                // Check if the list is now empty (relevant for list pages)
                 const listContainer = document.getElementById(
-                  "journal-entries-list"
+                  "journal-entries-list" // Assuming this is the ID of your list container
                 );
                 if (listContainer && listContainer.children.length === 0) {
                   const noEntriesMessage =
-                    document.getElementById("no-entries-message");
+                    document.getElementById("no-entries-message"); // Assuming you have such an element
                   if (noEntriesMessage)
                     noEntriesMessage.classList.remove("hidden");
                 }
-              }, 500);
+              }, 500); // Duration of the fade-out animation
             } else {
+              // Fallback if element not found on list page but deletion was successful
+              // This might happen if the element ID is incorrect or the structure changed.
+              // Consider a page reload as a robust fallback if specific element removal fails.
               console.warn(
-                `Element with ID ${entryElementId} not found for removal. Reloading page as fallback.`
+                `Element with ID ${entryElementId} not found for removal, but deletion successful. Consider page reload.`
               );
-              window.location.href = "/journal/"; // Hardcoded fallback
+              // window.location.reload(); // Uncomment if you prefer to reload the page in this case
             }
           } else {
             console.error(
@@ -255,6 +268,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
+  // Hide modal on Escape key press
   document.addEventListener("keydown", (event) => {
     if (
       event.key === "Escape" &&
@@ -265,5 +279,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+  // Initial call to attach event listeners to any existing delete buttons on page load
   initializeDeleteButtons();
+
+  // If you dynamically add content (e.g., via AJAX pagination or infinite scroll),
+  // you'll need to call initializeDeleteButtons() again after new content is loaded
+  // to attach listeners to new delete buttons.
+  // For example, using MutationObserver:
+  // const observerTarget = document.getElementById('journal-entries-list'); // Or a more global container
+  // if (observerTarget) {
+  //   const observer = new MutationObserver((mutationsList, observer) => {
+  //     for(const mutation of mutationsList) {
+  //       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+  //         // Check if added nodes contain delete buttons or if it's a general content update
+  //         initializeDeleteButtons();
+  //         break;
+  //       }
+  //     }
+  //   });
+  //   observer.observe(observerTarget, { childList: true, subtree: true });
+  // }
 });
