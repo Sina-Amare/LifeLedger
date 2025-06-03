@@ -51,7 +51,7 @@
                     {% endfor %}
                 </div>
             {% endif %}
-            {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
+            {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
                 <p class="text-sm text-gray-400 dark:text-gray-500 mt-3">
                     <em>({% blocktrans with time_diff=entry.updated_at|timesince:entry.created_at %}Last updated {{ time_diff }} ago{% endblocktrans %})</em>
                 </p>
@@ -142,7 +142,10 @@
                 </a>
                 <button class="delete-entry-button"
                         data-entry-id="{{ entry.pk }}"
-                        data-entry-title="{{ entry.title|default:_('Untitled Entry') }}">
+                        data-entry-title="{{ entry.title|default:_('Untitled Entry') }}"
+                        {# ***** MODIFICATION HERE ***** #}
+                        data-redirect-url-on-delete="{% url 'journal:journal_list' %}"> 
+                        {# End of modification #}
                     <i class="fas fa-trash-alt mr-2"></i>{% trans "Delete Entry" %}
                 </button>
             </div>
@@ -152,6 +155,9 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/journal_detail_scripts.js' %}"></script>
+    {# journal_detail_scripts.js is not provided, assuming it doesn't conflict #}
+    {# <script src="{% static 'js/journal_detail_scripts.js' %}"></script> #}
+    
+    {# ajax_delete.js handles the delete functionality #}
     <script src="{% static 'js/ajax_delete.js' %}"></script>
 {% endblock %}
