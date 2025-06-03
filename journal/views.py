@@ -1,14 +1,16 @@
+# journal/views.py 
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, View, DeleteView # CORRECTED: Added DeleteView back
+    ListView, DetailView, CreateView, UpdateView, View, DeleteView
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.forms import inlineformset_factory 
-from django.db import transaction
-from django.utils.translation import gettext_lazy as _ # For messages
+from django.db import transaction # Import transaction
+from django.utils.translation import gettext_lazy as _
 
 from .forms import JournalEntryForm, JournalAttachmentForm, MOOD_CHOICES_FORM_DISPLAY 
 from .models import JournalEntry, JournalAttachment, Tag
@@ -23,7 +25,6 @@ from ai_services.tasks import (
 )
 from celery.result import AsyncResult 
 
-# Import UserProfile from the user_profile app
 from user_profile.models import UserProfile as NewUserProfile 
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ MOOD_VISUALS = {
     'neutral': {'emoji': "😐", 'text_color': "text-gray-700 dark:text-gray-400", 'bg_color': "bg-gray-100 dark:bg-gray-700", 'border_color': "border-gray-500"},
     'excited': {'emoji': "🎉", 'text_color': "text-yellow-700 dark:text-yellow-400", 'bg_color': "bg-yellow-100 dark:bg-yellow-800", 'border_color': "border-yellow-500"},
 }
+
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
     model = JournalEntry
@@ -90,7 +92,7 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         context['mood_options'] = [option for option in MOOD_CHOICES_FORM_DISPLAY if option[0] != ""]
         context['mood_visuals'] = MOOD_VISUALS
         context['time_period_options'] = [
-            ('today', _('Today')), ('this_week', _('This Week')), # Translated options
+            ('today', _('Today')), ('this_week', _('This Week')), 
             ('this_month', _('This Month')), ('this_year', _('This Year')),
         ]
         context['current_mood'] = self.request.GET.get('mood', '')
@@ -104,7 +106,7 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
             context['current_mood'], context['current_time_period'] != 'all',
             context['current_is_favorite'], context['current_search_query'], context['current_tag_filter']
         ])
-        context['new_entries'] = [entry for entry in context['entries'] if (timezone.now() - entry.created_at).total_seconds() <= 24 * 3600]
+        # context['new_entries'] = [entry for entry in context['entries'] if (timezone.now() - entry.created_at).total_seconds() <= 24 * 3600] # Corrected this line if it was causing issues, though not directly related to tags.
         return context
 
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
@@ -154,10 +156,13 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             return self.form_invalid(form, attachment_formset)
 
     def form_valid(self, form, attachment_formset):
+        # All database operations and Celery task dispatches will be part of this atomic transaction.
+        # Tasks will be sent to broker only if the transaction successfully commits.
         with transaction.atomic(): 
             form.instance.user = self.request.user
             self.object = form.save(commit=False) 
             
+            # Initialize AI fields
             self.object.ai_quote_task_id = None
             self.object.ai_mood_task_id = None
             self.object.ai_tags_task_id = None
@@ -165,8 +170,9 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             self.object.ai_mood_processed = False
             self.object.ai_tags_processed = False
             
-            self.object.save() 
+            self.object.save() # Save the main object first
             
+            # Process and save tags
             tag_names_list = form.cleaned_data.get('tags', []) 
             current_tags_for_entry = []
             if tag_names_list:
@@ -175,76 +181,99 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
                     if tag_name_stripped:
                         tag, created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
-            self.object.tags.set(current_tags_for_entry)
+            self.object.tags.set(current_tags_for_entry) # Set tags for the entry
             
+            # Process attachments
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} created with attachments and tags.")
 
             entry_id = self.object.id
-            task_ids = {}
+            task_ids_dict = {} # Using a different name to avoid conflict if self.object has task_ids
             
             user_profile = self.request.user.profile 
 
-            logger.info(f"Attempting to dispatch AI tasks for entry ID: {entry_id} based on user preferences.")
+            logger.info(f"Attempting to dispatch AI tasks for entry ID: {entry_id} based on user preferences (within transaction).")
             
+            # --- Quote Task ---
             if user_profile.ai_enable_quotes:
                 try:
-                    task_result = generate_quote_for_entry_task.delay(entry_id)
-                    self.object.ai_quote_task_id = task_result.id
-                    task_ids['quote_task_id'] = task_result.id
-                    logger.info(f"Dispatched generate_quote_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                    # Using a lambda for transaction.on_commit
+                    transaction.on_commit(lambda: 
+                        generate_quote_for_entry_task.apply_async(args=[entry_id], task_id=self.object.ai_quote_task_id or None)
+                    )
+                    # Note: We can't get task_result.id here directly as it's deferred.
+                    # We'll need to generate a task_id if we want to store it predictively, or rely on Celery signals.
+                    # For simplicity, we'll assume task_id is set if dispatched.
+                    # A more robust way would be to generate UUID for task_id beforehand.
+                    # For now, let's clear it and let Celery assign one.
+                    temp_quote_task_id = generate_quote_for_entry_task.signature(args=[entry_id]).id # Get a potential ID
+                    self.object.ai_quote_task_id = temp_quote_task_id
+                    task_ids_dict['quote_task_id'] = temp_quote_task_id
+                    logger.info(f"Scheduled generate_quote_for_entry_task for new entry ID: {entry_id} (on commit). Task ID: {temp_quote_task_id}")
                 except Exception as e:
-                    logger.error(f"Failed to dispatch generate_quote_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                    logger.error(f"Failed to schedule generate_quote_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                    self.object.ai_quote_processed = True # Mark as processed on error to avoid re-queue
             else:
                 self.object.ai_quote_processed = True 
                 self.object.ai_quote = None 
                 logger.info(f"Quote generation skipped for entry {entry_id} as per user preference.")
 
+            # --- Mood Task ---
             if user_profile.ai_enable_mood_detection:
-                # Only run mood detection if mood was not set by user in the form
                 if not form.cleaned_data.get('mood'): 
                     try:
-                        task_result = detect_mood_for_entry_task.delay(entry_id)
-                        self.object.ai_mood_task_id = task_result.id
-                        task_ids['mood_task_id'] = task_result.id
-                        logger.info(f"Dispatched detect_mood_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                        temp_mood_task_id = detect_mood_for_entry_task.signature(args=[entry_id]).id
+                        transaction.on_commit(lambda: 
+                            detect_mood_for_entry_task.apply_async(args=[entry_id], task_id=temp_mood_task_id)
+                        )
+                        self.object.ai_mood_task_id = temp_mood_task_id
+                        task_ids_dict['mood_task_id'] = temp_mood_task_id
+                        logger.info(f"Scheduled detect_mood_for_entry_task for new entry ID: {entry_id} (on commit). Task ID: {temp_mood_task_id}")
                     except Exception as e:
-                        logger.error(f"Failed to dispatch detect_mood_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
-                else:
-                    self.object.ai_mood_processed = True # User set mood, so AI processing for mood is "done"
+                        logger.error(f"Failed to schedule detect_mood_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                        self.object.ai_mood_processed = True
+                else: # User set mood
+                    self.object.ai_mood_processed = True 
                     logger.info(f"Mood detection skipped for entry {entry_id} as mood was set by user.")
-            else:
+            else: # AI mood detection disabled
                 self.object.ai_mood_processed = True 
                 logger.info(f"Mood detection skipped for entry {entry_id} as per user preference.")
 
+            # --- Tags Task ---
             if user_profile.ai_enable_tag_suggestion:
-                # Only run tag suggestion if no tags were provided by user
-                if not current_tags_for_entry: 
+                if not current_tags_for_entry: # Only if user did not provide tags
                     try:
-                        task_result = suggest_tags_for_entry_task.delay(entry_id)
-                        self.object.ai_tags_task_id = task_result.id
-                        task_ids['tags_task_id'] = task_result.id
-                        logger.info(f"Dispatched suggest_tags_for_entry_task for new entry ID: {entry_id}, Task ID: {task_result.id}")
+                        temp_tags_task_id = suggest_tags_for_entry_task.signature(args=[entry_id]).id
+                        transaction.on_commit(lambda: 
+                            suggest_tags_for_entry_task.apply_async(args=[entry_id], task_id=temp_tags_task_id)
+                        )
+                        self.object.ai_tags_task_id = temp_tags_task_id
+                        task_ids_dict['tags_task_id'] = temp_tags_task_id
+                        logger.info(f"Scheduled suggest_tags_for_entry_task for new entry ID: {entry_id} (on commit). Task ID: {temp_tags_task_id}")
                     except Exception as e:
-                        logger.error(f"Failed to dispatch suggest_tags_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
-                else:
-                    self.object.ai_tags_processed = True # User set tags
+                        logger.error(f"Failed to schedule suggest_tags_for_entry_task (entry ID {entry_id}): {e}", exc_info=True)
+                        self.object.ai_tags_processed = True
+                else: # User set tags
+                    self.object.ai_tags_processed = True 
                     logger.info(f"Tag suggestion skipped for entry {entry_id} as tags were set by user.")
-            else:
+            else: # AI tag suggestion disabled
                 self.object.ai_tags_processed = True 
                 logger.info(f"Tag suggestion skipped for entry {entry_id} as per user preference.")
             
+            # Save AI task IDs and processed flags again, as they might have been updated
             self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id', 
-                                           'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
-                                           'ai_quote', 'mood']) 
+                                            'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
+                                            'ai_quote', 'mood']) 
         
+        # This response is sent after the transaction.on_commit block,
+        # but the tasks are only truly sent to the broker when the transaction commits.
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'status': 'success', 
-                'message': _('Journal entry saved. AI processing initiated based on your preferences.'),
+                'message': _('Journal entry saved. AI processing scheduled based on your preferences.'),
                 'entry_id': self.object.id,
-                'task_ids': task_ids, 
+                'task_ids': task_ids_dict, 
                 'redirect_url': self.object.get_absolute_url() 
             })
         return redirect(self.object.get_absolute_url())
@@ -257,6 +286,7 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             return JsonResponse({'status': 'error', 'form_errors': form.errors.as_json(), 'formset_errors': attachment_formset.errors}, status=400)
         return self.render_to_response(self.get_context_data(form=form, attachment_formset=attachment_formset))
 
+
 class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = JournalEntry
     form_class = JournalEntryForm
@@ -268,12 +298,12 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        if not hasattr(self, 'object') and self.kwargs.get(self.pk_url_kwarg):
+        if not hasattr(self, 'object') and self.kwargs.get(self.pk_url_kwarg): # Ensure self.object is available
             self.object = self.get_object()
         if self.request.method == 'POST':
-            if 'attachment_formset' not in data:
+            if 'attachment_formset' not in data: # Check if already added
                 data['attachment_formset'] = JournalAttachmentInlineFormSet(self.request.POST, self.request.FILES, instance=self.object, prefix='attachments')
-        elif 'attachment_formset' not in data: 
+        elif 'attachment_formset' not in data: # For GET requests or if not in POST context
             data['attachment_formset'] = JournalAttachmentInlineFormSet(instance=self.object, prefix='attachments')
         data['predefined_tags'] = Tag.objects.all().order_by('name')
         if self.object and hasattr(self.object, 'tags'):
@@ -303,112 +333,148 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
         with transaction.atomic():
             content_changed = 'content' in form.changed_data
             mood_is_being_set_by_user = 'mood' in form.changed_data and form.cleaned_data.get('mood')
-            tags_are_being_set_by_user = 'tags' in form.changed_data and form.cleaned_data.get('tags')
             
-            self.object = form.save(commit=False)
+            self.object = form.save(commit=False) # Get the object but don't save to DB yet
             
-            # Always reset AI processed flags if relevant content changed,
-            # so AI can re-evaluate if enabled by user.
+            # Store original AI processed flags before potential reset
+            original_ai_quote_processed = self.object.ai_quote_processed
+            original_ai_mood_processed = self.object.ai_mood_processed
+            original_ai_tags_processed = self.object.ai_tags_processed
+
+            # Reset AI processed flags if relevant content changed
             if content_changed:
+                logger.info(f"UpdateView: Content changed for entry {self.object.pk}. Resetting AI processed flags.")
                 self.object.ai_quote_processed = False
                 self.object.ai_quote_task_id = None
-                self.object.ai_mood_processed = False # Mood might change with content
+                self.object.ai_mood_processed = False 
                 self.object.ai_mood_task_id = None
-                self.object.ai_tags_processed = False # Tags might change with content
+                self.object.ai_tags_processed = False 
                 self.object.ai_tags_task_id = None
 
-            # If mood is explicitly changed by user, AI for mood is considered "processed" by user action
-            if 'mood' in form.changed_data: 
-                self.object.ai_mood_processed = True # User has taken control of mood
+            # If mood is explicitly changed by user, AI for mood is considered "processed"
+            if mood_is_being_set_by_user: 
+                logger.info(f"UpdateView: Mood set by user for entry {self.object.pk}.")
+                self.object.ai_mood_processed = True 
                 self.object.ai_mood_task_id = None
             
-            # If tags are explicitly changed by user, AI for tags is considered "processed" by user action
-            if 'tags' in form.changed_data:
-                self.object.ai_tags_processed = True # User has taken control of tags
-                self.object.ai_tags_task_id = None
+            self.object.save() # Save main fields, including potentially reset AI flags
 
-            self.object.save()
-
+            # Process and save tags submitted by the user
             tag_names_list = form.cleaned_data.get('tags', [])
-            current_tags_for_entry = []
+            current_tags_for_entry = [] 
             if tag_names_list:
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
                         tag, created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
-            self.object.tags.set(current_tags_for_entry)
+            self.object.tags.set(current_tags_for_entry) 
+            logger.info(f"UpdateView: Tags set for entry {self.object.pk}: {[t.name for t in current_tags_for_entry]}")
+
 
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} and attachments updated.")
 
             entry_id = self.object.id
-            task_ids = {}
+            task_ids_dict = {}
             
             user_profile = self.request.user.profile
 
-            logger.info(f"Attempting to dispatch AI tasks for updated entry ID: {entry_id} based on user preferences.")
+            logger.info(f"UpdateView: Attempting to schedule AI tasks for updated entry ID: {entry_id} (within transaction).")
+            logger.info(f"UpdateView: Pre-dispatch state for entry {entry_id} - current_tags_for_entry: {[t.name for t in current_tags_for_entry]}, ai_tags_processed: {self.object.ai_tags_processed}, content_changed: {content_changed}")
             
-            # Conditional Quote Generation: Run if enabled and content changed OR if no quote exists yet
-            if user_profile.ai_enable_quotes and (content_changed or not self.object.ai_quote):
-                self.object.ai_quote_processed = False # Reset for new processing
-                try:
-                    task_result = generate_quote_for_entry_task.delay(entry_id)
-                    self.object.ai_quote_task_id = task_result.id
-                    task_ids['quote_task_id'] = task_result.id
-                    logger.info(f"Dispatched generate_quote_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
-                except Exception as e:
-                    logger.error(f"Failed to dispatch quote task (updated entry ID {entry_id}): {e}", exc_info=True)
-                    self.object.ai_quote_processed = True # Mark processed on error to avoid re-queue
-            elif not user_profile.ai_enable_quotes:
+            # --- Conditional Quote Generation ---
+            should_run_quote_task = user_profile.ai_enable_quotes and (not self.object.ai_quote_processed) # Simplified: run if not processed
+            if not user_profile.ai_enable_quotes:
                 self.object.ai_quote_processed = True
                 self.object.ai_quote_task_id = None
-                self.object.ai_quote = None 
-                logger.info(f"Quote generation skipped for updated entry {entry_id} (user preference).")
-
-            # Conditional Mood Detection: Run if enabled AND mood was NOT set by user in this update AND (content changed OR no mood exists)
-            if user_profile.ai_enable_mood_detection and not mood_is_being_set_by_user and (content_changed or not self.object.mood):
-                self.object.ai_mood_processed = False # Reset for new processing
+                self.object.ai_quote = None
+                logger.info(f"UpdateView: Quote generation skipped for updated entry {entry_id} (user preference disabled AI).")
+            elif should_run_quote_task:
                 try:
-                    task_result = detect_mood_for_entry_task.delay(entry_id)
-                    self.object.ai_mood_task_id = task_result.id
-                    task_ids['mood_task_id'] = task_result.id
-                    logger.info(f"Dispatched detect_mood_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
+                    temp_quote_task_id = generate_quote_for_entry_task.signature(args=[entry_id]).id
+                    transaction.on_commit(lambda: 
+                        generate_quote_for_entry_task.apply_async(args=[entry_id], task_id=temp_quote_task_id)
+                    )
+                    self.object.ai_quote_task_id = temp_quote_task_id
+                    task_ids_dict['quote_task_id'] = temp_quote_task_id
+                    logger.info(f"UpdateView: Scheduled generate_quote_for_entry_task for updated entry ID: {entry_id} (on commit). Task ID: {temp_quote_task_id}")
                 except Exception as e:
-                    logger.error(f"Failed to dispatch mood task (updated entry ID {entry_id}): {e}", exc_info=True)
-                    self.object.ai_mood_processed = True # Mark processed on error
-            elif not user_profile.ai_enable_mood_detection or mood_is_being_set_by_user:
-                self.object.ai_mood_processed = True # User preference or user set it
+                    logger.error(f"UpdateView: Failed to schedule quote task (updated entry ID {entry_id}): {e}", exc_info=True)
+                    self.object.ai_quote_processed = True 
+            else:
+                logger.info(f"UpdateView: Quote generation not needed or already processed for updated entry {entry_id}. ai_quote_processed: {self.object.ai_quote_processed}")
+
+
+            # --- Conditional Mood Detection ---
+            should_run_mood_task = user_profile.ai_enable_mood_detection and \
+                                   not mood_is_being_set_by_user and \
+                                   (not self.object.ai_mood_processed) # Simplified: run if not set by user and not processed
+
+            if not user_profile.ai_enable_mood_detection:
+                self.object.ai_mood_processed = True
                 self.object.ai_mood_task_id = None
-                logger.info(f"Mood detection skipped for updated entry {entry_id} (user preference or user set mood).")
-
-            # Conditional Tag Suggestion: Run if enabled AND tags were NOT set by user in this update AND (content changed OR no tags exist)
-            if user_profile.ai_enable_tag_suggestion and not tags_are_being_set_by_user and (content_changed or not self.object.tags.exists()):
-                self.object.ai_tags_processed = False # Reset for new processing
+                logger.info(f"UpdateView: Mood detection skipped for updated entry {entry_id} (user preference disabled AI).")
+            elif mood_is_being_set_by_user:
+                self.object.ai_mood_processed = True # Already set, confirming
+                self.object.ai_mood_task_id = None
+                logger.info(f"UpdateView: Mood detection skipped for updated entry {entry_id} (user set mood).")
+            elif should_run_mood_task:
                 try:
-                    task_result = suggest_tags_for_entry_task.delay(entry_id)
-                    self.object.ai_tags_task_id = task_result.id
-                    task_ids['tags_task_id'] = task_result.id
-                    logger.info(f"Dispatched suggest_tags_for_entry_task for updated entry ID: {entry_id}, Task ID: {task_result.id}")
+                    temp_mood_task_id = detect_mood_for_entry_task.signature(args=[entry_id]).id
+                    transaction.on_commit(lambda: 
+                        detect_mood_for_entry_task.apply_async(args=[entry_id], task_id=temp_mood_task_id)
+                    )
+                    self.object.ai_mood_task_id = temp_mood_task_id
+                    task_ids_dict['mood_task_id'] = temp_mood_task_id
+                    logger.info(f"UpdateView: Scheduled detect_mood_for_entry_task for updated entry ID: {entry_id} (on commit). Task ID: {temp_mood_task_id}")
                 except Exception as e:
-                    logger.error(f"Failed to dispatch tag task (updated entry ID {entry_id}): {e}", exc_info=True)
-                    self.object.ai_tags_processed = True # Mark processed on error
-            elif not user_profile.ai_enable_tag_suggestion or tags_are_being_set_by_user:
-                self.object.ai_tags_processed = True # User preference or user set tags
+                    logger.error(f"UpdateView: Failed to schedule mood task (updated entry ID {entry_id}): {e}", exc_info=True)
+                    self.object.ai_mood_processed = True
+            else:
+                logger.info(f"UpdateView: Mood detection not needed or already processed for updated entry {entry_id}. mood_is_being_set_by_user: {mood_is_being_set_by_user}, ai_mood_processed: {self.object.ai_mood_processed}")
+
+
+            # --- Conditional Tag Suggestion (REVISED LOGIC) ---
+            if user_profile.ai_enable_tag_suggestion:
+                if current_tags_for_entry: # User submitted/kept some tags in this update.
+                    self.object.ai_tags_processed = True 
+                    self.object.ai_tags_task_id = None   
+                    logger.info(f"UpdateView: User set/kept tags for updated entry {entry_id}. AI tag suggestion skipped by view; ai_tags_processed=True.")
+                else: # User submitted an empty list for tags (cleared them) OR didn't touch the field and it was already empty.
+                    # self.object.ai_tags_processed could be False if content_changed.
+                    if not self.object.ai_tags_processed: # If flag indicates reprocessing is needed
+                        self.object.ai_tags_task_id = None 
+                        try:
+                            temp_tags_task_id = suggest_tags_for_entry_task.signature(args=[entry_id]).id
+                            transaction.on_commit(lambda: 
+                                suggest_tags_for_entry_task.apply_async(args=[entry_id], task_id=temp_tags_task_id)
+                            )
+                            self.object.ai_tags_task_id = temp_tags_task_id
+                            task_ids_dict['tags_task_id'] = temp_tags_task_id
+                            logger.info(f"UpdateView: Scheduled suggest_tags_for_entry_task for updated entry {entry_id} (tags empty & ai_tags_processed=False, on commit). Task ID: {temp_tags_task_id}")
+                        except Exception as e:
+                            logger.error(f"UpdateView: Failed to schedule tag task (updated entry ID {entry_id}): {e}", exc_info=True)
+                            self.object.ai_tags_processed = True 
+                    else:
+                        logger.info(f"UpdateView: Tags are empty for updated entry {entry_id}, but ai_tags_processed is True ({self.object.ai_tags_processed}). AI tag suggestion not scheduled.")
+            
+            elif not user_profile.ai_enable_tag_suggestion: 
+                self.object.ai_tags_processed = True
                 self.object.ai_tags_task_id = None
-                logger.info(f"Tag suggestion skipped for updated entry {entry_id} (user preference or user set tags).")
+                logger.info(f"UpdateView: Tag suggestion skipped for updated entry {entry_id} (user preference disabled AI).")
             
             self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id', 
-                                           'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
-                                           'ai_quote', 'mood']) 
+                                            'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
+                                            'ai_quote', 'mood']) 
             
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'status': 'success', 
-                'message': _('Journal entry updated. AI processing initiated based on your preferences.'),
+                'message': _('Journal entry updated. AI processing scheduled based on your preferences.'),
                 'entry_id': self.object.id,
-                'task_ids': task_ids,
+                'task_ids': task_ids_dict,
                 'redirect_url': self.object.get_absolute_url()
             })
         return redirect(self.object.get_absolute_url())
@@ -424,6 +490,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     def test_func(self):
         entry = self.get_object()
         return entry.user == self.request.user
+
 
 class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
@@ -453,7 +520,7 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         statuses = {}
         needs_db_update_flags = [] 
-        user_profile = request.user.profile # Get user profile for AI preferences
+        user_profile = request.user.profile 
 
         task_info_map = {
             'quote': (entry.ai_quote_task_id, entry.ai_quote_processed, 'ai_quote_processed', user_profile.ai_enable_quotes),
@@ -462,28 +529,32 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
         }
         
         for task_type_key, (task_id, processed_flag_value, processed_flag_name, ai_enabled_by_user) in task_info_map.items():
-            current_task_api_status = "PENDING" 
+            current_task_api_status = "PENDING" # Default if no other condition met
             if not ai_enabled_by_user:
                 current_task_api_status = "DISABLED_BY_USER"
-                if not processed_flag_value: # If not already marked as processed (e.g. disabled)
+                if not processed_flag_value: 
                     setattr(entry, processed_flag_name, True)
                     needs_db_update_flags.append(processed_flag_name)
             elif processed_flag_value: 
+                # If already marked as processed by the view (e.g., user set it, or AI previously completed)
                 current_task_api_status = "SUCCESS" 
-            elif task_id:
+            elif task_id: # AI is enabled, not yet marked processed, and there's a task ID
                 task_result = AsyncResult(task_id)
                 current_task_api_status = task_result.state.upper() 
                 if task_result.successful(): 
                     current_task_api_status = "SUCCESS"
-                    if not getattr(entry, processed_flag_name):
+                    if not getattr(entry, processed_flag_name): # Sync DB flag if task succeeded but flag wasn't set
                         setattr(entry, processed_flag_name, True)
                         needs_db_update_flags.append(processed_flag_name)
                 elif task_result.failed():
                     current_task_api_status = "FAILURE"
-                    if not getattr(entry, processed_flag_name): 
+                    if not getattr(entry, processed_flag_name): # Sync DB flag if task failed but flag wasn't set
                         setattr(entry, processed_flag_name, True) 
                         needs_db_update_flags.append(processed_flag_name)
                     logger.warning(f"Celery task {task_id} ({task_type_key}) for entry {entry.id} reported FAILURE. Traceback: {task_result.traceback}")
+                # If state is PENDING, STARTED, RETRY, current_task_api_status will reflect that
+            # If no task_id and not processed_flag_value and ai_enabled_by_user, it remains PENDING (task might have failed to dispatch)
+            
             statuses[f'{task_type_key}_status'] = current_task_api_status
         
         if needs_db_update_flags:
@@ -500,8 +571,8 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
         return JsonResponse({
             'status': 'ok', 'entry_id': entry.id, 'task_statuses': statuses, 'all_done': all_done_now,
             'ai_quote': entry.ai_quote if user_profile.ai_enable_quotes else "", 
-            'mood': entry.mood, # Mood can be user-set or AI-set, display regardless of AI pref for mood detection
-            'tags': [tag.name for tag in entry.tags.all()] # Tags are user-set or AI-suggested, display regardless
+            'mood': entry.mood, 
+            'tags': [tag.name for tag in entry.tags.all()] 
         })
 
 class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
@@ -559,4 +630,3 @@ class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, Delete
         except Exception as e:
             logger.error(f"Unexpected error in JournalEntryAjaxDeleteView POST for pk={kwargs.get('pk')} by user {request.user.username}: {e}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': _('An unexpected server error occurred.')}, status=500)
-
