@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "AI Insights Dashboard" %} - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+    {# <link rel="stylesheet" href="{% static 'css/dashboard_styles.css' %}"> #}
+    {# Consider creating a dedicated CSS file for insights if styles grow #}
+    <style>
+        .chart-container {
+            position: relative;
+            margin: 1rem auto; /* Added some margin */
+            height: 65vh; /* Increased height slightly */
+            width: 100%; 
+            max-width: 900px; /* Increased max-width */
+            background-color: var(--card-light, #ffffff); /* Use CSS variables from base */
+            padding: 1.5rem; /* Tailwind: p-6 */
+            border-radius: 0.75rem; /* Tailwind: rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Tailwind: shadow-lg */
+        }
+        .dark .chart-container {
+            background-color: var(--card-dark, #1f2937);
+        }
+        .time-filter-buttons button {
+            transition: all 0.2s ease-in-out;
+        }
+        .time-filter-buttons button.active {
+            /* Tailwind equivalent: bg-primary-dark text-white or similar */
+            background-color: var(--primary-light); /* Use your primary color */
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .dark .time-filter-buttons button.active {
+            background-color: var(--primary-dark);
+        }
+        /* Loading spinner style */
+        .chart-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10; /* Ensure it's above the canvas if canvas is not hidden */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<section class="py-12 md:py-16 bg-background-light dark:bg-background-dark min-h-full">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="text-center mb-10 md:mb-12">
+            <h1 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-3 tracking-tight">
+                <i class="fas fa-brain text-primary-light dark:text-primary-dark mr-3"></i>{% trans "AI Insights Dashboard" %}
+            </h1>
+            <p class="text-md text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                {% trans "Explore sentiment trends from your journal entries." %}
+            </p>
+        </header>
+
+        {# Time Period Filter Buttons #}
+        <div class="mb-8 flex flex-wrap justify-center gap-2 sm:gap-3 time-filter-buttons">
+            {% for option in time_period_options %}
+            <button 
+                type="button" 
+                class="px-4 py-2 text-sm font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 
+                       {% if option.value == selected_period %} 
+                           bg-primary-light text-white hover:bg-primary-dark dark:bg-primary-dark dark:hover:bg-primary-light dark:focus:ring-primary-light
+                       {% else %} 
+                           bg-card-light text-text-light hover:bg-gray-100 dark:bg-card-dark dark:text-text-dark dark:hover:bg-gray-700 border border-border-light dark:border-border-dark focus:ring-primary-light
+                       {% endif %}"
+                data-period="{{ option.value }}">
+                {{ option.label }}
+            </button>
+            {% endfor %}
+        </div>
+
+        {# Sentiment Trend Chart Section #}
+        <div class="dashboard-card mt-2 fade-in-element">
+            <h2 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-6 text-center">
+                <span id="chart-title-period">{% trans "Sentiment Over Last 30 Days" %}</span> {# Title will be updated by JS #}
+            </h2>
+            
+            <div class="chart-container">
+                {# Loading Spinner #}
+                <div id="chartLoader" class="chart-loader hidden">
+                    <i class="fas fa-spinner fa-spin text-3xl text-primary-light dark:text-primary-dark"></i>
+                </div>
+                <canvas id="sentimentTrendChart"></canvas>
+                <div id="noChartDataMessage" class="text-center py-10 px-6 text-gray-600 dark:text-gray-300 hidden">
+                    <i class="fas fa-info-circle text-4xl text-gray-400 dark:text-gray-500 mb-4"></i>
+                    <p>{% trans "Not enough data available for the selected period to display sentiment trends." %}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{% trans "Try selecting a different time period or write more journal entries." %}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Placeholder for other insight cards - to be added later #}
+        <div class="mt-12 md:mt-16">
+            <h3 class="text-2xl sm:text-3xl font-semibold text-text-light dark:text-text-dark mb-6 md:mb-8 text-center sm:text-left">
+                {% trans "Other Insights" %}
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.3s;">
+                    <div class="flex items-start text-green-500 dark:text-green-400 mb-4">
+                        <i class="fas fa-lightbulb fa-2x mr-4 card-icon pt-1"></i>
+                        <div>
+                            <h4 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Key Themes" %}</h4>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Coming Soon" %}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                        {% trans "Discover recurring themes and topics in your writings." %}
+                    </p>
+                    <span class="card-action-disabled mt-auto" aria-disabled="true">
+                        {% trans "Explore Themes" %} <i class="fas fa-cogs ml-2 text-sm"></i>
+                    </span>
+                </div>
+                 <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.4s;">
+                    <div class="flex items-start text-purple-500 dark:text-purple-400 mb-4">
+                        <i class="fas fa-pen-fancy fa-2x mr-4 card-icon pt-1"></i>
+                        <div>
+                            <h4 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Life Story Snippets" %}</h4>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Coming Soon" %}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                        {% trans "View AI-generated narratives based on your journal entries." %}
+                    </p>
+                    <span class="card-action-disabled mt-auto" aria-disabled="true">
+                        {% trans "Read My Story" %} <i class="fas fa-cogs ml-2 text-sm"></i>
+                    </span>
+                </div>
+                 <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.5s;">
+                    <div class="flex items-start text-blue-500 dark:text-blue-400 mb-4">
+                        <i class="fas fa-question-circle fa-2x mr-4 card-icon pt-1"></i>
+                        <div>
+                            <h4 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "Q&A on Your Journal" %}</h4>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Future Feature" %}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
+                        {% trans "Ask questions about your past entries and get AI-powered answers." %}
+                    </p>
+                    <span class="card-action-disabled mt-auto" aria-disabled="true">
+                        {% trans "Ask AI" %} <i class="fas fa-cogs ml-2 text-sm"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const chartCanvas = document.getElementById('sentimentTrendChart');
+            const chartLoader = document.getElementById('chartLoader');
+            const noDataMessageElement = document.getElementById('noChartDataMessage');
+            const chartTitlePeriodElement = document.getElementById('chart-title-period');
+
+            let sentimentChart = null; // To hold the chart instance
+
+            // Mood visuals data from Django context (for emojis and colors)
+            const moodVisuals = JSON.parse('{{ mood_visuals_json|escapejs|default:"{}" }}');
+            const moodDisplayNames = { // From JournalEntry.MOOD_CHOICES, for display
+                {% for mood_val, mood_name in MOOD_CHOICES_FORM_DISPLAY %}
+                    {% if mood_val %}"{{ mood_val }}": "{% trans mood_name %}",{% endif %}
+                {% endfor %}
+            };
+
+
+            const timeFilterButtons = document.querySelectorAll('.time-filter-buttons button');
+            
+            // Function to fetch chart data and update the chart
+            async function updateChart(timePeriodValue, buttonElement = null) {
+                if (chartLoader) chartLoader.classList.remove('hidden');
+                if (chartCanvas) chartCanvas.style.display = 'none'; // Hide canvas while loading
+                if (noDataMessageElement) noDataMessageElement.classList.add('hidden');
+
+                // Update active button state
+                timeFilterButtons.forEach(btn => {
+                    btn.classList.remove('active', 'bg-primary-light', 'text-white', 'dark:bg-primary-dark');
+                    btn.classList.add('bg-card-light', 'text-text-light', 'dark:bg-card-dark', 'dark:text-text-dark', 'border', 'border-border-light', 'dark:border-border-dark');
+                });
+                if (buttonElement) {
+                    buttonElement.classList.add('active', 'bg-primary-light', 'text-white', 'dark:bg-primary-dark');
+                    buttonElement.classList.remove('bg-card-light', 'text-text-light', 'dark:bg-card-dark', 'dark:text-text-dark', 'border', 'border-border-light', 'dark:border-border-dark');
+                    if (chartTitlePeriodElement) {
+                         // Get button text for title, remove "Last " if present for brevity
+                        let buttonText = buttonElement.textContent.trim();
+                        if (buttonText.startsWith("{% trans 'Last '%}")) {
+                           buttonText = buttonText.substring("{% trans 'Last '%}".length);
+                        } else if (buttonText === "{% trans 'All Time'%}") {
+                            buttonText = "{% trans 'Overall'%}";
+                        }
+                        chartTitlePeriodElement.textContent = `{% trans "Sentiment Over" %} ${buttonText}`;
+                    }
+                } else if (chartTitlePeriodElement) { // For initial load
+                    const initialButton = document.querySelector(`.time-filter-buttons button[data-period="${timePeriodValue}"]`);
+                     if(initialButton) {
+                        let buttonText = initialButton.textContent.trim();
+                         if (buttonText.startsWith("{% trans 'Last '%}")) {
+                           buttonText = buttonText.substring("{% trans 'Last '%}".length);
+                        } else if (buttonText === "{% trans 'All Time'%}") {
+                            buttonText = "{% trans 'Overall'%}";
+                        }
+                        chartTitlePeriodElement.textContent = `{% trans "Sentiment Over" %} ${buttonText}`;
+                     }
+                }
+
+
+                try {
+                    const response = await fetch(`{% url 'journal:sentiment_chart_data_ajax' %}?time_period=${timePeriodValue}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const chartAPIData = await response.json();
+
+                    if (chartLoader) chartLoader.classList.add('hidden');
+
+                    if (chartAPIData && chartAPIData.has_data) {
+                        if (chartCanvas) chartCanvas.style.display = 'block';
+                        if (noDataMessageElement) noDataMessageElement.classList.add('hidden');
+                        
+                        // Modify labels to include emojis directly if not already done in backend
+                        // The backend _get_sentiment_data_for_period should already include emojis.
+                        // chartAPIData.labels = chartAPIData.labels.map(label => {
+                        //    const moodKey = Object.keys(moodDisplayNames).find(key => moodDisplayNames[key] === label.split(' ')[1]);
+                        //    const emoji = moodKey && moodVisuals[moodKey] ? moodVisuals[moodKey].emoji : '';
+                        //    return `${emoji} ${label}`.trim();
+                        // });
+
+
+                        if (sentimentChart) {
+                            sentimentChart.data = chartAPIData;
+                            sentimentChart.update();
+                        } else if (chartCanvas) {
+                            sentimentChart = new Chart(chartCanvas, {
+                                type: 'bar',
+                                data: chartAPIData,
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    indexAxis: 'y', // Makes it a horizontal bar chart, good for mood labels with emojis
+                                    scales: {
+                                        y: { // Now the category axis
+                                            beginAtZero: true,
+                                            ticks: {
+                                                color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#4b5563',
+                                                font: { size: 13, family: 'Inter, sans-serif' }
+                                            },
+                                            grid: {
+                                                borderColor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+                                                color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                                            }
+                                        },
+                                        x: { // Now the value axis
+                                            beginAtZero: true,
+                                            title: {
+                                                display: true,
+                                                text: '{% trans "Number of Entries" %}',
+                                                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+                                                font: { size: 14, family: 'Inter, sans-serif', weight: '500' }
+                                            },
+                                            ticks: {
+                                                color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#4b5563',
+                                                font: { size: 12, family: 'Inter, sans-serif' },
+                                                stepSize: 1 // Ensure integer steps if counts are low
+                                            },
+                                            grid: {
+                                                borderColor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
+                                                 color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                                            }
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            display: false, // Data is clear enough from labels
+                                        },
+                                        tooltip: {
+                                            backgroundColor: document.documentElement.classList.contains('dark') ? '#374151' : '#fff',
+                                            titleColor: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937',
+                                            bodyColor: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#4b5563',
+                                            borderColor: document.documentElement.classList.contains('dark') ? '#4b5563' : '#e5e7eb',
+                                            borderWidth: 1,
+                                            padding: 10,
+                                            cornerRadius: 6,
+                                            boxPadding: 3,
+                                            callbacks: {
+                                                label: function(context) {
+                                                    let label = chartAPIData.datasets[context.datasetIndex].label || '';
+                                                    if (label) {
+                                                        label += ': ';
+                                                    }
+                                                    if (context.parsed.x !== null) { // x for horizontal bar chart
+                                                        label += context.parsed.x;
+                                                    }
+                                                    return label;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    // Custom hover effects for bars
+                                    onHover: (event, chartElement) => {
+                                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
+                                    },
+                                }
+                            });
+                        }
+                        console.log("Chart updated/initialized for period:", timePeriodValue);
+                    } else {
+                        if (sentimentChart) { // Clear previous chart if no new data
+                            sentimentChart.destroy();
+                            sentimentChart = null;
+                        }
+                        if (chartCanvas) chartCanvas.style.display = 'none';
+                        if (noDataMessageElement) noDataMessageElement.classList.remove('hidden');
+                        console.log("No data to display for period:", timePeriodValue);
+                    }
+                } catch (error) {
+                    console.error("Error fetching or updating chart:", error);
+                    if (chartLoader) chartLoader.classList.add('hidden');
+                    if (chartCanvas) chartCanvas.style.display = 'none';
+                    if (noDataMessageElement) {
+                        noDataMessageElement.innerHTML = '<p class="text-center text-red-500">{% trans "Error loading chart data. Please try refreshing or select another period." %}</p>';
+                        noDataMessageElement.classList.remove('hidden');
+                    }
+                }
+            }
+
+            // Attach event listeners to filter buttons
+            timeFilterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const period = this.dataset.period;
+                    // Update URL without full reload for bookmarking/sharing (optional)
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('time_period', period);
+                    window.history.pushState({}, '', currentUrl);
+                    
+                    updateChart(period, this);
+                });
+            });
+
+            // Initial chart load based on 'selected_period' from Django context
+            const initialPeriod = '{{ selected_period|escapejs }}' || 'last_30_days';
+            const initialActiveButton = document.querySelector(`.time-filter-buttons button[data-period="${initialPeriod}"]`);
+            updateChart(initialPeriod, initialActiveButton);
+
+            // Re-draw chart on theme change to update colors
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('themeChanged', () => { // Assuming 'themeChanged' is a custom event from theme.js
+                    if (sentimentChart) {
+                        // Update colors based on current theme (dark/light)
+                        sentimentChart.options.scales.x.ticks.color = document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#4b5563';
+                        sentimentChart.options.scales.x.title.color = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280';
+                        sentimentChart.options.scales.x.grid.borderColor = document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb';
+                        sentimentChart.options.scales.x.grid.color = document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
+                        sentimentChart.options.scales.y.ticks.color = document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#4b5563';
+                        sentimentChart.options.scales.y.grid.borderColor = document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb';
+                        sentimentChart.options.scales.y.grid.color = document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                        
+                        sentimentChart.options.plugins.tooltip.backgroundColor = document.documentElement.classList.contains('dark') ? '#374151' : '#fff';
+                        sentimentChart.options.plugins.tooltip.titleColor = document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937';
+                        sentimentChart.options.plugins.tooltip.bodyColor = document.documentElement.classList.contains('dark') ? '#d1d5db' : '#4b5563';
+                        sentimentChart.options.plugins.tooltip.borderColor = document.documentElement.classList.contains('dark') ? '#4b5563' : '#e5e7eb';
+                        
+                        sentimentChart.update('none'); // 'none' for no animation, for a smoother visual update
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}
+

@@ -85,7 +85,7 @@
                 </div>
             </div>
 
-            {# AI Insights Card #}
+            {# AI Insights Card - UPDATED #}
             <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.4s;">
                 <div class="flex items-start text-secondary-light dark:text-secondary-dark mb-4">
                     <i class="fas fa-brain fa-2x mr-4 card-icon pt-1"></i>
@@ -95,11 +95,13 @@
                     </div>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
-                    {% trans "Uncover patterns in your emotions and experiences with upcoming AI-powered analysis." %}
+                    {% trans "Uncover patterns in your emotions and experiences with AI-powered analysis." %}
                 </p>
-                <span class="card-action-disabled mt-auto" aria-disabled="true" title="{% trans 'Coming Soon' %}">
-                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-sm"></i>
-                </span>
+                {# ***** MODIFICATION HERE ***** #}
+                <a href="{% url 'journal:ai_insights_dashboard' %}" class="card-action mt-auto">
+                    {% trans "View Insights" %} <i class="fas fa-chart-line icon-btn ml-2 text-sm"></i>
+                </a>
+                {# End of modification #}
             </div>
 
             {# Profile & Settings Card #}

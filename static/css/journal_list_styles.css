@@ -419,7 +419,7 @@
 header {
   border-bottom: 1px solid #bfdbfe;
   padding-bottom: 1.5rem; /* Increased padding to give more space */
-  padding-top: 1rem $\pi$padding-top: 1rem; /* Added padding-top to ensure text is not cut off from the top */
+  padding-top: 1rem; /* Corrected line: Removed the erroneous part */
   position: relative;
   margin-bottom: 2rem;
 }
@@ -454,7 +454,7 @@ h1 {
   padding: 2rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05),
     0 5px 10px rgba(139, 92, 246, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.02);
-  transition: transform 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
+  transition: transform 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease; /* Note: 'transform' is listed twice, which is redundant but not an error */
   transform: perspective(1000px) translateZ(0);
 }
 .dark .filter-form {

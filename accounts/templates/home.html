@@ -12,8 +12,8 @@
 {% block content %}
 {# Hero Section #}
 <section class="hero-section-bg-overlay relative min-h-[95vh] md:min-h-screen flex flex-col items-center justify-center text-center text-white overflow-hidden">
-    {# Background image for the hero section with Ken Burns effect #}
-    <img src="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=70&fm=webp"
+    {# Background image for the hero section - Using local static image #}
+    <img src="{% static 'images/home/hero_main.avif' %}" {# MODIFIED: Using local static image #}
          class="hero-bg-image-creative absolute inset-0 w-full h-full object-cover" 
          alt="{% trans 'Person thoughtfully looking out a window with a notebook, symbolizing journaling and reflection.' %}" 
          loading="eager" />
@@ -62,64 +62,67 @@
         </div>
         <div class="space-y-28 md:space-y-36">
             <!-- Feature 1: Articulate Your Moments -->
-<div class="group feature-block-creative flex flex-col md:flex-row items-center gap-12 md:gap-20 animate-on-scroll animate-slide-right">
-    <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
-        <img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=75&fm=webp"
-             alt="Creative journaling setup with a laptop, notebook, and coffee" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
-    </div>
-    <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-left">
-        <span class="feature-pill-custom craft-curate inline-block py-1.5 px-3 mb-4">
-            <i class="fas fa-palette pill-icon text-lg mr-2.5"></i>
-            <span class="pill-text text-sm font-semibold uppercase tracking-wider">Craft & Curate</span>
-        </span>
-        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
-            Articulate Your Moments
-        </h3>
-        <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
-            Seamlessly record your daily experiences, profound thoughts, and significant milestones. LifeLedger offers an elegant and intuitive space to write, reflect, and relive with unparalleled clarity and beauty.
-        </p>
-    </div>
-</div>
+            <div class="group feature-block-creative flex flex-col md:flex-row items-center gap-12 md:gap-20 animate-on-scroll animate-slide-right">
+                <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
+                    <img src="{% static 'images/home/feature_articulate_moments.avif' %}" {# MODIFIED: Using local static image #}
+                         alt="Creative journaling setup with a laptop, notebook, and coffee" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
+                </div>
+                <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-left">
+                    <span class="feature-pill-custom craft-curate inline-block py-1.5 px-3 mb-4">
+                        <i class="fas fa-palette pill-icon text-lg mr-2.5"></i>
+                        <span class="pill-text text-sm font-semibold uppercase tracking-wider">Craft & Curate</span>
+                    </span>
+                    <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
+                        Articulate Your Moments
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
+                        Seamlessly record your daily experiences, profound thoughts, and significant milestones. LifeLedger offers an elegant and intuitive space to write, reflect, and relive with unparalleled clarity and beauty.
+                    </p>
+                </div>
+            </div>
 
-<!-- Feature 2: Insights Through AI -->
-<div class="group feature-block-creative flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20 animate-on-scroll animate-slide-left">
-    <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
-        <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=75&fm=webp"
-             alt="Team analyzing charts and data on a screen, symbolizing reflection and AI insights" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
-    </div>
-    <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-right">
-        <span class="feature-pill-custom intelligent-discovery inline-block py-1.5 px-3 mb-4">
-            <i class="fas fa-brain pill-icon text-lg mr-2.5"></i>
-            <span class="pill-text text-sm font-semibold uppercase tracking-wider">Intelligent Discovery</span>
-        </span>
-        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
-            Insights Through AI
-        </h3>
-        <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
-            Journey deeper into your narratives. Our forthcoming AI capabilities will illuminate emotional patterns and experiential themes, fostering profound personal growth and self-understanding.
-        </p>
-    </div>
-</div>
+            <!-- Feature 2: Insights Through AI -->
+            <div class="group feature-block-creative flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20 animate-on-scroll animate-slide-left">
+                <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
+                    <img src="{% static 'images/home/feature_ai_insights.avif' %}" {# MODIFIED: Using local static image #}
+                         alt="Team analyzing charts and data on a screen, symbolizing reflection and AI insights" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
+                </div>
+                <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-right">
+                    <span class="feature-pill-custom intelligent-discovery inline-block py-1.5 px-3 mb-4">
+                        <i class="fas fa-brain pill-icon text-lg mr-2.5"></i>
+                        <span class="pill-text text-sm font-semibold uppercase tracking-wider">Intelligent Discovery</span>
+                    </span>
+                    <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
+                        Insights Through AI
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
+                        Journey deeper into your narratives. Our forthcoming AI capabilities will illuminate emotional patterns and experiential themes, fostering profound personal growth and self-understanding.
+                    </p>
+                </div>
+            </div>
 
-<!-- Feature 3: Share Securely -->
-<div class="group feature-block-creative flex flex-col md:flex-row items-center gap-12 md:gap-20 animate-on-scroll animate-slide-right">
-    <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
-        <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=75&fm=webp"
-             alt="People collaborating and sharing ideas happily, symbolizing secure sharing" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
+            <!-- Feature 3: Share Securely -->
+            <div class="group feature-block-creative flex flex-col md:flex-row items-center gap-12 md:gap-20 animate-on-scroll animate-slide-right">
+                <div class="w-full md:w-1/2 lg:w-[48%] feature-image-wrapper-creative">
+                    <img src="{% static 'images/home/feature_share_securely.avif' %}" {# MODIFIED: Using local static image #}
+                         alt="People collaborating and sharing ideas happily, symbolizing secure sharing" loading="lazy" class="w-full h-full object-cover rounded-lg shadow-xl"/>
+                </div>
+                <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-left">
+                    <span class="feature-pill-custom connect-safeguard inline-block py-1.5 px-3 mb-4">
+                        <i class="fas fa-share-alt pill-icon text-lg mr-2.5"></i>
+                        <span class="pill-text text-sm font-semibold uppercase tracking-wider">Connect & Safeguard</span>
+                    </span>
+                    <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
+                        Share Securely, Preserve Forever
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
+                        Selectively share cherished memories or entire journals with loved ones, with utmost privacy and security. Build and protect your legacy for generations to come (sharing features coming soon).
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="w-full md:w-1/2 lg:w-[52%] text-center md:text-left">
-        <span class="feature-pill-custom connect-safeguard inline-block py-1.5 px-3 mb-4">
-            <i class="fas fa-share-alt pill-icon text-lg mr-2.5"></i>
-            <span class="pill-text text-sm font-semibold uppercase tracking-wider">Connect & Safeguard</span>
-        </span>
-        <h3 class="text-3xl sm:text-4xl font-semibold mb-6 text-text-light dark:text-text-dark tracking-tight">
-            Share Securely, Preserve Forever
-        </h3>
-        <p class="text-gray-600 dark:text-gray-400 text-base sm:text-lg leading-relaxed">
-            Selectively share cherished memories or entire journals with loved ones, with utmost privacy and security. Build and protect your legacy for generations to come (sharing features coming soon).
-        </p>
-    </div>
-</div>
+</section>
 
 <!-- Quick Stats Section -->
 <section class="quick-stats-section py-12 md:py-16 bg-background-light dark:bg-background-dark">
