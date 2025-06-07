@@ -1,7 +1,7 @@
 # journal/views.py 
 
 from django.shortcuts import render, get_object_or_404
-from django.urls import reverse_lazy 
+from django.urls import reverse_lazy
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, View, DeleteView, TemplateView
 )
@@ -24,7 +24,8 @@ import logging
 from ai_services.tasks import (
     generate_quote_for_entry_task,
     detect_mood_for_entry_task,
-    suggest_tags_for_entry_task
+    suggest_tags_for_entry_task,
+    generate_insights_for_period_task
 )
 from celery.result import AsyncResult 
 
@@ -48,11 +49,86 @@ MOOD_VISUALS = {
     'angry': {'emoji': "😠", 'text_color': "text-red-700 dark:text-red-400", 'bg_color': "bg-red-100 dark:bg-red-800", 'border_color': "border-red-500"},
     'calm': {'emoji': "😌", 'text_color': "text-sky-700 dark:text-sky-400", 'bg_color': "bg-sky-100 dark:bg-sky-800", 'border_color': "border-sky-500"},
     'neutral': {'emoji': "😐", 'text_color': "text-gray-700 dark:text-gray-400", 'bg_color': "bg-gray-100 dark:bg-gray-700", 'border_color': "border-gray-500"},
-    'excited': {'emoji': "🎉", 'text_color': "text-yellow-700 dark:text-yellow-400", 'bg_color': "bg-yellow-100 dark:bg-yellow-800", 'border_color': "border-yellow-500"}, # Corrected emoji
+    'excited': {'emoji': "🎉", 'text_color': "text-yellow-700 dark:text-yellow-400", 'bg_color': "bg-yellow-100 dark:bg-yellow-800", 'border_color': "border-yellow-500"},
 }
+
+# --- HELPER FUNCTION (MOVED TO MODULE LEVEL) ---
+def _get_sentiment_data_for_period(user, time_period_value):
+    """
+    Helper function to fetch and process sentiment data for a given user and time period.
+    This function is now a standalone utility to be easily reused by different views.
+    
+    Returns a dictionary suitable for JSON response for the chart.
+    """
+    end_date = timezone.now()
+    start_date = None
+    
+    valid_periods = ['last_7_days', 'last_30_days', 'last_90_days', 'last_365_days', 'all_time']
+    if time_period_value not in valid_periods:
+        time_period_value = 'last_30_days'
+
+    if time_period_value == 'last_7_days':
+        start_date = end_date - datetime.timedelta(days=6)
+    elif time_period_value == 'last_30_days':
+        start_date = end_date - datetime.timedelta(days=29)
+    elif time_period_value == 'last_90_days':
+        start_date = end_date - datetime.timedelta(days=89)
+    elif time_period_value == 'last_365_days':
+        start_date = end_date - datetime.timedelta(days=364)
+
+    entries_query = JournalEntry.objects.filter(user=user)
+    if start_date:
+        start_of_day = timezone.make_aware(datetime.datetime.combine(start_date.date(), datetime.time.min))
+        end_of_day = timezone.make_aware(datetime.datetime.combine(end_date.date(), datetime.time.max))
+        entries_for_period = entries_query.filter(created_at__gte=start_of_day, created_at__lte=end_of_day)
+    else: 
+        entries_for_period = entries_query.all()
+    
+    mood_counts = Counter(entry.mood for entry in entries_for_period.only('mood') if entry.mood)
+    
+    mood_display_names_dict = {key: str(name) for key, name in JournalEntry.MOOD_CHOICES}
+    
+    chart_labels, chart_data_values, chart_background_colors, chart_border_colors = [], [], [], []
+
+    for mood_value, visual_details in MOOD_VISUALS.items():
+        if mood_counts[mood_value] > 0:
+            emoji = visual_details.get('emoji', '')
+            display_name = mood_display_names_dict.get(mood_value, mood_value.capitalize())
+            chart_labels.append(f"{emoji} {display_name}".strip()) 
+            chart_data_values.append(mood_counts[mood_value])
+            
+            color_palette_js = {
+                'happy': {'bg': 'rgba(75, 192, 192, 0.6)', 'border': 'rgb(75, 192, 192)'},
+                'sad': {'bg': 'rgba(54, 162, 235, 0.6)', 'border': 'rgb(54, 162, 235)'},
+                'angry': {'bg': 'rgba(255, 99, 132, 0.6)', 'border': 'rgb(255, 99, 132)'},
+                'calm': {'bg': 'rgba(153, 102, 255, 0.6)', 'border': 'rgb(153, 102, 255)'},
+                'neutral': {'bg': 'rgba(201, 203, 207, 0.6)', 'border': 'rgb(201, 203, 207)'},
+                'excited': {'bg': 'rgba(255, 205, 86, 0.6)', 'border': 'rgb(255, 205, 86)'}
+            }
+            default_chart_js_color = {'bg': 'rgba(100, 100, 100, 0.6)', 'border': 'rgb(100, 100, 100)'}
+            chart_mood_colors = color_palette_js.get(mood_value, default_chart_js_color)
+            
+            chart_background_colors.append(chart_mood_colors['bg'])
+            chart_border_colors.append(chart_mood_colors['border'])
+
+    return {
+        'labels': chart_labels,
+        'datasets': [{
+            'label': str(_('Mood Occurrences')), 
+            'data': chart_data_values,
+            'backgroundColor': chart_background_colors,
+            'borderColor': chart_border_colors,
+            'borderWidth': 1,
+            'borderRadius': 5,
+            'hoverBorderWidth': 2,
+            'hoverBorderColor': '#333'
+        }],
+        'has_data': bool(chart_data_values)
+    }
 
 
 class JournalEntryListView(LoginRequiredMixin, ListView):
+    # ... (Your existing code for this view) ...
     model = JournalEntry
     template_name = 'journal/journal_list.html'
     context_object_name = 'entries'
@@ -114,6 +190,7 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
         return context
 
 class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    # ... (Your existing code for this view) ...
     model = JournalEntry
     template_name = 'journal/journal_detail.html'
     context_object_name = 'entry'
@@ -131,6 +208,7 @@ class JournalEntryDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         return context
 
 class JournalEntryCreateView(LoginRequiredMixin, CreateView):
+    # ... (Your existing code for this view) ...
     model = JournalEntry
     form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
@@ -275,6 +353,7 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
 
 
 class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    # ... (code is unchanged) ...
     model = JournalEntry
     form_class = JournalEntryForm
     template_name = 'journal/journal_form.html'
@@ -469,6 +548,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
 
 class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
+    # ... (Your existing AIServiceStatusView code remains unchanged) ...
     def test_func(self):
         try:
             entry_id = self.kwargs.get('entry_id') 
@@ -604,106 +684,11 @@ class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, Delete
             logger.error(f"Unexpected error in JournalEntryAjaxDeleteView POST for pk={kwargs.get('pk')} by user {request.user.username}: {e}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': _('An unexpected server error occurred.')}, status=500)
 
-# --- AI INSIGHTS DASHBOARD VIEW (Corrected and updated) ---
 class AIInsightsDashboardView(LoginRequiredMixin, TemplateView):
-    """
-    View to display the AI Insights Dashboard.
-    This view will handle fetching and preparing data for various AI-driven analyses
-    of the user's journal entries, starting with sentiment trend analysis.
-    """
     template_name = 'journal/ai_insights_dashboard.html'
-
-    def _get_sentiment_data_for_period(self, user, time_period_value):
-        """
-        Helper method to fetch and process sentiment data for a given user and time period.
-        Returns a dictionary suitable for JSON response for the chart.
-        """
-        end_date = timezone.now()
-        start_date = None
-        
-        # Define valid periods to check against
-        valid_periods = ['last_7_days', 'last_30_days', 'last_90_days', 'last_365_days', 'all_time']
-        if time_period_value not in valid_periods: # Default to last_30_days if invalid
-            time_period_value = 'last_30_days'
-
-        if time_period_value == 'last_7_days':
-            start_date = end_date - datetime.timedelta(days=6) # Inclusive of the start day
-        elif time_period_value == 'last_30_days':
-            start_date = end_date - datetime.timedelta(days=29)
-        elif time_period_value == 'last_90_days':
-            start_date = end_date - datetime.timedelta(days=89)
-        elif time_period_value == 'last_365_days':
-            start_date = end_date - datetime.timedelta(days=364)
-        # 'all_time' will leave start_date as None
-
-        entries_query = JournalEntry.objects.filter(user=user)
-        if start_date:
-            # Ensure correct timezone handling for date range queries
-            start_of_day_start_date = timezone.make_aware(datetime.datetime.combine(start_date.date(), datetime.time.min), timezone.get_default_timezone())
-            end_of_day_end_date = timezone.make_aware(datetime.datetime.combine(end_date.date(), datetime.time.max), timezone.get_default_timezone())
-            entries_for_period = entries_query.filter(
-                created_at__gte=start_of_day_start_date,
-                created_at__lte=end_of_day_end_date
-            )
-        else: # All time
-            entries_for_period = entries_query.all()
-        
-        mood_counts = Counter(entry.mood for entry in entries_for_period.only('mood') if entry.mood)
-        
-        # Get display names for moods, ensuring they are strings
-        mood_display_names_dict = {key: str(name) for key, name in JournalEntry.MOOD_CHOICES}
-        
-        chart_labels = []
-        chart_data_values = []
-        chart_background_colors = []
-        chart_border_colors = []
-
-        # Iterate through MOOD_VISUALS to ensure consistent order and access to emojis/colors
-        for mood_value, visual_details in MOOD_VISUALS.items():
-            if mood_counts[mood_value] > 0: # Only include moods that actually occurred
-                emoji = visual_details.get('emoji', '')
-                display_name = mood_display_names_dict.get(mood_value, mood_value.capitalize())
-                # Prepend emoji to the label for display in the chart
-                chart_labels.append(f"{emoji} {display_name}".strip()) 
-                chart_data_values.append(mood_counts[mood_value])
-                
-                # Define a consistent color palette for Chart.js
-                color_palette_js = {
-                    'happy': {'bg': 'rgba(75, 192, 192, 0.6)', 'border': 'rgb(75, 192, 192)'},
-                    'sad': {'bg': 'rgba(54, 162, 235, 0.6)', 'border': 'rgb(54, 162, 235)'},
-                    'angry': {'bg': 'rgba(255, 99, 132, 0.6)', 'border': 'rgb(255, 99, 132)'},
-                    'calm': {'bg': 'rgba(153, 102, 255, 0.6)', 'border': 'rgb(153, 102, 255)'},
-                    'neutral': {'bg': 'rgba(201, 203, 207, 0.6)', 'border': 'rgb(201, 203, 207)'},
-                    'excited': {'bg': 'rgba(255, 205, 86, 0.6)', 'border': 'rgb(255, 205, 86)'}
-                }
-                default_chart_js_color = {'bg': 'rgba(100, 100, 100, 0.6)', 'border': 'rgb(100, 100, 100)'}
-                chart_mood_colors = color_palette_js.get(mood_value, default_chart_js_color)
-                
-                chart_background_colors.append(chart_mood_colors['bg'])
-                chart_border_colors.append(chart_mood_colors['border'])
-
-        return {
-            'labels': chart_labels,
-            'datasets': [{
-                'label': str(_('Mood Occurrences')), 
-                'data': chart_data_values,
-                'backgroundColor': chart_background_colors,
-                'borderColor': chart_border_colors,
-                'borderWidth': 1,
-                'borderRadius': 5, # Added for a slightly more modern look
-                'hoverBorderWidth': 2,
-                'hoverBorderColor': '#333'
-            }],
-            'has_data': bool(chart_data_values)
-        }
-
     def get_context_data(self, **kwargs):
-        """
-        Prepares the context data for the AI Insights Dashboard for initial page load.
-        """
         context = super().get_context_data(**kwargs)
         request = self.request
-        
         context['time_period_options'] = [
             {'value': 'last_7_days', 'label': str(_('Last 7 Days'))},
             {'value': 'last_30_days', 'label': str(_('Last 30 Days'))},
@@ -711,55 +696,82 @@ class AIInsightsDashboardView(LoginRequiredMixin, TemplateView):
             {'value': 'last_365_days', 'label': str(_('Last Year'))},
             {'value': 'all_time', 'label': str(_('All Time'))},
         ]
-        
         selected_period = request.GET.get('time_period', 'last_30_days') 
         context['selected_period'] = selected_period
-
-        initial_chart_data_dict = self._get_sentiment_data_for_period(request.user, selected_period)
-        
+        initial_chart_data_dict = _get_sentiment_data_for_period(request.user, selected_period)
         context['sentiment_chart_data_json'] = json.dumps(initial_chart_data_dict)
         context['has_sentiment_data'] = initial_chart_data_dict.get('has_data', False)
-        
         serializable_mood_visuals = {
             mood: {k: str(v) for k, v in visuals.items()} 
             for mood, visuals in MOOD_VISUALS.items()
         }
         context['mood_visuals_json'] = json.dumps(serializable_mood_visuals)
-        
         logger.info(f"AIInsightsDashboardView: Initial load for user {request.user.username}, period: {selected_period}")
         return context
 
 class SentimentChartDataView(LoginRequiredMixin, View):
-    """
-    Provides JSON data for the sentiment chart, used for AJAX updates.
-    Accepts a 'time_period' GET parameter.
-    """
     def get(self, request, *args, **kwargs):
-        """
-        Handles GET requests to fetch sentiment chart data for the specified time period.
-        """
         user = request.user
         time_period_value = request.GET.get('time_period', 'last_30_days') 
-
-        # Use the helper method from AIInsightsDashboardView (or a refactored shared function)
-        # For this example, we assume AIInsightsDashboardView._get_sentiment_data_for_period is accessible
-        # or we replicate its logic. To call it directly, we'd need an instance or make it static/module-level.
-        # For simplicity, let's assume a module-level helper or re-implement briefly.
-        # Re-instantiating the view to call its method is not ideal.
-        # Better: Refactor _get_sentiment_data_for_period to be a standalone function.
-
-        # For now, re-instantiating to use the method.
-        # In a real scenario, refactor _get_sentiment_data_for_period to a utility function.
-        dashboard_view_instance = AIInsightsDashboardView()
-        chart_data = dashboard_view_instance._get_sentiment_data_for_period(user, time_period_value)
-        
+        chart_data = _get_sentiment_data_for_period(user, time_period_value)
         logger.info(f"SentimentChartDataView: AJAX request for user {user.username}, period: {time_period_value}")
         return JsonResponse(chart_data)
 
+class StartInsightsAnalysisView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        time_period = request.POST.get('time_period')
+        if not time_period:
+            return JsonResponse({'status': 'error', 'message': 'Time period is required.'}, status=400)
+
+        logger.info(f"User {request.user.username} initiated insights analysis for period: {time_period}")
+        task = generate_insights_for_period_task.delay(request.user.id, time_period)
+        
+        return JsonResponse({'status': 'processing', 'task_id': task.id})
+
+class GetInsightsResultView(LoginRequiredMixin, View):
+    """
+    Polls for the result of the collective insights Celery task using its task_id.
+    This view is designed to be called via an AJAX GET request.
+    """
+    def get(self, request, *args, **kwargs):
+        """
+        Handles GET requests to check the status and retrieve the result of the task.
+        Expects 'task_id' in the GET parameters.
+        """
+        task_id = request.GET.get('task_id')
+        if not task_id:
+            return JsonResponse({'status': 'error', 'message': 'Task ID is required.'}, status=400)
+
+        task_result = AsyncResult(task_id)
+
+        if task_result.ready():
+            if task_result.successful():
+                result = task_result.get()
+                logger.info(f"Task {task_id} completed successfully. Returning insights.")
+                return JsonResponse({'status': 'SUCCESS', 'insights': result})
+            else:
+                # If the task failed, log the error and return a JSON response
+                # with a 'FAILURE' status instead of a 500 server error.
+                # This allows the frontend to handle the error gracefully.
+                logger.error(f"Task {task_id} failed: {task_result.info}")
+                return JsonResponse({
+                    'status': 'FAILURE', 
+                    'message': 'Analysis failed. Please check server logs for details.'
+                })
+        else:
+            # Task is still pending or running
+            return JsonResponse({'status': task_result.state})
+
 
 class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
-    # ... (Your existing AIServiceStatusView code remains unchanged) ...
+    """
+    Checks the status of individual AI processing tasks (quote, mood, tags) for a single journal entry.
+    Used for the progress modal after creating or updating an entry.
+    """
     def test_func(self):
+        """
+        Ensures that the request is made by the owner of the journal entry.
+        """
         try:
             entry_id = self.kwargs.get('entry_id') 
             if not entry_id:
@@ -778,6 +790,9 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
             return False
 
     def get(self, request, entry_id, *args, **kwargs):
+        """
+        Handles GET requests to check the status of various AI tasks related to an entry.
+        """
         try:
             entry = JournalEntry.objects.get(pk=entry_id) 
         except JournalEntry.DoesNotExist:
@@ -829,7 +844,6 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
         all_done_now = (not user_profile.ai_enable_quotes or entry.ai_quote_processed) and \
                        (not user_profile.ai_enable_mood_detection or entry.ai_mood_processed) and \
                        (not user_profile.ai_enable_tag_suggestion or entry.ai_tags_processed)
-
 
         return JsonResponse({
             'status': 'ok', 'entry_id': entry.id, 'task_statuses': statuses, 'all_done': all_done_now,

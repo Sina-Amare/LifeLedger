@@ -13,14 +13,19 @@ urlpatterns = [
     path('<int:pk>/edit/', views.JournalEntryUpdateView.as_view(), name='journal_update'),
     path('<int:pk>/delete/', views.JournalEntryAjaxDeleteView.as_view(), name='journal_delete'),
     
-    # URL for polling AI task status (Celery tasks)
+    # URL for polling individual AI task status (quote, mood, tags)
     path('entry/<int:entry_id>/ai-status/', views.AIServiceStatusView.as_view(), name='ai_service_status'),
 
-    # URL for the AI Insights Dashboard page.
+    # URL for the AI Insights Dashboard page
     path('insights/', views.AIInsightsDashboardView.as_view(), name='ai_insights_dashboard'),
 
-    # --- NEW URL PATTERN ADDED ---
-    # This URL will be called by JavaScript to fetch updated sentiment chart data
-    # when the user selects a different time period on the AI Insights Dashboard.
+    # URL for fetching sentiment chart data via AJAX
     path('insights/sentiment-chart-data/', views.SentimentChartDataView.as_view(), name='sentiment_chart_data_ajax'),
+
+    # --- NEW URLS FOR COLLECTIVE INSIGHTS ---
+    # URL to start the collective insights analysis task (expects POST)
+    path('insights/start-analysis/', views.StartInsightsAnalysisView.as_view(), name='start_insights_analysis'),
+    
+    # URL to poll for and retrieve the results of the insights analysis task (expects GET with task_id)
+    path('insights/get-result/', views.GetInsightsResultView.as_view(), name='get_insights_result'),
 ]
