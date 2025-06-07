@@ -10,34 +10,36 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-# Import models inside tasks to avoid circular dependencies
-# from journal.models import JournalEntry, Tag 
-
+# Models are imported directly inside tasks to prevent potential circular 
+# dependency issues during application startup.
 logger = logging.getLogger(__name__)
 
+# Centralized API configuration for consistency and ease of maintenance.
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-# Using a capable model for all tasks. Can be changed in settings.py.
 AI_MODEL_FOR_ALL_TASKS = getattr(settings, 'AI_MODEL_FOR_JOURNAL_ANALYSIS', "openai/gpt-3.5-turbo")
 
 
 def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6, response_format=None, entry_id=None):
     """
-    Helper function to call the OpenRouter API, now with response_format support.
+    A robust helper function to make API calls to the OpenRouter service.
+
+    This function handles the construction of the request payload, headers,
+    and comprehensive error handling, including network timeouts and HTTP errors.
 
     Args:
         prompt_text (str): The prompt to send to the AI model.
-        task_name (str): A descriptive name for the task, used for logging.
-        max_tokens (int): The maximum number of tokens to generate.
-        temperature (float): The sampling temperature.
-        response_format (dict, optional): The desired response format (e.g., {"type": "json_object"}).
-        entry_id (int or str, optional): An identifier for the log (e.g., user_id or entry_id).
+        task_name (str): A descriptive name for the task, used for logging purposes.
+        max_tokens (int): The maximum number of tokens for the AI to generate.
+        temperature (float): The sampling temperature for the generation (0.0 to 1.0).
+        response_format (dict, optional): Specifies a required response format (e.g., {"type": "json_object"}).
+        entry_id (int or str, optional): An identifier for logging context (e.g., user_id or entry_id).
 
     Returns:
-        str: The content of the AI's response, or None on failure.
+        str: The content of the AI's response as a string, or None if an error occurs.
     """
     api_key = settings.OPENROUTER_API_KEY
     if not api_key:
-        logger.error(f"OPENROUTER_API_KEY not found. Aborting {task_name}.")
+        logger.error(f"OPENROUTER_API_KEY not set in settings. Aborting {task_name}.")
         return None
 
     payload = {
@@ -60,7 +62,6 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
     try:
         logger.info(f"Requesting {task_name} from OpenRouter for {log_identifier}. Model: {payload['model']}.")
         response = requests.post(OPENROUTER_API_URL, headers=headers, data=json.dumps(payload), timeout=90)
-        logger.info(f"OpenRouter API response status for {task_name} ({log_identifier}): {response.status_code}")
         response.raise_for_status()
         
         response_data = response.json()
@@ -72,7 +73,7 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
             if content:
                 return content.strip()
         
-        error_detail = response_data.get("error", {}).get("message", f"No 'choices' or 'content' in API response for {task_name}.")
+        error_detail = response_data.get("error", {}).get("message", "No 'choices' or 'content' in API response.")
         logger.warning(f"Unexpected OpenRouter response for {task_name} ({log_identifier}): {error_detail}")
         return None
             
@@ -81,222 +82,164 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
     except requests.exceptions.HTTPError as http_err:
         error_text = http_err.response.text[:200] if hasattr(http_err.response, 'text') else "Unknown HTTP Error"
         logger.error(f"OpenRouter API HTTPError for {task_name} ({log_identifier}): {http_err.response.status_code} - {error_text}")
-    except requests.exceptions.RequestException as req_err:
-        logger.error(f"OpenRouter API request failed for {task_name} ({log_identifier}): {req_err}", exc_info=True)
     except Exception as e:
         logger.error(f"Unexpected error calling OpenRouter API for {task_name} ({log_identifier}): {e}", exc_info=True)
     
     return None
 
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=60 * 2, acks_late=True, name='ai_services.tasks.generate_quote_for_entry_task_explicit')
+@shared_task(bind=True, max_retries=3, default_retry_delay=60 * 2, acks_late=True)
 def generate_quote_for_entry_task(self, journal_entry_id):
-    # ... (code is unchanged) ...
+    """
+    Celery task to generate an insightful and relevant quote for a specific journal entry.
+    It fetches the entry, constructs a prompt, calls the AI, and updates the entry.
+    """
     from journal.models import JournalEntry
-    logger.info(f"--- generate_quote_for_entry_task_explicit STARTED --- Entry ID: {journal_entry_id}")
-    task_succeeded = False
-    generated_quote_text = "Failed to generate quote." 
+    logger.info(f"Starting quote generation task for Entry ID: {journal_entry_id}")
+    generated_quote_text = _("Could not generate a quote at this time.")
+    
     try:
         entry = JournalEntry.objects.get(pk=journal_entry_id)
         content_snippet = (entry.content[:1000] + '...') if len(entry.content) > 1000 else entry.content
-        prompt_text = (
-            f"Analyze the following journal entry snippet, which could be in any language. Your task is to provide ONLY ONE single, short (1-2 sentences, maximum 3), "
-            f"insightful, and inspiring quote that is highly relevant to the potential themes, emotions, or topics expressed in the snippet. "
-            f"The quote MUST be from a well-known Persian (Iranian) OR English-speaking scientist, poet, philosopher, or other famous public figure. "
-            f"You must choose the most fitting quote; do not offer alternatives or explanations about your choice. "
-            f"Clearly attribute the quote to its author using the format: \"Quote text.\" - Author's Name. "
-            f"If the snippet is too vague or short to derive a specific thematic quote, select a general inspiring quote about life, reflection, "
-            f"or personal growth from such a figure (either Persian or English, whichever you deem more impactful in a general sense).\n\n"
+        
+        prompt = (
+            f"Analyze the following journal entry snippet. Provide ONE single, short (1-2 sentences), insightful quote from a well-known Persian (Iranian) "
+            f"OR English-speaking figure that is highly relevant to the themes expressed. Format the response as: \"Quote text.\" - Author's Name. "
+            f"If the snippet is too vague, select a general inspiring quote about life or growth.\n\n"
             f"Journal Entry Snippet:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
-            f"Provide only the quote and its attribution below (do not add any other text before or after the quote itself):\nQuote:"
+            f"Provide only the quote and its attribution below:\n"
         )
-        ai_response_content = call_openrouter_api(prompt_text, "quote_generation", max_tokens=120, temperature=0.7, entry_id=entry.id)
-        if ai_response_content:
-            processed_quote = ai_response_content
-            preambles_to_check = ["quote:", "here's a quote:", "a fitting quote could be:", "certainly, here is a quote:", "here is a quote:"]
-            temp_lower_quote = processed_quote.lower()
-            for preamble in preambles_to_check:
-                if temp_lower_quote.startswith(preamble):
-                    processed_quote = processed_quote[len(preamble):].strip()
-                    break 
-            if processed_quote.startswith('"') and processed_quote.endswith('"'):
-                processed_quote = processed_quote[1:-1]
-            generated_quote_text = processed_quote.strip()
-            if generated_quote_text:
-                task_succeeded = True
-                logger.info(f"Successfully generated and processed quote for entry {entry.id}: \"{generated_quote_text}\"")
-            else:
-                generated_quote_text = "AI quote was empty after processing."
+        
+        ai_response = call_openrouter_api(prompt, "quote_generation", max_tokens=120, temperature=0.7, entry_id=entry.id)
+        
+        if ai_response:
+            generated_quote_text = ai_response.strip('" ')
+            logger.info(f"Successfully generated quote for entry {entry.id}: \"{generated_quote_text}\"")
         else:
-            logger.warning(f"Failed to get valid content from AI for quote generation (entry {entry.id}).")
+            logger.warning(f"AI service did not return valid content for quote generation (entry {entry.id}).")
+
     except JournalEntry.DoesNotExist:
-        logger.error(f"JournalEntry {journal_entry_id} not found for quote generation.")
-        generated_quote_text = "Entry not found for quote."
+        logger.error(f"JournalEntry {journal_entry_id} not found for quote generation task.")
     except Exception as exc: 
-        logger.error(f"Unexpected error in quote generation task for entry {journal_entry_id}: {exc}", exc_info=True)
-        generated_quote_text = "Unexpected error generating quote."
+        logger.error(f"Retrying quote task for entry {journal_entry_id} due to unexpected error: {exc}", exc_info=True)
+        self.retry(exc=exc)
     finally:
-        try:
-            entry_to_update = JournalEntry.objects.get(pk=journal_entry_id) 
-            entry_to_update.ai_quote = generated_quote_text 
-            entry_to_update.ai_quote_processed = True 
-            entry_to_update.save(update_fields=['ai_quote', 'ai_quote_processed'])
-            logger.info(f"Final ai_quote and status for entry {entry_to_update.id} saved.")
-        except JournalEntry.DoesNotExist:
-            logger.error(f"JournalEntry {journal_entry_id} not found in finally block for quote task.")
-        except Exception as e_save:
-            logger.error(f"Error saving ai_quote/status for entry {journal_entry_id} in quote task finally: {e_save}", exc_info=True)
-    logger.info(f"--- generate_quote_for_entry_task_explicit COMPLETED for entry ID: {journal_entry_id} ---")
-    return f"Quote generation task processed for entry {journal_entry_id}. Success: {task_succeeded}"
+        JournalEntry.objects.filter(pk=journal_entry_id).update(
+            ai_quote=generated_quote_text,
+            ai_quote_processed=True
+        )
+        logger.info(f"Quote generation task completed and status saved for entry ID: {journal_entry_id}")
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=45, acks_late=True, name='ai_services.tasks.detect_mood_for_entry_task_explicit')
+@shared_task(bind=True, max_retries=3, default_retry_delay=45, acks_late=True)
 def detect_mood_for_entry_task(self, journal_entry_id):
-    # ... (code is unchanged) ...
+    """
+    Celery task to detect the primary mood of a journal entry using AI analysis.
+    If a mood is already set by the user, this task will be skipped.
+    """
     from journal.models import JournalEntry
-    logger.info(f"--- detect_mood_for_entry_task_explicit STARTED --- Entry ID: {journal_entry_id}")
-    task_succeeded = False
-    detected_mood_value = None 
+    from journal.constants import MOOD_CHOICES
+    
+    logger.info(f"Starting mood detection task for Entry ID: {journal_entry_id}")
+    
     try:
         entry = JournalEntry.objects.get(pk=journal_entry_id)
         if entry.mood: 
-            logger.info(f"User already set mood ('{entry.mood}') for JournalEntry ID: {entry.id}. AI mood detection skipped.")
-            task_succeeded = True 
+            logger.info(f"Mood ('{entry.mood}') was already set for entry {entry.id}. Skipping AI detection.")
         else:
-            logger.info(f"Detecting mood for JournalEntry ID: {entry.id} using AI.")
             content_snippet = (entry.content[:1500] + '...') if len(entry.content) > 1500 else entry.content
-            valid_moods = [choice[0] for choice in JournalEntry.MOOD_CHOICES]
+            valid_moods = [choice[0] for choice in MOOD_CHOICES]
             mood_options_str = ", ".join(valid_moods)
-            prompt_text = (
-                f"Analyze the sentiment and emotional tone of the following journal entry, which can be in any language. "
-                f"Based on your analysis, determine the primary mood. "
-                f"You MUST choose exactly ONE mood from the following predefined list: {mood_options_str}. "
-                f"Do not provide any explanation or other text, only the single mood word.\n\n"
-                f"Journal Entry Content:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
-                f"Primary Mood (choose one from list above):"
+            
+            prompt = (
+                f"Analyze the emotional tone of the journal entry below. "
+                f"Choose exactly ONE primary mood from the list: {mood_options_str}. "
+                f"Return only the single, lowercase mood word.\n\n"
+                f"Journal Entry:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
+                f"Primary Mood:"
             )
-            ai_response_content = call_openrouter_api(prompt_text, "mood_detection", max_tokens=10, temperature=0.3, entry_id=entry.id)
-            if ai_response_content:
-                potential_mood = ai_response_content.split()[0].lower().strip().replace("\"", "").replace(".", "")
+            
+            ai_response = call_openrouter_api(prompt, "mood_detection", max_tokens=10, temperature=0.2, entry_id=entry.id)
+            
+            detected_mood = 'neutral'  # Default fallback
+            if ai_response:
+                potential_mood = ai_response.lower().strip().split()[0].strip('".')
                 if potential_mood in valid_moods:
-                    detected_mood_value = potential_mood
-                    entry.mood = detected_mood_value
-                    task_succeeded = True
-                    logger.info(f"AI successfully detected mood as '{detected_mood_value}' for entry ID: {entry.id}")
+                    detected_mood = potential_mood
+                    logger.info(f"AI successfully detected mood as '{detected_mood}' for entry {entry.id}")
                 else:
-                    logger.warning(f"AI returned an invalid mood ('{ai_response_content}') for entry {entry.id}. Falling back to neutral.")
-                    detected_mood_value = 'neutral'
-                    entry.mood = detected_mood_value
+                    logger.warning(f"AI returned an invalid mood ('{ai_response}'). Falling back to neutral for entry {entry.id}.")
             else:
-                logger.warning(f"AI did not return content for mood detection for entry {entry.id}. Falling back to neutral.")
-                detected_mood_value = 'neutral'
-                entry.mood = detected_mood_value
+                logger.warning(f"AI did not return content for mood detection. Falling back to neutral for entry {entry.id}.")
+            
+            entry.mood = detected_mood
+            entry.save(update_fields=['mood'])
+
     except JournalEntry.DoesNotExist:
         logger.error(f"JournalEntry ID {journal_entry_id} not found for mood detection.")
     except Exception as e:
-        logger.error(f"Error in detect_mood_for_entry_task for entry {journal_entry_id}: {e}", exc_info=True)
-        if 'entry' in locals() and not entry.mood:
-            detected_mood_value = 'neutral'
-            entry.mood = detected_mood_value
+        logger.error(f"Retrying mood task for entry {journal_entry_id} due to error: {e}", exc_info=True)
+        self.retry(exc=e)
     finally:
-        try:
-            entry_to_update_status = JournalEntry.objects.get(pk=journal_entry_id)
-            if detected_mood_value and not entry_to_update_status.mood:
-                 entry_to_update_status.mood = detected_mood_value
-            entry_to_update_status.ai_mood_processed = True
-            entry_to_update_status.save(update_fields=['mood', 'ai_mood_processed'])
-            logger.info(f"Mood task status for entry {journal_entry_id} set to processed. Final mood: {entry_to_update_status.mood}")
-        except JournalEntry.DoesNotExist:
-            pass 
-        except Exception as e_save_status:
-            logger.error(f"Error saving mood/status for entry {journal_entry_id} in mood task finally: {e_save_status}", exc_info=True)
-    logger.info(f"--- detect_mood_for_entry_task_explicit COMPLETED for entry ID: {journal_entry_id} ---")
-    return f"Mood detection processed for entry {journal_entry_id}. Success: {task_succeeded}"
+        JournalEntry.objects.filter(pk=journal_entry_id).update(ai_mood_processed=True)
+        logger.info(f"Mood detection task completed and status saved for entry ID: {journal_entry_id}")
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=50, acks_late=True, name='ai_services.tasks.suggest_tags_for_entry_task_explicit')
+@shared_task(bind=True, max_retries=3, default_retry_delay=50, acks_late=True)
 def suggest_tags_for_entry_task(self, journal_entry_id):
-    # ... (code is unchanged) ...
+    """
+    Celery task to suggest relevant tags for a journal entry based on its content.
+    """
     from journal.models import JournalEntry, Tag
-    logger.info(f"--- suggest_tags_for_entry_task_explicit STARTED --- Entry ID: {journal_entry_id}")
-    task_succeeded = False
-    ai_suggested_tag_names = []
+    logger.info(f"Starting tag suggestion task for Entry ID: {journal_entry_id}")
+    
     try:
         entry = JournalEntry.objects.get(pk=journal_entry_id)
         if entry.tags.exists(): 
-            logger.info(f"User already set tags for JournalEntry ID: {entry.id}. AI tag suggestion skipped.")
-            task_succeeded = True 
+            logger.info(f"Tags already exist for entry {entry.id}. Skipping AI suggestion.")
         else:
-            logger.info(f"Suggesting tags for JournalEntry ID: {entry.id} using AI, as no user tags were found.")
             content_snippet = (entry.content[:2000] + '...') if len(entry.content) > 2000 else entry.content
-            existing_tag_names = list(Tag.objects.values_list('name', flat=True).distinct().order_by('?')[:20])
-            existing_tags_hint = ""
-            if existing_tag_names:
-                existing_tags_hint = f"You can also consider if any of these existing tags are relevant: {', '.join(existing_tag_names)}. "
-            prompt_text = (
-                f"Analyze the following journal entry, which can be in any language. "
-                f"Based on its content, themes, and topics, suggest 1 to 3 relevant tags. "
-                f"Each tag should be a single word or a short 2-3 word phrase. "
-                f"{existing_tags_hint}"
-                f"Return the suggested tags as a comma-separated list (e.g., Tag1, Another Tag, Example). "
-                f"Do not provide any explanation or other text, only the comma-separated list of tags.\n\n"
-                f"Journal Entry Content:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
-                f"Suggested Tags (comma-separated):"
+            prompt = (
+                "Analyze the following journal entry. Suggest 1 to 3 relevant tags. "
+                "Each tag should be a single word or a short 2-3 word phrase. "
+                "Return the tags as a single comma-separated list (e.g., Tag1, Another Tag, Example).\n\n"
+                f"Journal Entry:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
+                "Suggested Tags:"
             )
-            ai_response_content = call_openrouter_api(prompt_text, "tag_suggestion", max_tokens=50, temperature=0.5, entry_id=entry.id)
-            if ai_response_content:
-                raw_tags = [tag.strip() for tag in ai_response_content.split(',')]
-                for raw_tag in raw_tags:
-                    if not raw_tag: continue
-                    capitalized_tag = ' '.join(word.capitalize() for word in raw_tag.split())
-                    if capitalized_tag and len(capitalized_tag) <= 50:
-                         ai_suggested_tag_names.append(capitalized_tag)
-                ai_suggested_tag_names = list(set(ai_suggested_tag_names)) 
-                if ai_suggested_tag_names:
-                    logger.info(f"AI suggested tags for entry {entry.id}: {ai_suggested_tag_names}")
-                    task_succeeded = True
-                else:
-                    logger.warning(f"AI response for tags was empty or invalid after processing for entry {entry.id}: '{ai_response_content}'")
+            
+            ai_response = call_openrouter_api(prompt, "tag_suggestion", max_tokens=50, temperature=0.5, entry_id=entry.id)
+            
+            if ai_response:
+                suggested_tags = [tag.strip().capitalize() for tag in ai_response.split(',') if tag.strip() and len(tag) <= 50]
+                if suggested_tags:
+                    tags_to_add = []
+                    for tag_name in list(set(suggested_tags)): # Ensure unique tags
+                        tag_instance, _ = Tag.objects.get_or_create(name__iexact=tag_name, defaults={'name': tag_name})
+                        tags_to_add.append(tag_instance)
+                    entry.tags.add(*tags_to_add)
+                    logger.info(f"AI suggested and added tags {suggested_tags} to entry {entry.id}")
             else:
                 logger.warning(f"AI did not return content for tag suggestion for entry {entry.id}.")
+
     except JournalEntry.DoesNotExist:
         logger.error(f"JournalEntry ID {journal_entry_id} not found for tag suggestion.")
     except Exception as e:
-        logger.error(f"Error in suggest_tags_for_entry_task for entry {journal_entry_id}: {e}", exc_info=True)
+        logger.error(f"Retrying tag task for entry {journal_entry_id} due to error: {e}", exc_info=True)
+        self.retry(exc=e)
     finally:
-        try:
-            entry_to_update_status = JournalEntry.objects.get(pk=journal_entry_id)
-            if ai_suggested_tag_names and not entry_to_update_status.tags.exists():
-                tags_to_add_instances = []
-                for tag_name in ai_suggested_tag_names:
-                    tag_instance, created = Tag.objects.get_or_create(
-                        name__iexact=tag_name, 
-                        defaults={'name': tag_name} 
-                    )
-                    tags_to_add_instances.append(tag_instance)
-                    logger.info(f"AI Tag: Adding/found '{tag_instance.name}' for entry {entry_to_update_status.id} (Created: {created})")
-                if tags_to_add_instances:
-                    entry_to_update_status.tags.add(*tags_to_add_instances)
-                    logger.info(f"AI successfully added {len(tags_to_add_instances)} tags to entry {entry_to_update_status.id}.")
-            
-            entry_to_update_status.ai_tags_processed = True
-            entry_to_update_status.save(update_fields=['ai_tags_processed']) 
-            logger.info(f"Tag suggestion task status for entry {journal_entry_id} set to processed.")
-        except JournalEntry.DoesNotExist:
-            pass 
-        except Exception as e_save_status:
-            logger.error(f"Error saving tags/status for entry {journal_entry_id} in tag task finally: {e_save_status}", exc_info=True)
-    logger.info(f"--- suggest_tags_for_entry_task_explicit COMPLETED for entry ID: {journal_entry_id} ---")
-    return f"Tag suggestion processed for entry {journal_entry_id}. Success: {task_succeeded}"
+        JournalEntry.objects.filter(pk=journal_entry_id).update(ai_tags_processed=True)
+        logger.info(f"Tag suggestion task completed and status saved for entry ID: {journal_entry_id}")
 
 
 @shared_task(bind=True, name='ai_services.tasks.generate_insights_for_period_task')
 def generate_insights_for_period_task(self, user_id, time_period):
-    # ... (code is unchanged) ...
+    """
+    Analyzes a user's journal entries over a specified period to extract
+    key highlights, challenges, and recurring themes.
+    """
     from django.contrib.auth import get_user_model
     from journal.models import JournalEntry
-
     User = get_user_model()
+    
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
@@ -321,75 +264,52 @@ def generate_insights_for_period_task(self, user_id, time_period):
     entries = entries_query.order_by('created_at').only('created_at', 'content')
     
     if not entries.exists():
-        logger.warning(f"No entries found for user {user.username} in period {time_period}. Aborting insights task.")
-        return {'error': 'No entries found for this period.', 'highlights': [], 'challenges': [], 'key_themes': []}
+        logger.warning(f"No entries found for user {user.username} in period {time_period}.")
+        return {'highlights': [], 'challenges': [], 'key_themes': []}
 
     combined_content = ""
-    word_limit = 4000 
     for entry in entries:
-        entry_text = f"\n--- Entry from {entry.created_at.strftime('%Y-%m-%d')} ---\n{entry.content}\n"
-        if len(combined_content.split()) + len(entry_text.split()) > word_limit:
-            break
-        combined_content += entry_text
-
-    prompt_text = (
-        f"You are an insightful and empathetic life coach. Analyze the following collection of journal entries from a user. "
-        f"Your task is to identify and summarize the key points into three categories: Highlights, Challenges, and Key Themes. "
-        f"The entries can be in any language, so analyze them accordingly.\n\n"
-        f"1.  **Highlights**: Identify and list 2-4 key positive moments, achievements, sources of joy, or significant progress mentioned. "
-        f"2.  **Challenges**: Identify and list 2-4 main difficulties, struggles, or sources of frustration the user faced. "
-        f"3.  **Key Themes**: Identify 2-4 overarching themes or recurring topics that appear throughout the entries (e.g., 'Work-life balance', 'Exploring a new hobby', 'Family relationships').\n\n"
-        f"Please provide your response strictly in the following JSON format, with no introductory text or markdown formatting:\n"
-        f'{{"highlights": ["Point 1", "Point 2", ...], "challenges": ["Point 1", "Point 2", ...], "key_themes": ["Theme 1", "Theme 2", ...]}}\n\n'
-        f"Journal Entries Collection:\n\"\"\"\n{combined_content}\n\"\"\""
+        combined_content += f"\n--- Entry from {entry.created_at.strftime('%Y-%m-%d')} ---\n{entry.content}\n"
+    
+    prompt = (
+        "You are an insightful life coach. Analyze this collection of journal entries. "
+        "Summarize the key points into three categories: 'highlights', 'challenges', and 'key_themes'. "
+        "List 2-4 points for each. If a category is empty, return an empty list for it. "
+        "Respond ONLY with a valid JSON object.\n\n"
+        f"Journal Entries:\n\"\"\"\n{combined_content}\n\"\"\""
     )
 
-    ai_response_str = call_openrouter_api(
-        prompt_text, "collective_insights_generation", max_tokens=1000, 
-        temperature=0.5, response_format={"type": "json_object"}, entry_id=user_id
-    )
+    ai_response_str = call_openrouter_api(prompt, "collective_insights", max_tokens=1000, temperature=0.5, response_format={"type": "json_object"}, entry_id=user_id)
 
     if not ai_response_str:
-        logger.error(f"Failed to get a response from AI for collective insights (User: {user.username}).")
+        logger.error(f"Failed to get AI response for collective insights (User: {user.username}).")
         return {'error': 'AI service did not respond.'}
 
     try:
-        # Attempt to find a JSON object within the response string if it's not a clean JSON
         json_match = re.search(r'\{.*\}', ai_response_str, re.DOTALL)
         if not json_match:
-            raise ValueError("No valid JSON object found in the AI response.")
+            raise ValueError("No valid JSON object found in AI response for insights.")
         
         insights_data = json.loads(json_match.group(0))
         
         if not all(k in insights_data for k in ['highlights', 'challenges', 'key_themes']):
-            raise ValueError("AI response is missing one of the required keys.")
+            raise ValueError("AI response is missing required keys for insights.")
         
         logger.info(f"Successfully generated insights for user {user.username}.")
         return insights_data
 
     except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Failed to parse or validate JSON response from AI for collective insights (User: {user.username}): {e}")
-        logger.debug(f"Raw AI response was: {ai_response_str}")
+        logger.error(f"Failed to parse insights JSON from AI (User: {user.username}): {e}", exc_info=True)
         return {'error': 'Failed to process AI response.'}
 
-
-# --- NEW TASK FOR LIFE SUGGESTIONS ---
 
 @shared_task(bind=True, name='ai_services.tasks.generate_life_suggestions_task')
 def generate_life_suggestions_task(self, user_id, insights_data):
     """
-    Takes a summary of insights (highlights, challenges) and generates
-    actionable, empathetic suggestions for the user.
-
-    Args:
-        user_id (int): The ID of the user for whom to generate suggestions.
-        insights_data (dict): A dictionary containing 'highlights' and 'challenges' lists.
-
-    Returns:
-        dict: A dictionary containing a list of suggestions or an error message.
+    Takes a summary of insights and generates actionable, empathetic suggestions for the user.
+    The prompt for this task is engineered to be more directive and provide better results.
     """
     from django.contrib.auth import get_user_model
-
     User = get_user_model()
     try:
         user = User.objects.get(pk=user_id)
@@ -399,36 +319,38 @@ def generate_life_suggestions_task(self, user_id, insights_data):
 
     logger.info(f"--- generate_life_suggestions_task STARTED --- User: {user.username}")
 
-    # Prepare the context from the previous analysis task
     highlights = insights_data.get('highlights', [])
     challenges = insights_data.get('challenges', [])
     
     if not highlights and not challenges:
-        logger.warning(f"No highlights or challenges provided for user {user.username}. Cannot generate suggestions.")
-        return {'suggestions': [_("No specific insights were found to generate suggestions from.")]}
+        logger.warning(f"No specific highlights or challenges provided for user {user.username}. Returning a default suggestion.")
+        return {'suggestions': [_("Keep reflecting on your days. Each entry is a valuable piece of your personal story.")]}
 
-    # Format the context for the prompt
-    highlights_str = "\n- ".join(highlights) if highlights else "None"
-    challenges_str = "\n- ".join(challenges) if challenges else "None"
+    highlights_str = "- " + "\n- ".join(highlights) if highlights else _("None provided.")
+    challenges_str = "- " + "\n- ".join(challenges) if challenges else _("None provided.")
 
+    # This improved prompt gives the AI a clear persona and structured instructions,
+    # leading to more consistent and helpful suggestions.
     prompt_text = (
-        f"You are a supportive and insightful life coach. Your client has shared the following summary from their journal. "
-        f"Your task is to provide 2-3 actionable, empathetic, and encouraging suggestions based on this summary. "
-        f"Avoid generic advice. Focus on building on the highlights and providing constructive ways to approach the challenges.\n\n"
-        f"**User's Highlights:**\n- {highlights_str}\n\n"
-        f"**User's Challenges:**\n- {challenges_str}\n\n"
-        f"Based on this, generate your suggestions. "
-        f"Return your response strictly in the following JSON format, with no other text:\n"
-        f'{{"suggestions": ["Suggestion 1...", "Suggestion 2...", "Suggestion 3..."]}}'
+        "You are an empathetic and action-oriented AI life coach. Your client has shared the following summary from their journal. "
+        "Your task is to provide 2-3 concrete, encouraging, and actionable suggestions based on this summary. "
+        "Directly address the user's points.\n\n"
+        "**User's Highlights (Things that went well):**\n"
+        f"{highlights_str}\n\n"
+        "**User's Challenges (Things that were difficult):**\n"
+        f"{challenges_str}\n\n"
+        "**Your Task:**\n"
+        "1. **Acknowledge and Build:** Start with a suggestion that builds on a highlight (e.g., 'It's wonderful you felt [Highlight]. How can you plan a similar moment for next week?').\n"
+        "2. **Offer a Small Step:** Provide a gentle, manageable suggestion for one of the challenges (e.g., 'Regarding [Challenge], perhaps you could try dedicating just 5 minutes to [small action] to make it feel less overwhelming.').\n"
+        "3. **Provide an Insightful Question:** End with a thoughtful question that encourages deeper reflection.\n"
+        "4. **Important:** Respond ONLY with a JSON object in the format: "
+        '{"suggestions": ["Suggestion 1...", "Suggestion 2...", "Suggestion 3..."]}. '
+        "Do NOT add any introductory text, markdown, or explanations outside of the JSON."
     )
     
     ai_response_str = call_openrouter_api(
-        prompt_text,
-        "life_suggestions_generation",
-        max_tokens=500,
-        temperature=0.7,
-        response_format={"type": "json_object"},
-        entry_id=user_id
+        prompt_text, "life_suggestions_generation", max_tokens=500,
+        temperature=0.7, response_format={"type": "json_object"}, entry_id=user_id
     )
 
     if not ai_response_str:
@@ -436,20 +358,19 @@ def generate_life_suggestions_task(self, user_id, insights_data):
         return {'error': _('AI service did not respond.')}
 
     try:
-        # Attempt to find a JSON object within the response string
         json_match = re.search(r'\{.*\}', ai_response_str, re.DOTALL)
         if not json_match:
             raise ValueError("No valid JSON object found in the AI response for suggestions.")
         
         suggestions_data = json.loads(json_match.group(0))
 
-        if 'suggestions' not in suggestions_data or not isinstance(suggestions_data['suggestions'], list):
-             raise ValueError("AI response for suggestions is not in the expected format.")
+        if 'suggestions' not in suggestions_data or not isinstance(suggestions_data.get('suggestions'), list) or not suggestions_data.get('suggestions'):
+            raise ValueError("AI response for suggestions is not in the expected format or is empty.")
 
         logger.info(f"Successfully generated life suggestions for user {user.username}.")
         return suggestions_data
 
     except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Failed to parse or validate JSON response from AI for suggestions (User: {user.username}): {e}")
-        logger.debug(f"Raw AI response was: {ai_response_str}")
+        logger.error(f"Failed to parse or validate JSON response from AI for suggestions (User: {user.username}): {e}", exc_info=True)
+        logger.debug(f"Raw AI response for suggestions was: {ai_response_str}")
         return {'error': _('Failed to process AI suggestions.')}
