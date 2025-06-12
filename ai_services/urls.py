@@ -1,5 +1,3 @@
-# ai_services/urls.py
-
 from django.urls import path
 from . import views
 
@@ -11,6 +9,9 @@ urlpatterns = [
 
     # API endpoint to fetch updated sentiment data for the chart via AJAX.
     path('insights/sentiment-chart-data/', views.SentimentChartDataView.as_view(), name='sentiment_chart_data_ajax'),
+
+    # API endpoint to fetch data for the emotional arc line chart.
+    path('insights/emotional-arc-data/', views.EmotionalArcDataView.as_view(), name='emotional_arc_data_ajax'),
 
     # API endpoint to begin the analysis for generating collective insights.
     path('insights/start-analysis/', views.StartInsightsAnalysisView.as_view(), name='start_insights_analysis'),
