@@ -29,7 +29,6 @@
     </header>
 
     <form method="get" class="filter-form mb-12 fade-in-element" style="animation-delay: 0.3s;" id="filter-form">
-        <!-- Filter form content remains the same... -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
                 <label for="mood-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{% trans "Filter by Mood" %}</label>
@@ -112,15 +111,30 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                                
+                                <!-- **** FIX: Mood and Tags Section **** -->
                                 <div class="entry-meta">
+                                    {% if entry.mood %}
+                                        {% with mood_visual=mood_visuals|get_item:entry.mood %}
+                                        <div class="mood-display-pill">
+                                            {% if mood_visual.emoji %}
+                                                <span class="mr-2">{{ mood_visual.emoji }}</span>
+                                            {% endif %}
+                                            <span>{{ entry.get_mood_display }}</span>
+                                        </div>
+                                        {% endwith %}
+                                    {% endif %}
+
                                     {% if entry.tags.all %}
-                                        <div class="flex flex-wrap gap-3 mb-3">
+                                        <div class="flex flex-wrap gap-2">
                                             {% for tag in entry.tags.all %}
                                                 <span class="tag-pill-list-item">{{ tag }}</span>
                                             {% endfor %}
                                         </div>
                                     {% endif %}
                                 </div>
+                                <!-- **** End of FIX **** -->
+                                
                                 <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                                     <div class="flex flex-col sm:flex-row gap-3 mt-4">
                                         <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
@@ -152,16 +166,37 @@
 
     {% if is_paginated %}
     <nav class="mt-10 flex justify-center" aria-label="{% trans 'Pagination for journal entries' %}">
-        <!-- Pagination content remains the same... -->
+        <ul class="pagination-ul flex gap-3">
+            {% if page_obj.has_previous %}
+                <li>
+                    <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}" class="pagination-ul a">
+                        <i class="fas fa-chevron-left mr-1"></i>{% trans "Previous" %}
+                    </a>
+                </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li><span class="active-page">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:-2 and num < page_obj.number|add:2 %}
+                    <li>
+                        <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+                <li>
+                    <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}" class="pagination-ul a">
+                        {% trans "Next" %}<i class="fas fa-chevron-right ml-1"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
     </nav>
     {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-{# This script is now specific to this page for the 'Read More' feature. #}
 <script src="{% static 'js/journal_list_scripts.js' %}"></script>
-
-{# The global delete modal script is now loaded in base.html so it's available everywhere. #}
 <script src="{% static 'js/ajax_delete.js' %}"></script>
 {% endblock %}
