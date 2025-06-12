@@ -17,7 +17,7 @@ import logging
 
 from .forms import JournalEntryForm, JournalAttachmentForm, MOOD_CHOICES_FORM_DISPLAY
 from .models import JournalEntry, JournalAttachment, Tag
-from .utils import MOOD_VISUALS  # Import shared constants
+from .utils import MOOD_VISUALS
 
 from ai_services.tasks import (
     generate_quote_for_entry_task,
@@ -203,7 +203,8 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
-                        tag, _ = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
+                        # ***** FIX HERE: Use 'was_created' instead of '_' to avoid conflict *****
+                        tag, was_created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
             
@@ -352,7 +353,8 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
-                        tag, _ = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
+                        # ***** FIX HERE: Use 'was_created' instead of '_' to avoid conflict *****
+                        tag, was_created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
 
@@ -499,36 +501,51 @@ class JournalEntryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView
 
 class JournalEntryAjaxDeleteView(LoginRequiredMixin, UserPassesTestMixin, View):
     """
-    Handles the deletion of a journal entry via an AJAX POST request for a smoother UX.
+    Handles the deletion of a journal entry using an AJAX POST request. This provides
+    a smoother user experience by not requiring a full page reload.
     """
     http_method_names = ['post']
 
     def test_func(self):
-        """Checks if the user has permission to delete the object before dispatching."""
-        self.object = get_object_or_404(JournalEntry, pk=self.kwargs.get('pk'))
-        return self.object.user == self.request.user
+        """
+        This check runs before the view's dispatch method.
+        It ensures that the user attempting to access this view is the actual
+        owner of the journal entry. It fetches the object once and attaches it
+        to the view instance (`self.object`) so we don't have to fetch it again.
+        """
+        entry = get_object_or_404(JournalEntry, pk=self.kwargs.get('pk'))
+        if entry.user != self.request.user:
+            return False
+        self.object = entry
+        return True
     
     def handle_no_permission(self):
-        """Returns a JSON 403 error for AJAX requests if permission is denied."""
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'error', 'message': _('Permission denied.')}, status=403)
-        return super().handle_no_permission()
+        """
+        If the test_func returns False, this method is called.
+        It's customized to return a JSON 403 Forbidden error, which is more
+        appropriate for an AJAX call than the default HTML redirect.
+        """
+        return JsonResponse({'status': 'error', 'message': _('Permission denied.')}, status=403)
 
     def post(self, request, *args, **kwargs):
         """
-        Deletes the specified journal entry and returns a JSON response.
+        Handles the actual deletion of the journal entry object.
+        This method is only called if the test_func check passes.
         """
         try:
-            self.object = self.get_object()
+            # The object is already available as self.object thanks to test_func
             entry_pk = self.object.pk
             entry_title = self.object.title or _("Untitled Entry")
+            
+            # The delete() method on the model instance handles the deletion.
             self.object.delete()
-            logger.info(f"User {request.user.username} successfully deleted journal entry PK: {entry_pk}, Title: '{entry_title}' via AJAX.")
+            
+            logger.info(f"User '{request.user.username}' successfully deleted journal entry PK: {entry_pk}, Title: '{entry_title}' via AJAX.")
+            
+            # Return a success response to the frontend.
             return JsonResponse({'status': 'success', 'message': _('Entry deleted successfully.'), 'entry_id': entry_pk})
-        except Http404:
-            logger.warning(f"AJAX delete failed: Entry PK {kwargs.get('pk')} not found for user {request.user.username}.")
-            return JsonResponse({'status': 'error', 'message': _('Entry not found.')}, status=404)
+        
         except Exception as e:
-            logger.error(f"Unexpected error in AJAX delete for PK {kwargs.get('pk')}: {e}", exc_info=True)
+            # A general catch-all for any other unexpected errors during deletion.
+            logger.error(f"Unexpected error in AJAX delete for PK {kwargs.get('pk')} for user '{request.user.username}': {e}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': _('An unexpected server error occurred.')}, status=500)
-

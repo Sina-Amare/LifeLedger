@@ -293,3 +293,6 @@ html {
 #hamburger-toggle[aria-expanded="true"] i {
   transform: rotate(90deg); /* Rotate icon when menu is open */
 }
+#delete-modal {
+  z-index: 9999;
+}

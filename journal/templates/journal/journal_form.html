@@ -42,12 +42,8 @@
                         </label>
                         
                         {% if field.name == "tags" %}
-                            {# ***** MODIFICATION HERE ***** #}
-                            {# Use a fixed ID for the hidden input so JavaScript can reliably find it #}
                             <input type="hidden" name="{{ field.html_name }}" id="id_tags_hidden_input" 
                                    value="{% if form.instance.pk %}{{ initial_tags_str|default_if_none:'' }}{% else %}{{ field.value|default_if_none:'' }}{% endif %}">
-                            {# End of modification #}
-
                             <div id="selected-tags-container" class="flex flex-wrap gap-2 mb-3 empty:mb-0"></div>
                             {% if predefined_tags %}
                                 <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -153,7 +149,7 @@
                                     {% endwith %}
                                 </div>
                             {% endif %}
-                                
+                            
                             {% if attachment_formset.can_delete and formset_form.instance.pk %}
                                 <div class="flex items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                                     {% render_field formset_form.DELETE class="h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:bg-gray-800 dark:border-gray-600 dark:checked:bg-red-500 transition-all duration-300" %}
@@ -231,11 +227,8 @@
 
 {% block extra_js %}
     <script>
-        // Pass initial_tags_str from Django to JavaScript
         const initialTagsFromDjango = "{{ initial_tags_str|escapejs|default_if_none:'' }}";
-        // ***** MODIFICATION HERE *****
-        // Pass the ID of the hidden tags input field to JavaScript
-        const hiddenTagsInputId = "id_tags_hidden_input"; // Corresponds to the ID set in the HTML for the tags hidden input
+        const hiddenTagsInputId = "id_tags_hidden_input";
     </script>
     <script src="{% static 'js/journal_form_scripts.js' %}"></script>
     <script src="{% static 'js/journal_form_ai_progress.js' %}"></script>

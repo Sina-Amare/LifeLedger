@@ -29,12 +29,6 @@
                     {% endwith %}
                 </span>
                 {% endif %}
-                {% if entry.location %}
-                <span class="flex items-center truncate" title="{{ entry.location }}">
-                    <i class="fas fa-map-marker-alt mr-2 opacity-75"></i>
-                    <span class="truncate">{{ entry.location|truncatechars:30 }}</span>
-                </span>
-                {% endif %}
                 {% if entry.is_favorite %}
                 <span class="flex items-center text-yellow-500 dark:text-yellow-400 font-semibold">
                     <i class="fas fa-star mr-2"></i>{% trans "Favorite" %}
@@ -50,11 +44,6 @@
                         </span>
                     {% endfor %}
                 </div>
-            {% endif %}
-            {% if entry.created_at|timesince:entry.updated_at != "0 minutes" and entry.updated_at|date:"U" > entry.created_at|date:"U"|add:"60" %}
-                <p class="text-sm text-gray-400 dark:text-gray-500 mt-3">
-                    <em>({% blocktrans with time_diff=entry.updated_at|timesince:entry.created_at %}Last updated {{ time_diff }} ago{% endblocktrans %})</em>
-                </p>
             {% endif %}
         </header>
 
@@ -87,9 +76,6 @@
                                             <i class="fas fa-search-plus"></i>
                                         </div>
                                     </a>
-                                    <div class="attachment-info">
-                                        <p class="attachment-filename" title="{{ file_name }}">{{ file_name }}</p>
-                                    </div>
                                 {% else %}
                                     <div class="attachment-content">
                                         {% if attachment.file_type == 'audio' %}
@@ -99,31 +85,10 @@
                                         {% else %}
                                             <i class="fas fa-paperclip attachment-icon-lg text-gray-500 dark:text-gray-400"></i>
                                         {% endif %}
-                                        <p class="attachment-filename mt-2" title="{{ file_name }}">{{ file_name }}</p>
                                     </div>
-                                    {% if attachment.file_type == 'audio' %}
-                                        <audio controls class="w-full px-4 pb-3">
-                                            <source src="{{ attachment.file.url }}">
-                                            {% trans "Your browser does not support the audio element." %}
-                                        </audio>
-                                    {% elif attachment.file_type == 'video' %}
-                                        <video controls class="w-full rounded-b-xl max-h-60 bg-black">
-                                            <source src="{{ attachment.file.url }}">
-                                            {% trans "Your browser does not support the video tag." %}
-                                        </video>
-                                    {% endif %}
-                                    <div class="attachment-info"></div>
                                 {% endif %}
-                                
-                                <div class="px-4 pb-4 pt-3 flex justify-between items-center border-t border-gray-200 dark:border-gray-600">
-                                    <a href="{{ attachment.file.url }}"
-                                       class="attachment-download-link"
-                                       download="{{ file_name }}">
-                                        <i class="fas fa-download mr-2"></i> {% trans "Download" %}
-                                    </a>
-                                    <p class="attachment-meta">
-                                        {{ attachment.get_file_type_display|capfirst }}
-                                    </p>
+                                <div class="attachment-info">
+                                    <p class="attachment-filename" title="{{ file_name }}">{{ file_name }}</p>
                                 </div>
                             {% endwith %}
                         </div>
@@ -133,19 +98,18 @@
         {% endif %}
 
         <footer class="mt-12 pt-8 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row justify-between items-center gap-6">
-            <a href="{% url 'journal:journal_list' %}">
+            <a href="{% url 'journal:journal_list' %}" class="text-primary-light dark:text-primary-dark hover:underline">
                 <i class="fas fa-arrow-left mr-2"></i>{% trans "Back to List" %}
             </a>
             <div class="flex space-x-4">
-                <a href="{% url 'journal:journal_update' pk=entry.pk %}">
+                <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
                     <i class="fas fa-edit mr-2"></i>{% trans "Edit Entry" %}
                 </a>
                 <button class="delete-entry-button"
                         data-entry-id="{{ entry.pk }}"
                         data-entry-title="{{ entry.title|default:_('Untitled Entry') }}"
-                        {# ***** MODIFICATION HERE ***** #}
-                        data-redirect-url-on-delete="{% url 'journal:journal_list' %}"> 
-                        {# End of modification #}
+                        data-delete-url="{% url 'journal:journal_delete' pk=entry.pk %}"
+                        data-redirect-url="{% url 'journal:journal_list' %}">
                     <i class="fas fa-trash-alt mr-2"></i>{% trans "Delete Entry" %}
                 </button>
             </div>
@@ -155,9 +119,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    {# journal_detail_scripts.js is not provided, assuming it doesn't conflict #}
-    {# <script src="{% static 'js/journal_detail_scripts.js' %}"></script> #}
-    
-    {# ajax_delete.js handles the delete functionality #}
     <script src="{% static 'js/ajax_delete.js' %}"></script>
 {% endblock %}

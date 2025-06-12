@@ -371,53 +371,68 @@ input[type="file"]:focus {
   cursor: pointer;
 }
 
+/* --- AI Progress Modal Styles (FIXED) --- */
 #ai-progress-modal {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   transition: opacity 0.4s ease-in-out;
 }
+
 #ai-progress-modal .modal-content {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 2rem;
+  background: var(--card-light-bg); /* Use solid card background */
   transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
   transform: scale(0.95);
   padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-light);
 }
+.dark #ai-progress-modal .modal-content {
+  background: var(
+    --card-dark-bg
+  ); /* Use the card background for dark mode too */
+  border: 1px solid var(--border-dark);
+}
+
 #ai-progress-modal.show .modal-content {
   transform: scale(1);
   opacity: 1;
 }
+
 #ai-progress-bar-container {
-  height: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 0.75rem; /* 12px */
+  border-radius: 9999px; /* A very large value to make it a pill shape */
+  overflow: hidden; /* Ensures the inner bar doesn't spill out */
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Adds a subtle inner shadow for depth */
+
+  /* Set a visible background color for the track in light mode */
+  background-color: #e5e7eb; /* Corresponds to Tailwind's gray-200 */
 }
 .dark #ai-progress-bar-container {
-  background: rgba(255, 255, 255, 0.05);
+  /* Set a visible background for the track in dark mode */
+  background-color: #374151; /* Corresponds to Tailwind's gray-700 */
 }
+
 #ai-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #00e1c8, #c678dd);
-  transition: width 0.4s ease-in-out;
+  background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
+  transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
   border-radius: 9999px;
 }
 .spinner {
-  border: 4px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #00e1c8;
+  border: 4px solid rgba(156, 163, 175, 0.3); /* gray-400 with opacity */
+  border-top-color: var(--primary-light);
   animation: spin 0.8s linear infinite;
+  border-radius: 50%;
 }
 .dark .spinner {
-  border-top-color: #b36dfb;
+  border-top-color: var(--primary-dark);
 }
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
+/* --- End of AI Progress Modal Styles --- */
 
 button[type="submit"],
 a.button {

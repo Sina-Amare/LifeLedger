@@ -1,5 +1,6 @@
 # ai_services/tasks.py
 
+import os
 import requests
 import json
 import logging
@@ -9,6 +10,15 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from dotenv import load_dotenv
+
+# --- FIX: Load environment variables for the Celery worker ---
+# This ensures that the OPENROUTER_API_KEY is available when the task runs
+# in a separate process from the main Django application.
+# It assumes your .env file is in the project's root directory.
+env_path = os.path.join(settings.BASE_DIR.parent, '.env')
+if os.path.exists(env_path):
+    load_dotenv(dotenv_path=env_path)
 
 # Models are imported directly inside tasks to prevent potential circular 
 # dependency issues during application startup.
@@ -37,9 +47,10 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
     Returns:
         str: The content of the AI's response as a string, or None if an error occurs.
     """
-    api_key = settings.OPENROUTER_API_KEY
+    # The API key is now reliably loaded from the environment.
+    api_key = os.getenv('OPENROUTER_API_KEY')
     if not api_key:
-        logger.error(f"OPENROUTER_API_KEY not set in settings. Aborting {task_name}.")
+        logger.error(f"FATAL: OPENROUTER_API_KEY not found. Aborting {task_name}. Please check your .env file and restart the Celery worker.")
         return None
 
     payload = {
