@@ -1,5 +1,3 @@
-# journal/views.py
-
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -189,6 +187,9 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             self.object.ai_mood_processed = False
             self.object.ai_tags_processed = False
             self.object.ai_quote = None
+            self.object.ai_quote_task_id = None
+            self.object.ai_mood_task_id = None
+            self.object.ai_tags_task_id = None
             
             self.object.save()
             
@@ -216,8 +217,6 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
                 quote_task = generate_quote_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_quote_task_id = quote_task.id
                 task_ids_dict['quote_task_id'] = quote_task.id
-            else:
-                self.object.ai_quote_processed = True
             
             if user_profile.ai_enable_mood_detection and not form.cleaned_data.get('mood'):
                 mood_task = detect_mood_for_entry_task.apply_async(args=[entry_id])
@@ -302,7 +301,8 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
     def form_valid(self, form, attachment_formset):
         """
-        Process the valid form, re-scheduling AI tasks if content has changed.
+        Process the valid form, re-scheduling AI tasks if content has changed,
+        respecting manual edits by the user.
         """
         with transaction.atomic():
             content_changed = 'content' in form.changed_data
@@ -311,70 +311,76 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
             self.object = form.save(commit=False)
             
+            user_profile = self.request.user.profile
+            task_ids_dict = {}
+
+            should_run_ai_for_quote = False
             should_run_ai_for_mood = False
             should_run_ai_for_tags = False
-            
+
             if content_changed:
-                logger.info(f"Content changed for entry {self.object.pk}. Resetting AI quote.")
-                self.object.ai_quote_processed = False
-                self.object.ai_quote = None
-                self.object.ai_quote_task_id = None
-                
-                if not mood_manually_edited:
-                    logger.info("Content changed and mood was not manually set. Resetting mood for AI detection.")
+                if user_profile.ai_enable_quotes:
+                    logger.info(f"Content changed for entry {self.object.pk}. Resetting for AI quote.")
+                    self.object.ai_quote_processed = False
+                    self.object.ai_quote = None
+                    self.object.ai_quote_task_id = None
+                    should_run_ai_for_quote = True
+
+                if user_profile.ai_enable_mood_detection and not mood_manually_edited:
+                    logger.info(f"Content changed, mood not manually set. Resetting for AI mood detection.")
+                    self.object.mood = None 
                     self.object.ai_mood_processed = False
-                    self.object.mood = None
                     self.object.ai_mood_task_id = None
                     should_run_ai_for_mood = True
                 
-                if not tags_manually_edited:
-                    logger.info("Content changed and tags were not manually set. Resetting tags for AI suggestion.")
+                if user_profile.ai_enable_tag_suggestion and not tags_manually_edited:
+                    logger.info(f"Content changed, tags not manually set. Resetting for AI tag suggestion.")
                     self.object.ai_tags_processed = False
                     self.object.ai_tags_task_id = None
                     should_run_ai_for_tags = True
-                    self.object.tags.clear() # IMPORTANT: Clear existing tags immediately
             
-            # Save changes to the main object instance (including cleared fields)
-            self.object.save()
-            
-            # If tags were edited manually, process them now.
+            # This logic needs to run whether content changed or not.
             if tags_manually_edited:
+                logger.info(f"Tags were manually edited for entry {self.object.pk}. Applying them now.")
                 tag_names_list = form.cleaned_data.get('tags', [])
                 tags_to_set = []
                 for tag_name in tag_names_list:
-                    tag, was_created = Tag.objects.get_or_create(
-                        name__iexact=tag_name.strip(), 
-                        defaults={'name': tag_name.strip().capitalize()}
-                    )
-                    tags_to_set.append(tag)
+                    tag_name_stripped = tag_name.strip()
+                    if tag_name_stripped:
+                        # FINAL FIX: Changed '_' to 'was_created'
+                        tag, was_created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
+                        tags_to_set.append(tag)
                 self.object.tags.set(tags_to_set)
                 self.object.ai_tags_processed = True
+            elif should_run_ai_for_tags:
+                logger.info(f"Clearing tags for entry {self.object.pk} before AI suggestion.")
+                self.object.tags.clear()
+            
+            self.object.save()
             
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} and attachments updated.")
 
-            # Schedule AI tasks
+            # --- Dispatch AI Tasks ---
             entry_id = self.object.id
-            task_ids_dict = {}
-            user_profile = self.request.user.profile
-            
-            if user_profile.ai_enable_quotes and not self.object.ai_quote_processed:
+            if should_run_ai_for_quote:
                 quote_task = generate_quote_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_quote_task_id = quote_task.id
                 task_ids_dict['quote_task_id'] = quote_task.id
             
-            if user_profile.ai_enable_mood_detection and should_run_ai_for_mood:
+            if should_run_ai_for_mood:
                 mood_task = detect_mood_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_mood_task_id = mood_task.id
                 task_ids_dict['mood_task_id'] = mood_task.id
             
-            if user_profile.ai_enable_tag_suggestion and should_run_ai_for_tags:
+            if should_run_ai_for_tags:
                 tags_task = suggest_tags_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_tags_task_id = tags_task.id
                 task_ids_dict['tags_task_id'] = tags_task.id
             
-            self.object.save()
+            if task_ids_dict:
+                self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id'])
 
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
@@ -453,10 +459,11 @@ class AIServiceStatusView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         if needs_db_update_flags:
             entry.save(update_fields=list(set(needs_db_update_flags)))
-            logger.info(f"Updated AI processed flags for entry {entry.id}: {needs_db_update_flags}")
+            logger.info(f"Updated AI processed flags for entry {entry.id} via status check: {needs_db_update_flags}")
 
         all_done = all(
-            (not info[3] or info[1]) for info in task_info_map.values()
+            statuses[f'{task_type}_status'] in ["SUCCESS", "DISABLED_BY_USER", "FAILURE"]
+            for task_type in task_info_map
         )
 
         return JsonResponse({
