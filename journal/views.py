@@ -6,8 +6,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, View, DeleteView
 )
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.http import JsonResponse, Http404
-from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from django.forms import inlineformset_factory
 from django.db import transaction
 from django.db.models import Q
@@ -186,74 +185,56 @@ class JournalEntryCreateView(LoginRequiredMixin, CreateView):
             form.instance.user = self.request.user
             self.object = form.save(commit=False)
             
-            # Initialize AI-related fields before the first save.
-            self.object.ai_quote_task_id = None
-            self.object.ai_mood_task_id = None
-            self.object.ai_tags_task_id = None
             self.object.ai_quote_processed = False
             self.object.ai_mood_processed = False
             self.object.ai_tags_processed = False
+            self.object.ai_quote = None
             
             self.object.save()
             
-            # Process and save tags.
             tag_names_list = form.cleaned_data.get('tags', [])
             current_tags_for_entry = []
             if tag_names_list:
                 for tag_name in tag_names_list:
                     tag_name_stripped = tag_name.strip()
                     if tag_name_stripped:
-                        # ***** FIX HERE: Use 'was_created' instead of '_' to avoid conflict *****
                         tag, was_created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
                         current_tags_for_entry.append(tag)
             self.object.tags.set(current_tags_for_entry)
             
-            # Save attachments.
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} created with attachments and tags.")
 
-            # Schedule AI tasks to run after the transaction is committed.
             entry_id = self.object.id
             task_ids_dict = {}
             user_profile = self.request.user.profile
 
             logger.info(f"Dispatching AI tasks for new entry {entry_id} based on user preferences.")
             
-            # Schedule quote generation.
             if user_profile.ai_enable_quotes:
-                quote_task = generate_quote_for_entry_task.s(entry_id)
+                quote_task = generate_quote_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_quote_task_id = quote_task.id
                 task_ids_dict['quote_task_id'] = quote_task.id
-                transaction.on_commit(quote_task.delay)
             else:
                 self.object.ai_quote_processed = True
-                self.object.ai_quote = None
             
-            # Schedule mood detection if not manually set.
             if user_profile.ai_enable_mood_detection and not form.cleaned_data.get('mood'):
-                mood_task = detect_mood_for_entry_task.s(entry_id)
+                mood_task = detect_mood_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_mood_task_id = mood_task.id
                 task_ids_dict['mood_task_id'] = mood_task.id
-                transaction.on_commit(mood_task.delay)
             else:
                 self.object.ai_mood_processed = True
             
-            # Schedule tag suggestion if no tags were manually added.
             if user_profile.ai_enable_tag_suggestion and not current_tags_for_entry:
-                tags_task = suggest_tags_for_entry_task.s(entry_id)
+                tags_task = suggest_tags_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_tags_task_id = tags_task.id
                 task_ids_dict['tags_task_id'] = tags_task.id
-                transaction.on_commit(tags_task.delay)
             else:
                 self.object.ai_tags_processed = True
 
-            # Save the updated AI-related fields.
-            self.object.save(update_fields=['ai_quote_task_id', 'ai_mood_task_id', 'ai_tags_task_id', 
-                                            'ai_quote_processed', 'ai_mood_processed', 'ai_tags_processed',
-                                            'ai_quote', 'mood'])
+            self.object.save()
 
-        # Respond to the client.
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'status': 'success', 
@@ -321,72 +302,77 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
 
     def form_valid(self, form, attachment_formset):
         """
-        Process the valid form and formset for an update, handling AI task re-scheduling.
+        Process the valid form, re-scheduling AI tasks if content has changed.
         """
         with transaction.atomic():
             content_changed = 'content' in form.changed_data
-            mood_is_being_set_by_user = 'mood' in form.changed_data and form.cleaned_data.get('mood')
-            
+            mood_manually_edited = 'mood' in form.changed_data
+            tags_manually_edited = 'tags' in form.changed_data
+
             self.object = form.save(commit=False)
             
-            # Reset AI flags if content has been modified.
-            if content_changed:
-                logger.info(f"UpdateView: Content changed for entry {self.object.pk}. Resetting AI flags.")
-                self.object.ai_quote_processed = False
-                self.object.ai_mood_processed = False
-                self.object.ai_tags_processed = False
-                self.object.ai_quote_task_id = None
-                self.object.ai_mood_task_id = None
-                self.object.ai_tags_task_id = None
-
-            # If user manually sets a mood, mark AI processing as complete.
-            if mood_is_being_set_by_user:
-                self.object.ai_mood_processed = True
-                self.object.ai_mood_task_id = None
+            should_run_ai_for_mood = False
+            should_run_ai_for_tags = False
             
+            if content_changed:
+                logger.info(f"Content changed for entry {self.object.pk}. Resetting AI quote.")
+                self.object.ai_quote_processed = False
+                self.object.ai_quote = None
+                self.object.ai_quote_task_id = None
+                
+                if not mood_manually_edited:
+                    logger.info("Content changed and mood was not manually set. Resetting mood for AI detection.")
+                    self.object.ai_mood_processed = False
+                    self.object.mood = None
+                    self.object.ai_mood_task_id = None
+                    should_run_ai_for_mood = True
+                
+                if not tags_manually_edited:
+                    logger.info("Content changed and tags were not manually set. Resetting tags for AI suggestion.")
+                    self.object.ai_tags_processed = False
+                    self.object.ai_tags_task_id = None
+                    should_run_ai_for_tags = True
+                    self.object.tags.clear() # IMPORTANT: Clear existing tags immediately
+            
+            # Save changes to the main object instance (including cleared fields)
             self.object.save()
-
-            # Update tags.
-            tag_names_list = form.cleaned_data.get('tags', [])
-            current_tags_for_entry = []
-            if tag_names_list:
+            
+            # If tags were edited manually, process them now.
+            if tags_manually_edited:
+                tag_names_list = form.cleaned_data.get('tags', [])
+                tags_to_set = []
                 for tag_name in tag_names_list:
-                    tag_name_stripped = tag_name.strip()
-                    if tag_name_stripped:
-                        # ***** FIX HERE: Use 'was_created' instead of '_' to avoid conflict *****
-                        tag, was_created = Tag.objects.get_or_create(name__iexact=tag_name_stripped, defaults={'name': tag_name_stripped.capitalize()})
-                        current_tags_for_entry.append(tag)
-            self.object.tags.set(current_tags_for_entry)
-
-            # Update attachments.
+                    tag, was_created = Tag.objects.get_or_create(
+                        name__iexact=tag_name.strip(), 
+                        defaults={'name': tag_name.strip().capitalize()}
+                    )
+                    tags_to_set.append(tag)
+                self.object.tags.set(tags_to_set)
+                self.object.ai_tags_processed = True
+            
             attachment_formset.instance = self.object
             attachment_formset.save()
             logger.info(f"JournalEntry {self.object.pk} and attachments updated.")
 
-            # Schedule AI tasks if necessary.
+            # Schedule AI tasks
             entry_id = self.object.id
             task_ids_dict = {}
             user_profile = self.request.user.profile
             
             if user_profile.ai_enable_quotes and not self.object.ai_quote_processed:
-                quote_task = generate_quote_for_entry_task.s(entry_id)
+                quote_task = generate_quote_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_quote_task_id = quote_task.id
                 task_ids_dict['quote_task_id'] = quote_task.id
-                transaction.on_commit(quote_task.delay)
-                
-            if user_profile.ai_enable_mood_detection and not self.object.ai_mood_processed and not mood_is_being_set_by_user:
-                mood_task = detect_mood_for_entry_task.s(entry_id)
+            
+            if user_profile.ai_enable_mood_detection and should_run_ai_for_mood:
+                mood_task = detect_mood_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_mood_task_id = mood_task.id
                 task_ids_dict['mood_task_id'] = mood_task.id
-                transaction.on_commit(mood_task.delay)
-
-            if user_profile.ai_enable_tag_suggestion and not current_tags_for_entry and not self.object.ai_tags_processed:
-                tags_task = suggest_tags_for_entry_task.s(entry_id)
+            
+            if user_profile.ai_enable_tag_suggestion and should_run_ai_for_tags:
+                tags_task = suggest_tags_for_entry_task.apply_async(args=[entry_id])
                 self.object.ai_tags_task_id = tags_task.id
                 task_ids_dict['tags_task_id'] = tags_task.id
-                transaction.on_commit(tags_task.delay)
-            elif current_tags_for_entry:
-                 self.object.ai_tags_processed = True
             
             self.object.save()
 

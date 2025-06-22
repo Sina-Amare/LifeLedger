@@ -12,19 +12,12 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from dotenv import load_dotenv
 
-# --- FIX: Load environment variables for the Celery worker ---
-# This ensures that the OPENROUTER_API_KEY is available when the task runs
-# in a separate process from the main Django application.
-# It assumes your .env file is in the project's root directory.
 env_path = os.path.join(settings.BASE_DIR, '.env')
 if os.path.exists(env_path):
     load_dotenv(dotenv_path=env_path)
 
-# Models are imported directly inside tasks to prevent potential circular 
-# dependency issues during application startup.
 logger = logging.getLogger(__name__)
 
-# Centralized API configuration for consistency and ease of maintenance.
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 AI_MODEL_FOR_ALL_TASKS = getattr(settings, 'AI_MODEL_FOR_JOURNAL_ANALYSIS', "openai/gpt-3.5-turbo")
 
@@ -32,25 +25,10 @@ AI_MODEL_FOR_ALL_TASKS = getattr(settings, 'AI_MODEL_FOR_JOURNAL_ANALYSIS', "ope
 def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6, response_format=None, entry_id=None):
     """
     A robust helper function to make API calls to the OpenRouter service.
-
-    This function handles the construction of the request payload, headers,
-    and comprehensive error handling, including network timeouts and HTTP errors.
-
-    Args:
-        prompt_text (str): The prompt to send to the AI model.
-        task_name (str): A descriptive name for the task, used for logging purposes.
-        max_tokens (int): The maximum number of tokens for the AI to generate.
-        temperature (float): The sampling temperature for the generation (0.0 to 1.0).
-        response_format (dict, optional): Specifies a required response format (e.g., {"type": "json_object"}).
-        entry_id (int or str, optional): An identifier for logging context (e.g., user_id or entry_id).
-
-    Returns:
-        str: The content of the AI's response as a string, or None if an error occurs.
     """
-    # The API key is now reliably loaded from the environment.
     api_key = os.getenv('OPENROUTER_API_KEY')
     if not api_key:
-        logger.error(f"FATAL: OPENROUTER_API_KEY not found. Aborting {task_name}. Please check your .env file and restart the Celery worker.")
+        logger.error(f"FATAL: OPENROUTER_API_KEY not found. Aborting {task_name}.")
         return None
 
     payload = {
@@ -102,7 +80,6 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
 def generate_quote_for_entry_task(self, journal_entry_id):
     """
     Celery task to generate an insightful and relevant quote for a specific journal entry.
-    It fetches the entry, constructs a prompt, calls the AI, and updates the entry.
     """
     from journal.models import JournalEntry
     logger.info(f"Starting quote generation task for Entry ID: {journal_entry_id}")
@@ -145,7 +122,6 @@ def generate_quote_for_entry_task(self, journal_entry_id):
 def detect_mood_for_entry_task(self, journal_entry_id):
     """
     Celery task to detect the primary mood of a journal entry using AI analysis.
-    If a mood is already set by the user, this task will be skipped.
     """
     from journal.models import JournalEntry
     from journal.constants import MOOD_CHOICES
@@ -153,6 +129,7 @@ def detect_mood_for_entry_task(self, journal_entry_id):
     logger.info(f"Starting mood detection task for Entry ID: {journal_entry_id}")
     
     try:
+        # Re-fetch the entry to ensure we have the latest version.
         entry = JournalEntry.objects.get(pk=journal_entry_id)
         if entry.mood: 
             logger.info(f"Mood ('{entry.mood}') was already set for entry {entry.id}. Skipping AI detection.")
@@ -199,35 +176,29 @@ def detect_mood_for_entry_task(self, journal_entry_id):
 def suggest_tags_for_entry_task(self, journal_entry_id):
     """
     Celery task to suggest and apply relevant, *pre-existing* tags for a journal entry.
-
-    This task fetches all available tags from the database and instructs the AI
-    to choose only from that list. This prevents the creation of new, unwanted tags.
-    If no relevant tags are found, it applies a default 'General' tag.
     """
     from journal.models import JournalEntry, Tag
     logger.info(f"Starting tag suggestion task for Entry ID: {journal_entry_id}")
     
     try:
+        # Re-fetch the entry to ensure we have the latest version from the DB
         entry = JournalEntry.objects.get(pk=journal_entry_id)
         if entry.tags.exists(): 
             logger.info(f"Tags already exist for entry {entry.id}. Skipping AI suggestion.")
-        else:
-            # Step 1: Get all predefined tag names to provide as context to the AI.
-            available_tags = list(Tag.objects.values_list('name', flat=True))
-            if not available_tags:
-                logger.warning(f"No predefined tags found in the database. Cannot suggest tags for entry {entry.id}.")
-                entry.ai_tags_processed = True
-                entry.save(update_fields=['ai_tags_processed'])
-                return
+            JournalEntry.objects.filter(pk=journal_entry_id).update(ai_tags_processed=True)
+            return
 
+        available_tags = list(Tag.objects.values_list('name', flat=True))
+        if not available_tags:
+            logger.warning(f"No predefined tags found in the database. Cannot suggest tags for entry {entry.id}.")
+        else:
             tag_options_str = ", ".join(available_tags)
             content_snippet = (entry.content[:2000] + '...') if len(entry.content) > 2000 else entry.content
             
-            # Step 2: Create a more precise prompt for the AI.
             prompt = (
                 f"Analyze the following journal entry. From the list of available tags below, "
                 f"select up to 3 that are the most relevant. Your response must be a single, "
-                f"comma-separated list containing ONLY tags from the provided list.\n\n"
+                f"comma-separated list containing ONLY tags from the provided list. Do not create new tags.\n\n"
                 f"AVAILABLE TAGS:\n[{tag_options_str}]\n\n"
                 f"JOURNAL ENTRY:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
                 f"Relevant Tags from List:"
@@ -235,37 +206,25 @@ def suggest_tags_for_entry_task(self, journal_entry_id):
             
             ai_response = call_openrouter_api(prompt, "tag_suggestion", max_tokens=50, temperature=0.3, entry_id=entry.id)
             
+            tags_to_add_qs = None
             if ai_response:
-                # Step 3: Process the response and validate against existing tags.
-                # Create a case-insensitive map for robust matching.
                 available_tags_map = {name.lower(): name for name in available_tags}
+                raw_tags = [tag.strip(' ".,') for tag in ai_response.split(',') if tag.strip()]
                 
-                # Clean up the AI response.
-                raw_tags = [tag.strip(' ".,').capitalize() for tag in ai_response.split(',') if tag.strip()]
+                valid_tag_names = {available_tags_map[t.lower()] for t in raw_tags if t.lower() in available_tags_map}
                 
-                valid_tag_names = set()
-                for tag_name in raw_tags:
-                    if tag_name.lower() in available_tags_map:
-                        # Use the original capitalization from the database.
-                        valid_tag_names.add(available_tags_map[tag_name.lower()])
-
                 logger.info(f"AI suggested: {raw_tags}. Validated against existing tags: {list(valid_tag_names)}")
                 
-                # Step 4: Apply the valid tags, or a fallback tag.
-                tags_to_add = []
                 if valid_tag_names:
-                    tags_to_add = Tag.objects.filter(name__in=valid_tag_names)
-                else:
-                    logger.warning(f"No valid tags were identified from AI response for entry {entry.id}. Applying 'General' fallback.")
-                    # Use get_or_create for the fallback to ensure it exists.
-                    general_tag, _ = Tag.objects.get_or_create(name='General', defaults={'emoji': '🗒️'})
-                    tags_to_add = [general_tag]
-                
-                if tags_to_add:
-                    entry.tags.add(*tags_to_add)
-                    logger.info(f"Successfully applied tags {[t.name for t in tags_to_add]} to entry {entry.id}")
+                    tags_to_add_qs = Tag.objects.filter(name__in=valid_tag_names)
+            
+            if tags_to_add_qs:
+                entry.tags.add(*tags_to_add_qs)
+                logger.info(f"Successfully applied tags {[t.name for t in tags_to_add_qs]} to entry {entry.id}")
             else:
-                logger.warning(f"AI did not return content for tag suggestion for entry {entry.id}.")
+                logger.warning(f"No valid tags were identified. Applying 'General' fallback for entry {entry.id}.")
+                general_tag, _ = Tag.objects.get_or_create(name='General', defaults={'emoji': '🗒️'})
+                entry.tags.add(general_tag)
 
     except JournalEntry.DoesNotExist:
         logger.error(f"JournalEntry ID {journal_entry_id} not found for tag suggestion.")
@@ -354,7 +313,6 @@ def generate_insights_for_period_task(self, user_id, time_period):
 def generate_life_suggestions_task(self, user_id, insights_data):
     """
     Takes a summary of insights and generates actionable, empathetic suggestions for the user.
-    The prompt for this task is engineered to be more directive and provide better results.
     """
     from django.contrib.auth import get_user_model
     User = get_user_model()
@@ -376,8 +334,6 @@ def generate_life_suggestions_task(self, user_id, insights_data):
     highlights_str = "- " + "\n- ".join(highlights) if highlights else _("None provided.")
     challenges_str = "- " + "\n- ".join(challenges) if challenges else _("None provided.")
 
-    # This improved prompt gives the AI a clear persona and structured instructions,
-    # leading to more consistent and helpful suggestions.
     prompt_text = (
         "You are an empathetic and action-oriented AI life coach. Your client has shared the following summary from their journal. "
         "Your task is to provide 2-3 concrete, encouraging, and actionable suggestions based on this summary. "
