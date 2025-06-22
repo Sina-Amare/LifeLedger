@@ -1,8 +1,8 @@
-# journal/utils.py
-
 """
 Shared utilities and constants for the journal application.
 """
+import os
+import mimetypes
 
 # Visual configurations for different moods to be used across views and templates.
 # This centralized dictionary ensures consistency in UI representation of moods.
@@ -57,3 +57,25 @@ CHART_JS_COLOR_PALETTE = {
     'default': {'bg': 'rgba(100, 100, 100, 0.6)', 'border': 'rgb(100, 100, 100)'}
 }
 
+def get_file_type(filename):
+    """
+    Determines the generic file type ('image', 'audio', 'video', 'other')
+    based on the file's mimetype or extension.
+    """
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type:
+        if mime_type.startswith('image'):
+            return 'image'
+        if mime_type.startswith('audio'):
+            return 'audio'
+        if mime_type.startswith('video'):
+            return 'video'
+    # Fallback to extension check if mimetype is not definitive
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']:
+        return 'image'
+    if ext in ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac']:
+        return 'audio'
+    if ext in ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv']:
+        return 'video'
+    return 'other'

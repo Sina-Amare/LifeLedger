@@ -251,21 +251,21 @@ input[type="file"]:focus {
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: #ffffff;
   border: none;
-  opacity: 0; /* Start hidden for fade-in */
-  transform: scale(0.95); /* Slight scale for a pop effect */
-  transition: opacity 0.3s ease, transform 0.3s ease; /* Fade-in and scale animation */
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .selected-tag-pill:not(.removing) {
   opacity: 1;
   transform: scale(1);
 }
 .selected-tag-pill.removing {
-  opacity: 0; /* Fade-out for removal */
+  opacity: 0;
   transform: scale(0.95);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .selected-tag-pill:hover {
-  transform: scale(1.05); /* Slight scale on hover */
+  transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 .dark .selected-tag-pill {
@@ -371,7 +371,6 @@ input[type="file"]:focus {
   cursor: pointer;
 }
 
-/* --- AI Progress Modal Styles (FIXED) --- */
 #ai-progress-modal {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
@@ -379,7 +378,7 @@ input[type="file"]:focus {
 }
 
 #ai-progress-modal .modal-content {
-  background: var(--card-light-bg); /* Use solid card background */
+  background: var(--card-light-bg);
   transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
   transform: scale(0.95);
   padding: 2rem;
@@ -387,9 +386,7 @@ input[type="file"]:focus {
   border: 1px solid var(--border-light);
 }
 .dark #ai-progress-modal .modal-content {
-  background: var(
-    --card-dark-bg
-  ); /* Use the card background for dark mode too */
+  background: var(--card-dark-bg);
   border: 1px solid var(--border-dark);
 }
 
@@ -399,17 +396,14 @@ input[type="file"]:focus {
 }
 
 #ai-progress-bar-container {
-  height: 0.75rem; /* 12px */
-  border-radius: 9999px; /* A very large value to make it a pill shape */
-  overflow: hidden; /* Ensures the inner bar doesn't spill out */
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Adds a subtle inner shadow for depth */
-
-  /* Set a visible background color for the track in light mode */
-  background-color: #e5e7eb; /* Corresponds to Tailwind's gray-200 */
+  height: 0.75rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #e5e7eb;
 }
 .dark #ai-progress-bar-container {
-  /* Set a visible background for the track in dark mode */
-  background-color: #374151; /* Corresponds to Tailwind's gray-700 */
+  background-color: #374151;
 }
 
 #ai-progress-bar {
@@ -419,7 +413,7 @@ input[type="file"]:focus {
   border-radius: 9999px;
 }
 .spinner {
-  border: 4px solid rgba(156, 163, 175, 0.3); /* gray-400 with opacity */
+  border: 4px solid rgba(156, 163, 175, 0.3);
   border-top-color: var(--primary-light);
   animation: spin 0.8s linear infinite;
   border-radius: 50%;
@@ -432,7 +426,6 @@ input[type="file"]:focus {
     transform: rotate(360deg);
   }
 }
-/* --- End of AI Progress Modal Styles --- */
 
 button[type="submit"],
 a.button {
@@ -491,4 +484,106 @@ a.button:hover {
 .dark .error-container {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.7);
+}
+
+/* === NEW STYLES for Attachment Gallery (APPENDED) === */
+.attachment-preview-item,
+.attachment-add-button {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* Creates a square */
+  border-radius: 0.75rem; /* 12px */
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: #f9fafb; /* gray-50 */
+}
+
+.dark .attachment-preview-item,
+.dark .attachment-add-button {
+  background-color: #374151; /* gray-700 */
+}
+
+.attachment-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.attachment-preview-item:hover img {
+  transform: scale(1.05);
+}
+
+.attachment-add-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #d1d5db; /* gray-300 */
+  color: #6b7280; /* gray-500 */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.dark .attachment-add-button {
+  border-color: #4b5563; /* gray-600 */
+  color: #9ca3af; /* gray-400 */
+}
+.attachment-add-button:hover {
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+  background-color: rgba(0, 225, 200, 0.05);
+}
+.dark .attachment-add-button:hover {
+  border-color: var(--primary-dark);
+  color: var(--primary-dark);
+  background-color: rgba(198, 120, 221, 0.05);
+}
+
+.delete-attachment-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease-in-out;
+}
+
+.attachment-preview-item.existing-attachment:hover .delete-attachment-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.delete-attachment-btn i {
+  color: white;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.delete-attachment-btn:hover {
+  background-color: #ef4444; /* red-500 */
+}
+
+/* Style the parent when the hidden DELETE checkbox is checked */
+.attachment-preview-item > input[type="checkbox"]:checked ~ a > img {
+  filter: grayscale(1) brightness(0.6);
+  transform: scale(1); /* Reset hover scale */
+}
+
+.attachment-preview-item
+  > input[type="checkbox"]:checked
+  ~ div
+  > .delete-attachment-btn {
+  background-color: #ef4444; /* red-500 */
+  opacity: 1;
+  transform: scale(1);
 }

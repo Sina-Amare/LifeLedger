@@ -1,13 +1,11 @@
-# journal/forms.py
-
 from django import forms
 from .models import JournalEntry, JournalAttachment, Tag
 import os
 import mimetypes
 import re
-import logging # Import the logging module
+import logging
 
-logger = logging.getLogger(__name__) # Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 MOOD_CHOICES_FORM_DISPLAY = [
     ('', 'Select Mood'),
@@ -18,6 +16,26 @@ MOOD_CHOICES_FORM_DISPLAY = [
     ('neutral', '😐 Neutral'),
     ('excited', '🎉 Excited'),
 ]
+
+# --- NEW: Custom Widget and Field for Multiple File Uploads ---
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget that allows multiple file selections."""
+    allow_multiple_selected = True
+
+class MultipleFileField(forms.FileField):
+    """Custom field that uses the MultipleFileInput widget."""
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = single_file_clean(data, initial)
+        return result
+
 
 class JournalEntryForm(forms.ModelForm):
     mood = forms.ChoiceField(
@@ -37,9 +55,18 @@ class JournalEntryForm(forms.ModelForm):
         })
     )
 
+    # ADDED: A dedicated field for new uploads. It's not tied to a model field.
+    attachments = MultipleFileField(
+        required=False,
+        label="Add New Attachments",
+        # We will style the label as a button, so the input itself is hidden.
+        widget=MultipleFileInput(attrs={'multiple': True, 'class': 'hidden'})
+    )
+
     class Meta:
         model = JournalEntry
-        fields = ['title', 'content', 'mood', 'tags', 'location', 'privacy_level', 'is_favorite']
+        # IMPORTANT: The new 'attachments' field is added here to be included in the form.
+        fields = ['title', 'content', 'mood', 'tags', 'attachments', 'location', 'privacy_level', 'is_favorite']
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': 'Enter a title for your entry (optional)'}),
             'content': forms.Textarea(attrs={'placeholder': 'Write your thoughts, feelings, and reflections here...', 'rows': 12}),
@@ -49,14 +76,13 @@ class JournalEntryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'privacy_level' in self.fields and not self.fields['privacy_level'].widget.choices:
-             self.fields['privacy_level'].choices = JournalEntry.PRIVACY_CHOICES
+            self.fields['privacy_level'].choices = JournalEntry.PRIVACY_CHOICES
         
         if self.instance and self.instance.pk:
             initial_tag_names = [tag.name for tag in self.instance.tags.all().order_by('name')]
             self.initial['tags'] = ', '.join(initial_tag_names)
             if 'tags' in self.fields:
-                 self.fields['tags'].initial = self.initial['tags']
-
+                self.fields['tags'].initial = self.initial['tags']
 
     def clean_tags(self):
         tags_string = self.cleaned_data.get('tags', '')
@@ -81,7 +107,7 @@ class JournalEntryForm(forms.ModelForm):
                 raise forms.ValidationError(f"Tag \"{name}\" cannot start or end with a hyphen.")
 
             if '--' in name:
-                 raise forms.ValidationError(f"Tag \"{name}\" cannot contain consecutive hyphens.")
+                raise forms.ValidationError(f"Tag \"{name}\" cannot contain consecutive hyphens.")
 
             capitalized_name = ' '.join(word.capitalize() for word in name.replace('-', ' - ').split(' ')).replace(' - ', '-')
             
@@ -91,64 +117,10 @@ class JournalEntryForm(forms.ModelForm):
             cleaned_and_validated_tags.append(capitalized_name)
         
         return list(dict.fromkeys(cleaned_and_validated_tags))
-    
 
+# MODIFIED: This form is now only used to handle the deletion of existing files via the formset.
 class JournalAttachmentForm(forms.ModelForm):
     class Meta:
         model = JournalAttachment
-        fields = ['file'] 
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'file' in self.fields:
-            self.fields['file'].widget.attrs.update({
-                'class': 'block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 transition duration-200 ease-in-out custom-file-input',
-            })
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        
-        if self.cleaned_data.get('file') and hasattr(self.cleaned_data['file'], 'name'):
-            uploaded_file = self.cleaned_data['file']
-            filename = uploaded_file.name
-            
-            mime_type, _ = mimetypes.guess_type(filename)
-            guessed_file_type = 'other'
-
-            if mime_type:
-                if mime_type.startswith('image'):
-                    guessed_file_type = 'image'
-                elif mime_type.startswith('audio'):
-                    guessed_file_type = 'audio'
-                elif mime_type.startswith('video'):
-                    guessed_file_type = 'video'
-            else: 
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']:
-                    guessed_file_type = 'image'
-                elif ext in ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac']:
-                    guessed_file_type = 'audio'
-                elif ext in ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv']:
-                    guessed_file_type = 'video'
-            
-            instance.file_type = guessed_file_type
-            logger.info(f"Auto-detected file_type for '{filename}' as '{guessed_file_type}'. Mime: {mime_type}") # logger is now defined
-        elif instance.pk and instance.file and not instance.file_type:
-            filename = instance.file.name
-            mime_type, _ = mimetypes.guess_type(filename)
-            guessed_file_type = 'other'
-            if mime_type:
-                if mime_type.startswith('image'): guessed_file_type = 'image'
-                elif mime_type.startswith('audio'): guessed_file_type = 'audio'
-                elif mime_type.startswith('video'): guessed_file_type = 'video'
-            else:
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']: guessed_file_type = 'image'
-                elif ext in ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac']: guessed_file_type = 'audio'
-                elif ext in ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv']: guessed_file_type = 'video'
-            instance.file_type = guessed_file_type
-            logger.info(f"Updated missing file_type for existing attachment '{filename}' to '{guessed_file_type}'. Mime: {mime_type}")
-
-        if commit:
-            instance.save()
-        return instance
+        fields = ['id'] # We only need the ID to identify instances and the DELETE checkbox.
+        # The 'file' field is no longer needed here.
