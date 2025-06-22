@@ -32,6 +32,8 @@ PREDEFINED_TAGS_WITH_EMOJI = [
     {'name': 'Nature', 'emoji': '🌳'},
     {'name': 'Music', 'emoji': '🎵'},
     {'name': 'Technology', 'emoji': '💻'},
+    # ADDED: A neutral, general-purpose tag for fallback.
+    {'name': 'General', 'emoji': '🗒️'},
 ]
 
 def populate_initial_tags_handler(sender, **kwargs):
@@ -79,4 +81,3 @@ class JournalAppConfig(AppConfig):
         # for this app (journal) are run.
         post_migrate.connect(populate_initial_tags_handler, sender=self)
         print("JournalAppConfig: Connected populate_initial_tags_handler to post_migrate signal.")
-

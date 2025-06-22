@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 # This ensures that the OPENROUTER_API_KEY is available when the task runs
 # in a separate process from the main Django application.
 # It assumes your .env file is in the project's root directory.
-env_path = os.path.join(settings.BASE_DIR.parent, '.env')
+env_path = os.path.join(settings.BASE_DIR, '.env')
 if os.path.exists(env_path):
     load_dotenv(dotenv_path=env_path)
 
@@ -87,7 +87,7 @@ def call_openrouter_api(prompt_text, task_name, max_tokens=250, temperature=0.6,
         error_detail = response_data.get("error", {}).get("message", "No 'choices' or 'content' in API response.")
         logger.warning(f"Unexpected OpenRouter response for {task_name} ({log_identifier}): {error_detail}")
         return None
-            
+        
     except requests.exceptions.Timeout:
         logger.error(f"Timeout during OpenRouter API request for {task_name} ({log_identifier}).")
     except requests.exceptions.HTTPError as http_err:
@@ -198,7 +198,11 @@ def detect_mood_for_entry_task(self, journal_entry_id):
 @shared_task(bind=True, max_retries=3, default_retry_delay=50, acks_late=True)
 def suggest_tags_for_entry_task(self, journal_entry_id):
     """
-    Celery task to suggest relevant tags for a journal entry based on its content.
+    Celery task to suggest and apply relevant, *pre-existing* tags for a journal entry.
+
+    This task fetches all available tags from the database and instructs the AI
+    to choose only from that list. This prevents the creation of new, unwanted tags.
+    If no relevant tags are found, it applies a default 'General' tag.
     """
     from journal.models import JournalEntry, Tag
     logger.info(f"Starting tag suggestion task for Entry ID: {journal_entry_id}")
@@ -208,26 +212,58 @@ def suggest_tags_for_entry_task(self, journal_entry_id):
         if entry.tags.exists(): 
             logger.info(f"Tags already exist for entry {entry.id}. Skipping AI suggestion.")
         else:
+            # Step 1: Get all predefined tag names to provide as context to the AI.
+            available_tags = list(Tag.objects.values_list('name', flat=True))
+            if not available_tags:
+                logger.warning(f"No predefined tags found in the database. Cannot suggest tags for entry {entry.id}.")
+                entry.ai_tags_processed = True
+                entry.save(update_fields=['ai_tags_processed'])
+                return
+
+            tag_options_str = ", ".join(available_tags)
             content_snippet = (entry.content[:2000] + '...') if len(entry.content) > 2000 else entry.content
+            
+            # Step 2: Create a more precise prompt for the AI.
             prompt = (
-                "Analyze the following journal entry. Suggest 1 to 3 relevant tags. "
-                "Each tag should be a single word or a short 2-3 word phrase. "
-                "Return the tags as a single comma-separated list (e.g., Tag1, Another Tag, Example).\n\n"
-                f"Journal Entry:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
-                "Suggested Tags:"
+                f"Analyze the following journal entry. From the list of available tags below, "
+                f"select up to 3 that are the most relevant. Your response must be a single, "
+                f"comma-separated list containing ONLY tags from the provided list.\n\n"
+                f"AVAILABLE TAGS:\n[{tag_options_str}]\n\n"
+                f"JOURNAL ENTRY:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
+                f"Relevant Tags from List:"
             )
             
-            ai_response = call_openrouter_api(prompt, "tag_suggestion", max_tokens=50, temperature=0.5, entry_id=entry.id)
+            ai_response = call_openrouter_api(prompt, "tag_suggestion", max_tokens=50, temperature=0.3, entry_id=entry.id)
             
             if ai_response:
-                suggested_tags = [tag.strip().capitalize() for tag in ai_response.split(',') if tag.strip() and len(tag) <= 50]
-                if suggested_tags:
-                    tags_to_add = []
-                    for tag_name in list(set(suggested_tags)): # Ensure unique tags
-                        tag_instance, _ = Tag.objects.get_or_create(name__iexact=tag_name, defaults={'name': tag_name})
-                        tags_to_add.append(tag_instance)
+                # Step 3: Process the response and validate against existing tags.
+                # Create a case-insensitive map for robust matching.
+                available_tags_map = {name.lower(): name for name in available_tags}
+                
+                # Clean up the AI response.
+                raw_tags = [tag.strip(' ".,').capitalize() for tag in ai_response.split(',') if tag.strip()]
+                
+                valid_tag_names = set()
+                for tag_name in raw_tags:
+                    if tag_name.lower() in available_tags_map:
+                        # Use the original capitalization from the database.
+                        valid_tag_names.add(available_tags_map[tag_name.lower()])
+
+                logger.info(f"AI suggested: {raw_tags}. Validated against existing tags: {list(valid_tag_names)}")
+                
+                # Step 4: Apply the valid tags, or a fallback tag.
+                tags_to_add = []
+                if valid_tag_names:
+                    tags_to_add = Tag.objects.filter(name__in=valid_tag_names)
+                else:
+                    logger.warning(f"No valid tags were identified from AI response for entry {entry.id}. Applying 'General' fallback.")
+                    # Use get_or_create for the fallback to ensure it exists.
+                    general_tag, _ = Tag.objects.get_or_create(name='General', defaults={'emoji': '🗒️'})
+                    tags_to_add = [general_tag]
+                
+                if tags_to_add:
                     entry.tags.add(*tags_to_add)
-                    logger.info(f"AI suggested and added tags {suggested_tags} to entry {entry.id}")
+                    logger.info(f"Successfully applied tags {[t.name for t in tags_to_add]} to entry {entry.id}")
             else:
                 logger.warning(f"AI did not return content for tag suggestion for entry {entry.id}.")
 
