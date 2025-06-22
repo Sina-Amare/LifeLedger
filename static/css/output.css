@@ -924,6 +924,10 @@ video {
   height: 1.5rem;
 }
 
+.h-4 {
+  height: 1rem;
+}
+
 .max-h-40 {
   max-height: 10rem;
 }
@@ -978,6 +982,10 @@ video {
 
 .w-6 {
   width: 1.5rem;
+}
+
+.w-4 {
+  width: 1rem;
 }
 
 .min-w-full {
@@ -1234,6 +1242,12 @@ video {
 
 .overflow-hidden {
   overflow: hidden;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .break-all {
@@ -2495,6 +2509,11 @@ form input[type="password"]:focus {
 
 .dark\:bg-green-900\/50:is(.dark *) {
   background-color: rgb(20 83 45 / 0.5);
+}
+
+.dark\:bg-gray-600:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(75 85 99 / var(--tw-bg-opacity));
 }
 
 .dark\:from-primary-dark:is(.dark *) {
