@@ -125,12 +125,12 @@ def generate_quote_for_entry_task(self, journal_entry_id):
 def detect_mood_for_entry_task(self, journal_entry_id):
     """
     Celery task to detect and set the primary mood of a journal entry using AI.
-    It expects to be called only when a mood analysis is explicitly required.
+    This task is designed to understand nuance and sarcasm.
     """
     from journal.models import JournalEntry
     from journal.constants import MOOD_CHOICES
     
-    logger.info(f"Starting mood detection task for Entry ID: {journal_entry_id}")
+    logger.info(f"Starting nuanced mood detection task for Entry ID: {journal_entry_id}")
     
     try:
         entry = JournalEntry.objects.get(pk=journal_entry_id)
@@ -138,15 +138,20 @@ def detect_mood_for_entry_task(self, journal_entry_id):
         valid_moods = [choice[0] for choice in MOOD_CHOICES]
         mood_options_str = ", ".join(valid_moods)
         
+        # --- REFINED PROMPT ---
         prompt = (
-            f"You are a text analysis expert. Your task is to identify the single primary emotion from a journal entry. "
-            f"Analyze the emotional tone of the text provided below. You must choose exactly ONE primary mood from the following list: {mood_options_str}. "
-            f"Your response MUST be a single word from that list, in lowercase. Do not add any explanation or punctuation.\n\n"
+            f"You are an expert in sentiment analysis with a high degree of emotional intelligence. Your task is to identify the single, *underlying* primary emotion from a journal entry. "
+            f"The user might express frustration and happiness in the same sentence (e.g., 'I hate this bug, but I'm so happy I finally fixed it'). Your job is to determine the dominant, concluding emotion. "
+            f"Look for sarcasm, irony, and mixed signals. Prioritize the final feeling over initial complaints.\n\n"
+            f"From the list below, choose exactly ONE primary mood that best represents the entry's core feeling:\n"
+            f"[{mood_options_str}]\n\n"
             f"JOURNAL ENTRY:\n\"\"\"\n{content_snippet}\n\"\"\"\n\n"
+            f"Your response MUST be a single word from the list, in lowercase. Do not add any explanation or punctuation.\n"
             f"PRIMARY MOOD:"
         )
         
-        ai_response = call_openrouter_api(prompt, "mood_detection", max_tokens=10, temperature=0.2, entry_id=entry.id)
+        # Increased temperature for more nuanced interpretation
+        ai_response = call_openrouter_api(prompt, "mood_detection", max_tokens=10, temperature=0.4, entry_id=entry.id)
         
         detected_mood = 'neutral'  # Default fallback
         if ai_response:
@@ -231,7 +236,7 @@ def suggest_tags_for_entry_task(self, journal_entry_id):
         JournalEntry.objects.filter(pk=journal_entry_id).update(ai_tags_processed=True)
         logger.info(f"Tag suggestion task completed and status saved for entry ID: {journal_entry_id}")
 
-# ... (The rest of the tasks `generate_insights_for_period_task` and `generate_life_suggestions_task` remain unchanged) ...
+
 @shared_task(bind=True, name='ai_services.tasks.generate_insights_for_period_task')
 def generate_insights_for_period_task(self, user_id, time_period):
     """
