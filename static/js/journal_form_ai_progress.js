@@ -1,8 +1,11 @@
-// static/js/journal_form_ai_progress.js
-
+/**
+ * Handles the AI processing progress modal for the journal entry form.
+ * This script intercepts the form submission, shows a progress modal,
+ * and polls the backend for the status of asynchronous AI tasks.
+ */
 document.addEventListener("DOMContentLoaded", function () {
   const journalForm = document.getElementById("journal-entry-form");
-  const saveButton = document.getElementById("save-entry-button"); // Ensure your save button has this ID
+  const saveButton = document.getElementById("save-entry-button");
 
   const progressModal = document.getElementById("ai-progress-modal");
   const progressModalContent = document.getElementById(
@@ -19,7 +22,14 @@ document.addEventListener("DOMContentLoaded", function () {
   const spinner = document.getElementById("ai-spinner");
 
   let pollingInterval;
-  const totalAiTasks = 3; // Quote, Mood, Tags
+  const totalAiTasks = 3; // Corresponds to quote, mood, and tags.
+
+  if (!journalForm || !saveButton) {
+    console.warn(
+      "Journal form or save button not found. Progress script is inactive."
+    );
+    return;
+  }
 
   function getCookie(name) {
     let cookieValue = null;
@@ -27,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const cookies = document.cookie.split(";");
       for (let i = 0; i < cookies.length; i++) {
         const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === name + "=") {
+        if (cookie.startsWith(name + "=")) {
           cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
           break;
         }
@@ -37,42 +47,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   const csrftoken = getCookie("csrftoken");
 
-  function showProgressModal(isUpdate = false) {
-    if (
-      !progressModal ||
-      !progressModalContent ||
-      !progressBar ||
-      !progressPercentageText ||
-      !progressMessage ||
-      !progressTitle ||
-      !taskStatusList ||
-      !successMessageDiv ||
-      !spinner
-    ) {
-      console.error("One or more progress modal elements not found.");
-      return;
-    }
+  function showProgressModal(isUpdate) {
     progressTitle.textContent = isUpdate
       ? "Updating your masterpiece..."
       : "Crafting your insights...";
     progressMessage.textContent =
       "Please wait a moment while we enhance your journal entry.";
-    progressBar.style.width = "5%"; // Start with a small amount of progress
+    progressBar.style.width = "5%";
     progressPercentageText.textContent = "5%";
     taskStatusList.innerHTML = `
-            <li id="status-quote" class="text-gray-500 dark:text-gray-400">Quote Generation: <span class="font-semibold">Initializing...</span></li>
-            <li id="status-mood" class="text-gray-500 dark:text-gray-400">Mood Detection: <span class="font-semibold">Initializing...</span></li>
-            <li id="status-tags" class="text-gray-500 dark:text-gray-400">Tag Suggestion: <span class="font-semibold">Initializing...</span></li>
-        `;
+          <li id="status-quote" class="text-gray-500 dark:text-gray-400">Quote Generation: <span class="font-semibold">Initializing...</span></li>
+          <li id="status-mood" class="text-gray-500 dark:text-gray-400">Mood Detection: <span class="font-semibold">Initializing...</span></li>
+          <li id="status-tags" class="text-gray-500 dark:text-gray-400">Tag Suggestion: <span class="font-semibold">Initializing...</span></li>
+      `;
     successMessageDiv.classList.add("hidden");
     spinner.classList.remove("hidden");
-    progressBar.classList.remove("bg-green-500", "bg-red-500"); // Reset bar color
+    progressBar.classList.remove("bg-green-500", "bg-red-500");
     progressBar.classList.add("bg-primary-light", "dark:bg-primary-dark");
 
     progressModal.classList.remove("hidden");
     progressModal.classList.add("flex");
-    // Force reflow for transition
-    void progressModalContent.offsetWidth;
+    void progressModalContent.offsetWidth; // Reflow
     progressModalContent.classList.remove("opacity-0", "scale-95");
     progressModalContent.classList.add("opacity-100", "scale-100");
   }
@@ -85,7 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
       progressModal.classList.add("hidden");
       progressModal.classList.remove("flex");
       if (saveButton) {
-        // Re-enable save button if modal is hidden due to error
         saveButton.disabled = false;
         saveButton.classList.remove("opacity-50", "cursor-not-allowed");
       }
@@ -96,8 +90,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const statusElement = document.getElementById(`status-${taskType}`);
     if (statusElement) {
       let statusText = "Pending...";
-      let statusIcon = "<i class='fas fa-spinner fa-spin ml-1'></i>"; // Default pending icon
-      let textColor = "text-yellow-500 dark:text-yellow-400";
+      let statusIcon = "<i class='far fa-clock ml-1'></i>";
+      let textColor = "text-gray-500 dark:text-gray-400";
 
       if (status === "SUCCESS") {
         statusText = "Done";
@@ -109,12 +103,13 @@ document.addEventListener("DOMContentLoaded", function () {
         textColor = "text-red-600 dark:text-red-400";
       } else if (status === "STARTED" || status === "RETRY") {
         statusText = "Processing...";
-      } else if (status === "PENDING" && taskType !== "initial") {
-        // Don't show spinner if truly just pending
-        statusIcon = "<i class='far fa-clock ml-1'></i>";
+        statusIcon = "<i class='fas fa-spinner fa-spin ml-1'></i>";
+        textColor = "text-yellow-500 dark:text-yellow-400";
+      } else if (status === "DISABLED_BY_USER") {
+        statusText = "Disabled";
+        statusIcon = "<i class='fas fa-ban text-gray-400 ml-1'></i>";
         textColor = "text-gray-500 dark:text-gray-400";
       }
-
       statusElement.innerHTML = `${
         taskType.charAt(0).toUpperCase() + taskType.slice(1)
       }: <span class="font-semibold ${textColor}">${statusText} ${statusIcon}</span>`;
@@ -133,67 +128,36 @@ document.addEventListener("DOMContentLoaded", function () {
     if (progressBar) {
       progressBar.style.width = `${percentage}%`;
       if (hasFailure && completedTasks < totalTasksToConsider) {
-        progressBar.classList.remove(
-          "bg-primary-light",
-          "dark:bg-primary-dark",
-          "bg-green-500"
-        );
-        progressBar.classList.add("bg-red-500");
+        progressBar.className =
+          "h-full rounded-full bg-red-500 transition-all duration-500";
       } else if (percentage === 100) {
-        progressBar.classList.remove(
-          "bg-primary-light",
-          "dark:bg-primary-dark",
-          "bg-red-500"
-        );
-        progressBar.classList.add("bg-green-500"); // Green on full success
+        progressBar.className =
+          "h-full rounded-full bg-green-500 transition-all duration-500";
       }
     }
     if (progressPercentageText)
       progressPercentageText.textContent = `${percentage}%`;
   }
 
-  async function pollTaskStatus(entryId, initialTaskIds, redirectUrl) {
-    if (!entryId) {
-      console.error("Entry ID is missing for polling.");
-      hideProgressModal();
-      alert("Error: Could not track AI processing. Entry ID missing.");
-      return;
-    }
-
+  async function pollTaskStatus(entryId, redirectUrl) {
     const statusUrl = `/journal/entry/${entryId}/ai-status/`;
     let attempts = 0;
-    const maxAttempts = 20; // Poll for a maximum of 20 * 3 = 60 seconds
+    const maxAttempts = 20;
 
     pollingInterval = setInterval(async () => {
       attempts++;
       if (attempts > maxAttempts) {
         clearInterval(pollingInterval);
-        logger.warn("Max polling attempts reached for entry ID:", entryId);
-        progressTitle.textContent = "Processing Update";
-        progressMessage.innerHTML = `<span class="text-yellow-500 dark:text-yellow-300">AI tasks are taking longer than expected. Your entry is saved. You can check back on its detail page shortly.</span>`;
-        spinner.classList.add("hidden");
-        setTimeout(() => {
-          window.location.href = redirectUrl; // Redirect anyway
-        }, 4000);
+        window.location.href = redirectUrl;
         return;
       }
 
       try {
         const response = await fetch(statusUrl);
-        if (!response.ok) {
-          // If status endpoint itself fails (e.g. 404, 500 from status view)
-          throw new Error(
-            `AI status check failed: ${response.status} ${response.statusText}`
-          );
-        }
         const data = await response.json();
-        console.log("Polling status response:", data);
 
-        if (data.status !== "ok") {
-          throw new Error(
-            data.message || "Unknown error from AI status endpoint."
-          );
-        }
+        if (data.status !== "ok")
+          throw new Error(data.message || "Status check failed.");
 
         let completedCount = 0;
         let hasFailure = false;
@@ -202,11 +166,13 @@ document.addEventListener("DOMContentLoaded", function () {
         taskTypes.forEach((taskType) => {
           const status = data.task_statuses[`${taskType}_status`];
           updateTaskStatusUI(taskType, status);
-          if (status === "SUCCESS") {
+          if (
+            status === "SUCCESS" ||
+            status === "FAILURE" ||
+            status === "DISABLED_BY_USER"
+          ) {
             completedCount++;
-          } else if (status === "FAILURE") {
-            completedCount++; // Count failures as "processed" for progress bar completion
-            hasFailure = true;
+            if (status === "FAILURE") hasFailure = true;
           }
         });
 
@@ -215,42 +181,27 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.all_done) {
           clearInterval(pollingInterval);
           spinner.classList.add("hidden");
-          if (hasFailure) {
-            progressTitle.textContent = "Processing Partially Complete";
-            progressMessage.innerHTML = `<span class="text-yellow-600 dark:text-yellow-400">Some AI enhancements encountered issues. Your entry is saved.</span>`;
-          } else {
-            progressTitle.textContent = "Enhancements Complete!";
-            progressMessage.textContent =
-              "Your journal entry has been beautifully crafted.";
-            successMessageDiv.classList.remove("hidden");
-          }
+          progressTitle.textContent = hasFailure
+            ? "Processing Partially Complete"
+            : "Enhancements Complete!";
+          successMessageDiv.classList.remove("hidden");
           setTimeout(
-            () => {
-              window.location.href = redirectUrl;
-            },
+            () => (window.location.href = redirectUrl),
             hasFailure ? 3000 : 1500
           );
         }
       } catch (error) {
         console.error("Polling error:", error);
-        progressMessage.textContent = "Error checking AI status. Retrying...";
-        // The interval will continue to retry up to maxAttempts
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
   }
 
-  if (journalForm && saveButton) {
+  if (journalForm) {
     journalForm.addEventListener("submit", async function (event) {
       event.preventDefault();
 
-      // Call your existing tag update function if it's globally available
       if (typeof window.updatePillsAndHiddenInput === "function") {
         window.updatePillsAndHiddenInput();
-        console.log("Called window.updatePillsAndHiddenInput()");
-      } else {
-        console.warn(
-          "Global function updatePillsAndHiddenInput not found for tags."
-        );
       }
 
       const isUpdate = journalForm.action.includes("/edit/");
@@ -266,73 +217,52 @@ document.addEventListener("DOMContentLoaded", function () {
           method: "POST",
           body: formData,
           headers: {
-            "X-CSRFToken": csrftoken, // Ensure CSRF token is sent
+            "X-CSRFToken": csrftoken,
             "X-Requested-With": "XMLHttpRequest",
           },
         });
 
-        const responseData = await response.json(); // Try to parse JSON regardless of status for more info
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const responseData = await response.json();
 
-        if (!response.ok) {
-          console.error("Form submission error response:", responseData);
-          let errorMessages =
-            "Submission failed. Please check the form for errors.";
-          if (responseData.form_errors || responseData.formset_errors) {
-            errorMessages =
-              "Please correct the errors highlighted in the form. The page will reload.";
-            // Here, you could attempt to parse responseData.form_errors (which is JSON string)
-            // and display them in the modal, but a reload is simpler for now.
-          } else if (responseData.message) {
-            errorMessages = responseData.message;
+          if (!response.ok) {
+            console.error("Form submission error response:", responseData);
+            progressTitle.textContent = "Submission Error";
+            progressMessage.innerHTML = `<span class="text-red-500">Please check the form for errors. The page will now reload.</span>`;
+            spinner.classList.add("hidden");
+            setTimeout(() => window.location.reload(), 4000);
+            return;
           }
-          progressTitle.textContent = "Submission Error";
-          progressMessage.innerHTML = `<span class="text-red-500">${errorMessages}</span>`;
-          spinner.classList.add("hidden");
-          setTimeout(() => {
-            hideProgressModal();
-            // Don't submit normally, let user fix errors if possible or show a persistent error
-            // journalForm.submit();
-            saveButton.disabled = false;
-            saveButton.classList.remove("opacity-50", "cursor-not-allowed");
-          }, 4000);
-          return;
-        }
 
-        console.log("Form submission successful:", responseData);
-
-        if (
-          responseData.status === "success" &&
-          responseData.entry_id &&
-          responseData.redirect_url
-        ) {
-          progressMessage.textContent =
-            "Entry saved! AI enhancements are now in progress...";
-          pollTaskStatus(
-            responseData.entry_id,
-            responseData.task_ids,
+          if (
+            responseData.status === "success" &&
+            responseData.entry_id &&
             responseData.redirect_url
-          );
+          ) {
+            progressMessage.textContent =
+              "Entry saved! AI enhancements are in progress...";
+            pollTaskStatus(responseData.entry_id, responseData.redirect_url);
+          } else {
+            throw new Error(
+              responseData.message ||
+                "Received an unexpected success response format."
+            );
+          }
         } else {
-          // This case might happen if backend returns 200 OK but status is not 'success'
+          const errorText = await response.text();
+          console.error("Server returned non-JSON response:", errorText);
           throw new Error(
-            responseData.message || "Unknown success response format."
+            "The server responded with an unexpected error. Please check the server logs."
           );
         }
       } catch (error) {
         console.error("AJAX submission processing error:", error);
         progressTitle.textContent = "Error";
-        progressMessage.innerHTML = `<span class="text-red-500">An error occurred: ${error.message}. Please try again.</span>`;
+        progressMessage.innerHTML = `<span class="text-red-500">${error.message}</span>`;
         spinner.classList.add("hidden");
-        setTimeout(hideProgressModal, 5000);
-        // Re-enable button after error
-        saveButton.disabled = false;
-        saveButton.classList.remove("opacity-50", "cursor-not-allowed");
+        setTimeout(hideProgressModal, 6000);
       }
-      // Do not re-enable button here if polling has started. It's handled in hideProgressModal or success.
     });
-  } else {
-    console.warn(
-      "Journal form or save button not found for AI progress script."
-    );
   }
 });

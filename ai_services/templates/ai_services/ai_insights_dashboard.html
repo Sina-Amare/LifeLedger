@@ -1,0 +1,862 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "AI Insights" %}{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-light: #3b82f6;
+        --primary-dark: #60a5fa;
+        --accent-color: #8b5cf6;
+        --accent-dark: #a78bfa;
+        --card-light-bg: #ffffff;
+        --card-dark-bg: #1e293b;
+        --border-light: #e5e7eb;
+        --border-dark: #334155;
+        --text-light-color: #1f2937;
+        --text-dark: #f1f5f9;
+        --text-muted-light: #6b7280;
+        --text-muted-dark: #9ca3af;
+        --success-color: #22c55e;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --shadow-light: 0 10px 20px rgba(0, 0, 0, 0.1);
+        --shadow-dark: 0 10px 20px rgba(0, 0, 0, 0.3);
+        --gradient-bg-light: linear-gradient(45deg, var(--primary-light), var(--accent-color));
+        --gradient-bg-dark: linear-gradient(45deg, var(--primary-dark), var(--accent-dark));
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f4f6;
+        color: var(--text-light-color);
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .dark body {
+        background-color: #0f172a;
+        color: var(--text-dark);
+    }
+
+    .dashboard-card {
+        background: var(--card-light-bg);
+        border: 1px solid var(--border-light);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s cubic-bezier(.25, .46, .45, .94), box-shadow 0.3s;
+    }
+
+    .dark .dashboard-card {
+        background: var(--card-dark-bg);
+        border: 1px solid var(--border-dark);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-light);
+    }
+
+    .dark .dashboard-card:hover {
+        box-shadow: var(--shadow-dark);
+    }
+
+    .fancy-button {
+        background: var(--gradient-bg-light);
+        border: none;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .dark .fancy-button {
+        background: var(--gradient-bg-dark);
+    }
+
+    .fancy-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .dark .fancy-button:hover {
+        box-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+    }
+
+    .fancy-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .fancy-button:hover::before {
+        left: 100%;
+    }
+
+    .fancy-button i {
+        transition: transform 0.3s ease;
+    }
+
+    .fancy-button:hover i {
+        transform: rotate(15deg);
+    }
+
+    .fancy-button:disabled {
+        background: #d1d5db;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .dark .fancy-button:disabled {
+        background: #4b5563;
+    }
+
+    .loader-container {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s;
+        z-index: 10;
+        pointer-events: none;
+        border-radius: 1rem;
+    }
+
+    .dark .loader-container {
+        background: rgba(30, 41, 59, 0.7);
+    }
+
+    .loader-container.visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .gear-group {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem; /* Add spacing between gears */
+    }
+
+    .gear {
+        font-size: 2.5rem;
+        background: var(--gradient-bg-light);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        animation: spin 2s linear infinite;
+        filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+    }
+
+    .dark .gear {
+        background: var(--gradient-bg-dark);
+        filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.5));
+    }
+    
+    .gear:nth-child(2) {
+        font-size: 1.8rem;
+        animation: spin-reverse 1.5s linear infinite;
+    }
+
+    .gear:nth-child(3) {
+        font-size: 1.3rem;
+        animation: spin 1.2s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin-reverse { to { transform: rotate(-360deg); } }
+
+    .fade-in-element {
+        opacity: 0;
+        animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-list li {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 0.75rem;
+        transition: transform 0.2s ease;
+    }
+    .result-list li:hover {
+        transform: translateX(5px);
+    }
+    .result-list li::before {
+        content: '';
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 50%;
+        color: white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    .highlights-list li::before { content: '\f005'; background: linear-gradient(45deg, #f59e0b, #facc15); }
+    .challenges-list li::before { content: '\f071'; background: linear-gradient(45deg, #ef4444, #f87171); }
+    .themes-list li::before { content: '\f02b'; background: linear-gradient(45deg, #8b5cf6, #a78bfa); }
+    .suggestions-list li::before { content: '\f0eb'; background: linear-gradient(45deg, #10b981, #34d399); }
+
+    .chart-container canvas {
+        opacity: 0;
+        transition: opacity 0.5s ease 0.2s;
+    }
+    .chart-container canvas.visible {
+        opacity: 1;
+    }
+
+    .fade-in-results.visible {
+        opacity: 1;
+    }
+    
+    .time-filter-buttons button.active {
+        background-color: var(--primary-light);
+        color: white;
+        border-color: var(--primary-light);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+    .dark .time-filter-buttons button.active {
+        background-color: var(--primary-dark);
+        border-color: var(--primary-dark);
+        box-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
+    }
+
+    .insights-status.error {
+        color: var(--danger-color);
+        font-weight: 500;
+    }
+
+    /* Centering Deeper Analysis Results */
+    .analysis-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    #insights-results {
+        width: 80%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Suggestions Section Centering */
+    #suggestions-container {
+        text-align: center;
+        padding: 1rem;
+    }
+    #suggestions-results {
+        width: 80%;
+        margin: 0 auto;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .grid-cols-5 {
+            grid-template-columns: 1fr;
+        }
+        #insights-results {
+            width: 100%;
+        }
+        #suggestions-results {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="py-12 md:py-20 bg-transparent min-h-screen">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="text-center mb-12 md:mb-16 fade-in-element" style="animation-delay: 0.1s;">
+            <h1 class="text-4xl sm:text-5xl font-bold text-text-light-color dark:text-text-dark mb-3 tracking-tight flex items-center justify-center gap-3">
+                <i class="fas fa-brain text-3xl sm:text-4xl text-primary-light dark:text-primary-dark"></i>
+                {% trans "AI Insights Dashboard" %}
+            </h1>
+            <p class="text-lg text-muted-light dark:text-muted-dark max-w-2xl mx-auto leading-relaxed">
+                {% trans "Discover patterns and insights from your journal entries over time." %}
+            </p>
+        </header>
+
+        <div class="mb-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 fade-in-element" style="animation-delay: 0.2s;">
+            <div class="flex flex-wrap justify-center gap-2 time-filter-buttons" role="group">
+                {% for option in time_period_options %}
+                <button type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-card-light-bg dark:bg-card-dark-bg border border-border-light dark:border-border-dark text-text-light-color dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark transition-all duration-200" data-period="{{ option.value }}" data-label="{{ option.label }}">
+                    {{ option.label }}
+                </button>
+                {% endfor %}
+            </div>
+            <span id="global-time-period" class="text-sm font-semibold text-muted-light dark:text-muted-dark mt-2 sm:mt-0">{% trans "Last 30 Days" %}</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-8">
+            <!-- Sentiment Analysis Chart -->
+            <div class="dashboard-card lg:col-span-2 fade-in-element" style="animation-delay: 0.3s;">
+                <div class="p-6 sm:p-8">
+                    <h2 class="text-2xl font-semibold text-text-light-color dark:text-text-dark mb-4">{% trans "Sentiment Analysis" %}</h2>
+                    <div class="chart-container relative h-[300px] w-full">
+                        <div id="sentimentChartLoader" class="loader-container">
+                            <div class="gear-group"><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i></div>
+                        </div>
+                        <canvas id="sentimentTrendChart"></canvas>
+                        <div id="noSentimentChartDataMessage" class="absolute inset-0 hidden flex-col items-center justify-center text-center p-6 text-muted-light dark:text-muted-dark">
+                            <i class="fas fa-chart-pie text-5xl mb-4"></i>
+                            <p class="font-semibold">{% trans "Not enough data to display sentiment." %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Mood Trends Chart -->
+            <div class="dashboard-card lg:col-span-3 fade-in-element" style="animation-delay: 0.4s;">
+                <div class="p-6 sm:p-8">
+                    <h2 class="text-2xl font-semibold text-text-light-color dark:text-text-dark mb-4">{% trans "Mood Trends" %}</h2>
+                    <div class="chart-container relative h-[300px] w-full">
+                        <div id="arcChartLoader" class="loader-container">
+                            <div class="gear-group"><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i></div>
+                        </div>
+                        <canvas id="emotionalArcChart"></canvas>
+                        <div id="noArcChartDataMessage" class="absolute inset-0 hidden flex-col items-center justify-center text-center p-6 text-muted-light dark:text-muted-dark">
+                            <i class="fas fa-chart-line text-5xl mb-4"></i>
+                            <p class="font-semibold">{% trans "Not enough data to display mood trends." %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deeper Analysis Section -->
+        <div class="dashboard-card mt-8 fade-in-element" style="animation-delay: 0.5s;">
+            <div class="p-6 sm:p-8">
+                <div class="text-center mb-6">
+                    <h3 class="text-3xl font-bold text-text-light-color dark:text-text-dark tracking-tight">{% trans "Deeper Analysis" %}</h3>
+                    <p class="mt-2 text-lg text-muted-light dark:text-muted-dark">{% trans "Let AI find highlights, challenges, and key themes from your entries." %}</p>
+                </div>
+                <div class="analysis-section relative min-h-[200px]">
+                    <div id="insights-initial-prompt" class="text-center">
+                        <button id="generate-insights-btn" class="fancy-button flex items-center gap-2 mx-auto">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>{% trans "Generate Key Insights" %}</span>
+                        </button>
+                        <p id="insights-time-period" class="text-sm text-muted-light dark:text-muted-dark mt-3">{% trans "Based on Last 30 Days" %}</p>
+                    </div>
+                    <div id="insights-loader" class="loader-container">
+                        <div class="gear-group"><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i></div>
+                    </div>
+                    <div id="insights-results" class="w-full hidden fade-in-results">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                            <div>
+                                <h4 class="text-lg font-semibold text-text-light-color dark:text-text-dark mb-4 border-b-2 border-yellow-400 pb-2 flex items-center gap-2"><i class="fas fa-star text-yellow-400"></i> {% trans "Highlights" %}</h4>
+                                <ul id="highlights-list" class="space-y-3 text-sm result-list highlights-list text-muted-light dark:text-muted-dark"></ul>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold text-text-light-color dark:text-text-dark mb-4 border-b-2 border-red-400 pb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-red-400"></i> {% trans "Challenges" %}</h4>
+                                <ul id="challenges-list" class="space-y-3 text-sm result-list challenges-list text-muted-light dark:text-muted-dark"></ul>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold text-text-light-color dark:text-text-dark mb-4 border-b-2 border-accent-color pb-2 flex items-center gap-2"><i class="fas fa-bookmark text-accent-color"></i> {% trans "Key Themes" %}</h4>
+                                <ul id="themes-list" class="space-y-3 text-sm result-list themes-list text-muted-light dark:text-muted-dark"></ul>
+                            </div>
+                        </div>
+                        <div id="suggestions-prompt" class="text-center mt-10 hidden border-t border-border-light dark:border-border-dark pt-6">
+                            <button id="generate-suggestions-btn" class="fancy-button flex items-center gap-2 mx-auto">
+                                <i class="fas fa-magic"></i>
+                                <span>{% trans "Get Actionable Suggestions" %}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="insights-error" class="text-center text-red-500 hidden font-medium fade-in-results"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Suggestions Section -->
+        <div id="suggestions-section" class="mt-8 hidden fade-in-element" style="animation-delay: 0.6s;">
+            <div class="dashboard-card p-6 sm:p-8">
+                <div id="suggestions-container" class="relative min-h-[150px]">
+                    <h3 class="text-2xl font-bold text-text-light-color dark:text-text-dark tracking-tight mb-6 text-center">{% trans "Your Next Steps" %}</h3>
+                    <div id="suggestions-loader" class="loader-container">
+                        <div class="gear-group"><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i><i class="fas fa-cog gear"></i></div>
+                    </div>
+                    <div id="suggestions-results" class="w-full hidden fade-in-results">
+                        <ul id="suggestions-list" class="space-y-4 text-muted-light dark:text-muted-dark result-list suggestions-list"></ul>
+                    </div>
+                    <div id="suggestions-error" class="text-center text-red-500 hidden font-medium fade-in-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const MOOD_VISUALS = {
+            angry:   { name: '{% trans "Angry" %}',   emoji: '😡', color: '#ef4444', value: -2 },
+            sad:     { name: '{% trans "Sad" %}',     emoji: '😢', color: '#3b82f6', value: -1 },
+            neutral: { name: '{% trans "Neutral" %}', emoji: '😐', color: '#6b7280', value: 0  },
+            calm:    { name: '{% trans "Calm" %}',    emoji: '😌', color: '#22c55e', value: 1  },
+            happy:   { name: '{% trans "Happy" %}',   emoji: '😊', color: '#f59e0b', value: 2  },
+            excited: { name: '{% trans "Excited" %}', emoji: '🤩', color: '#facc15', value: 3  }
+        };
+        
+        const ui = {
+            globalTime: {
+                filters: document.querySelector('.time-filter-buttons'),
+                timePeriodLabel: document.getElementById('global-time-period')
+            },
+            sentimentChart: {
+                canvas: document.getElementById('sentimentTrendChart'),
+                loader: document.getElementById('sentimentChartLoader'),
+                noDataMsg: document.getElementById('noSentimentChartDataMessage')
+            },
+            arcChart: {
+                canvas: document.getElementById('emotionalArcChart'),
+                loader: document.getElementById('arcChartLoader'),
+                noDataMsg: document.getElementById('noArcChartDataMessage')
+            },
+            insights: {
+                btn: document.getElementById('generate-insights-btn'),
+                prompt: document.getElementById('insights-initial-prompt'),
+                loader: document.getElementById('insights-loader'),
+                container: document.getElementById('insights-results'),
+                error: document.getElementById('insights-error'),
+                highlights: document.getElementById('highlights-list'),
+                challenges: document.getElementById('challenges-list'),
+                themes: document.getElementById('themes-list'),
+                timePeriodLabel: document.getElementById('insights-time-period')
+            },
+            suggestions: {
+                section: document.getElementById('suggestions-section'),
+                prompt: document.getElementById('suggestions-prompt'),
+                btn: document.getElementById('generate-suggestions-btn'),
+                loader: document.getElementById('suggestions-loader'),
+                container: document.getElementById('suggestions-container'),
+                results: document.getElementById('suggestions-results'),
+                list: document.getElementById('suggestions-list'),
+                error: document.getElementById('suggestions-error')
+            }
+        };
+    
+        const state = {
+            csrfToken: '{{ csrf_token }}',
+            activeTimePeriod: '{{ selected_period|escapejs }}' || 'last_30_days',
+            lastInsightsData: null,
+            sentimentChart: null,
+            arcChart: null,
+            hasData: true
+        };
+    
+        const api = {
+            fetchSentimentChartData: (period) => fetch(`{% url 'ai_services:sentiment_chart_data_ajax' %}?time_period=${period}`),
+            fetchArcChartData: (period) => fetch(`{% url 'ai_services:emotional_arc_data_ajax' %}?time_period=${period}`),
+            startInsightsTask: (formData) => fetch(`{% url 'ai_services:start_insights_analysis' %}`, {
+                method: 'POST', body: formData, headers: { 'X-CSRFToken': state.csrfToken }
+            }),
+            getInsightsResult: (taskId) => fetch(`{% url 'ai_services:get_insights_result' %}?task_id=${taskId}`),
+            startSuggestionsTask: (insights) => fetch(`{% url 'ai_services:start_suggestions_analysis' %}`, {
+                method: 'POST', body: JSON.stringify(insights), headers: { 'X-CSRFToken': state.csrfToken, 'Content-Type': 'application/json' }
+            }),
+            getSuggestionsResult: (taskId) => fetch(`{% url 'ai_services:get_suggestions_result' %}?task_id=${taskId}`)
+        };
+    
+        function pollForTaskResult(taskId, getResultFn, successCallback, failureCallback, loaderElement) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await getResultFn(taskId);
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ message: 'Polling request failed.' }));
+                        throw new Error(errorData.message);
+                    }
+                    const data = await response.json();
+                    if (data.status === 'SUCCESS') {
+                        clearInterval(interval);
+                        loaderElement.classList.remove('visible');
+                        successCallback(data);
+                    } else if (data.status === 'FAILURE') {
+                        clearInterval(interval);
+                        loaderElement.classList.remove('visible');
+                        failureCallback(data);
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                    loaderElement.classList.remove('visible');
+                    failureCallback({ message: error.message || '{% trans "Could not retrieve analysis results." %}' });
+                    console.error('Polling error:', error);
+                }
+            }, 3000);
+        }
+        
+        const chartManager = {
+            getChartColors: () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                return {
+                    ticks: isDark ? '#d1d5db' : '#6b7280',
+                    title: isDark ? '#f1f5f9' : '#1f2937',
+                    grid: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    tooltip: {
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        titleColor: isDark ? '#f3f4f6' : '#1f2937',
+                        bodyColor: isDark ? '#d1d5db' : '#4b5563'
+                    },
+                    lineColor: isDark ? '#60a5fa' : '#3b82f6',
+                    cardBg: isDark ? '#1e293b' : '#ffffff'
+                };
+            },
+    
+            renderSentimentChart: function(data) {
+                const chartColors = this.getChartColors();
+                if (state.sentimentChart) state.sentimentChart.destroy();
+                
+                const totalEntries = data.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                
+                const moodData = data.labels.map(labelKey => {
+                    const moodInfo = MOOD_VISUALS[labelKey.toLowerCase()];
+                    if (!moodInfo) {
+                        console.warn(`Unknown mood key "${labelKey}" received.`);
+                        return { name: labelKey, color: '#6b7280' };
+                    }
+                    return moodInfo;
+                });
+    
+                state.sentimentChart = new Chart(ui.sentimentChart.canvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: moodData.map(m => `${m.emoji} ${m.name}`),
+                        datasets: [{
+                            label: '{% trans "Mood Distribution" %}',
+                            data: data.datasets[0].data,
+                            backgroundColor: moodData.map(m => m.color),
+                            borderColor: chartColors.cardBg,
+                            borderWidth: 3,
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: chartColors.title,
+                                    font: { family: 'Inter', size: 12 },
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'rectRounded'
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: chartColors.tooltip.backgroundColor,
+                                titleColor: chartColors.tooltip.titleColor,
+                                bodyColor: chartColors.tooltip.bodyColor,
+                                displayColors: true,
+                                padding: 12,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: (context) => {
+                                        const percentage = totalEntries > 0 ? (context.parsed / totalEntries * 100).toFixed(1) : 0;
+                                        return [
+                                            `{% trans "Entries" %}: ${context.parsed}`,
+                                            `{% trans "Percentage" %}: ${percentage}%`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        animation: { duration: 800, easing: 'easeOutQuad' },
+                        cutout: '60%'
+                    }
+                });
+                ui.sentimentChart.canvas.classList.add('visible');
+            },
+    
+            renderArcChart: function(data) {
+                const chartColors = this.getChartColors();
+                if (state.arcChart) state.arcChart.destroy();
+                
+                const smoothedData = data.datasets[0].data;
+                const moodLabels = Object.fromEntries(
+                    Object.values(MOOD_VISUALS).map(m => [m.value, `${m.emoji} ${m.name}`])
+                );
+    
+                state.arcChart = new Chart(ui.arcChart.canvas.getContext('2d'), {
+                    type: 'scatter', // Changed to scatter plot
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: '{% trans "Average Mood" %}',
+                            data: smoothedData.map((value, index) => ({
+                                x: index,
+                                y: value,
+                                r: data.datasets[0].is_interpolated[index] ? 4 : 6 // Size based on interpolation
+                            })),
+                            backgroundColor: smoothedData.map(value => {
+                                const moodValue = Math.round(value);
+                                return Object.values(MOOD_VISUALS).find(m => m.value === moodValue)?.color || chartColors.lineColor;
+                            }),
+                            borderColor: chartColors.cardBg,
+                            borderWidth: 1,
+                            pointStyle: 'circle',
+                            pointHoverRadius: 8,
+                            showLine: false // No connecting lines for scatter
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ticks: {
+                                    color: chartColors.ticks,
+                                    font: { family: 'Inter', size: 12 },
+                                    callback: (value) => moodLabels[value] || ''
+                                },
+                                grid: { color: chartColors.grid, drawBorder: false },
+                                min: -2,
+                                max: 3,
+                                stepSize: 1
+                            },
+                            x: {
+                                ticks: {
+                                    color: chartColors.ticks,
+                                    font: { family: 'Inter', size: 12 },
+                                    callback: (value) => data.labels[value] || '',
+                                    maxTicksLimit: state.activeTimePeriod === 'last_365_days' ? 12 : 10,
+                                    autoSkip: true,
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: chartColors.tooltip.backgroundColor,
+                                titleColor: chartColors.tooltip.titleColor,
+                                bodyColor: chartColors.tooltip.bodyColor,
+                                displayColors: false,
+                                padding: 12,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: (context) => {
+                                        const moodValue = context.parsed.y;
+                                        const moodLabel = moodLabels[Math.round(moodValue)] || `{% trans "Mood" %}: ${moodValue.toFixed(2)}`;
+                                        return `{% trans "Average Mood" %}: ${moodLabel} (${data.labels[context.parsed.x]})`;
+                                    }
+                                }
+                            }
+                        },
+                        animation: { duration: 1000, easing: 'easeOutQuad' }
+                    }
+                });
+                ui.arcChart.canvas.classList.add('visible');
+            },
+    
+            updateInsightsButton: function(hasData, timeLabel) {
+                ui.insights.timePeriodLabel.textContent = hasData 
+                    ? `{% trans "Based on" %} ${timeLabel}`
+                    : `{% trans "No data available for" %} ${timeLabel}`;
+                ui.insights.timePeriodLabel.classList.toggle('error', !hasData);
+                ui.insights.btn.disabled = !hasData;
+            },
+    
+            update: async function(timePeriod, buttonEl) {
+                const timePeriodLabel = buttonEl ? buttonEl.dataset.label : '{% trans "Last 30 Days" %}';
+                ui.globalTime.timePeriodLabel.textContent = timePeriodLabel;
+                state.activeTimePeriod = timePeriod;
+    
+                ui.globalTime.filters.querySelectorAll('button').forEach(btn => btn.classList.remove('active', 'bg-primary-light', 'text-white', 'dark:bg-primary-dark'));
+                if (buttonEl) buttonEl.classList.add('active', 'bg-primary-light', 'text-white', 'dark:bg-primary-dark');
+    
+                [ui.sentimentChart, ui.arcChart].forEach(chartUI => {
+                    chartUI.loader.classList.add('visible');
+                    chartUI.canvas.classList.remove('visible');
+                    chartUI.noDataMsg.classList.add('hidden');
+                    chartUI.noDataMsg.style.display = 'none';
+                });
+                
+                let hasSentimentData = false, hasArcData = false;
+    
+                try {
+                    const response = await api.fetchSentimentChartData(timePeriod);
+                    if (!response.ok) throw new Error('Sentiment chart data fetch failed');
+                    const data = await response.json();
+                    if (data && data.has_data) {
+                        this.renderSentimentChart(data);
+                        hasSentimentData = true;
+                    } else {
+                        if(state.sentimentChart) state.sentimentChart.destroy();
+                        ui.sentimentChart.noDataMsg.style.display = 'flex';
+                    }
+                } catch (error) {
+                    console.error("Sentiment chart fetch error:", error);
+                    if(state.sentimentChart) state.sentimentChart.destroy();
+                    ui.sentimentChart.noDataMsg.style.display = 'flex';
+                } finally {
+                    ui.sentimentChart.loader.classList.remove('visible');
+                }
+    
+                try {
+                    const response = await api.fetchArcChartData(timePeriod);
+                    if (!response.ok) throw new Error('Mood trends chart data fetch failed');
+                    const data = await response.json();
+                    if (data && data.has_data) {
+                        this.renderArcChart(data);
+                        hasArcData = true;
+                    } else {
+                        if(state.arcChart) state.arcChart.destroy();
+                        ui.arcChart.noDataMsg.style.display = 'flex';
+                    }
+                } catch (error) {
+                    console.error("Mood trends chart fetch error:", error);
+                    if(state.arcChart) state.arcChart.destroy();
+                    ui.arcChart.noDataMsg.style.display = 'flex';
+                } finally {
+                    ui.arcChart.loader.classList.remove('visible');
+                }
+    
+                state.hasData = hasSentimentData || hasArcData;
+                this.updateInsightsButton(state.hasData, timePeriodLabel);
+            }
+        };
+        
+        const insightsManager = {
+            display: (data) => {
+                state.lastInsightsData = data;
+                const renderList = (listEl, items) => {
+                    listEl.innerHTML = items && items.length > 0 
+                        ? items.map(item => `<li>${item}</li>`).join('')
+                        : `<li class="text-muted-light dark:text-muted-dark italic">{% trans "None found for this period." %}</li>`;
+                };
+                renderList(ui.insights.highlights, data.highlights);
+                renderList(ui.insights.challenges, data.challenges);
+                renderList(ui.insights.themes, data.key_themes);
+                
+                ui.insights.container.classList.remove('hidden');
+                ui.suggestions.prompt.classList.remove('hidden');
+            },
+            start: async () => {
+                if (!state.hasData) return;
+                ui.insights.prompt.classList.add('hidden');
+                ui.insights.container.classList.add('hidden');
+                ui.insights.error.classList.add('hidden');
+                ui.suggestions.section.classList.add('hidden');
+                ui.insights.loader.classList.add('visible');
+    
+                const formData = new FormData();
+                formData.append('time_period', state.activeTimePeriod);
+    
+                try {
+                    const response = await api.startInsightsTask(formData);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || 'Failed to start insights analysis.');
+                    
+                    if (data.status === 'processing' && data.task_id) {
+                        pollForTaskResult(data.task_id, api.getInsightsResult,
+                            (successData) => insightsManager.display(successData),
+                            (failureData) => {
+                                ui.insights.error.textContent = failureData.message || '{% trans "An error occurred." %}';
+                                ui.insights.error.classList.remove('hidden');
+                                ui.insights.prompt.classList.remove('hidden');
+                            },
+                            ui.insights.loader
+                        );
+                    } else { throw new Error(data.message || '{% trans "Could not start the task." %}'); }
+                } catch (err) {
+                    console.error("Insights analysis error:", err);
+                    ui.insights.loader.classList.remove('visible');
+                    ui.insights.error.textContent = err.message;
+                    ui.insights.error.classList.remove('hidden');
+                    ui.insights.prompt.classList.remove('hidden');
+                }
+            }
+        };
+    
+        const suggestionsManager = {
+            display: (data) => {
+                ui.suggestions.list.innerHTML = data.suggestions && data.suggestions.length > 0
+                    ? data.suggestions.map(item => `<li>${item}</li>`).join('')
+                    : `<li class="text-muted-light dark:text-muted-dark italic">{% trans "No specific suggestions could be generated." %}</li>`;
+                ui.suggestions.results.classList.remove('hidden');
+            },
+            start: async () => {
+                if (!state.lastInsightsData) return;
+                ui.suggestions.section.classList.remove('hidden');
+                ui.suggestions.prompt.classList.add('hidden');
+                ui.suggestions.results.classList.add('hidden');
+                ui.suggestions.error.classList.add('hidden');
+                ui.suggestions.loader.classList.add('visible');
+                try {
+                    const response = await api.startSuggestionsTask(state.lastInsightsData);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || 'Failed to start suggestions task.');
+    
+                    if (data.status === 'processing' && data.task_id) {
+                        pollForTaskResult(data.task_id, api.getSuggestionsResult,
+                            (successData) => suggestionsManager.display(successData),
+                            (failureData) => {
+                                ui.suggestions.error.textContent = failureData.message || '{% trans "Could not retrieve suggestions." %}';
+                                ui.suggestions.error.classList.remove('hidden');
+                            },
+                            ui.suggestions.loader
+                        );
+                    } else { throw new Error(data.message || '{% trans "Could not start the task." %}'); }
+                } catch(err) {
+                    console.error("Suggestions error:", err);
+                    ui.suggestions.loader.classList.remove('visible');
+                    ui.suggestions.error.textContent = err.message;
+                    ui.suggestions.error.classList.remove('hidden');
+                }
+            }
+        };
+    
+        ui.globalTime.filters.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => chartManager.update(btn.dataset.period, btn));
+        });
+        ui.insights.btn.addEventListener('click', insightsManager.start);
+        ui.suggestions.btn.addEventListener('click', suggestionsManager.start);
+    
+        // Handle theme change event
+        document.addEventListener('themeChanged', () => {
+            const activeBtn = ui.globalTime.filters.querySelector(`button[data-period="${state.activeTimePeriod}"]`);
+            if (state.sentimentChart) state.sentimentChart.destroy();
+            if (state.arcChart) state.arcChart.destroy();
+            chartManager.update(state.activeTimePeriod, activeBtn);
+        });
+    
+        const initialActiveButton = ui.globalTime.filters.querySelector(`button[data-period="${state.activeTimePeriod}"]`);
+        chartManager.update(state.activeTimePeriod, initialActiveButton);
+    });
+</script>
+{% endblock %}

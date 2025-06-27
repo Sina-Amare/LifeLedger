@@ -5,7 +5,7 @@
 {% block title %}{% trans "Dashboard" %} - LifeLedger{% endblock %}
 
 {% block extra_head %}
-{# Link to the new CSS file specific to dashboard.html #}
+{# Link to the CSS file specific to dashboard.html #}
 <link rel="stylesheet" href="{% static 'css/dashboard_styles.css' %}">
 {% endblock %}
 
@@ -31,22 +31,21 @@
             <div class="dashboard-card fade-in-element" style="animation-delay: 0.2s;">
                 {% if latest_entry %}
                     <div class="flex flex-col sm:flex-row sm:items-start justify-between">
-                        <div class="flex items-start mb-4">
+                        <div class="flex items-start mb-4 sm:mb-0 w-full sm:w-3/4">
                             <i class="fas fa-feather-alt reflection-icon mr-4"></i>
-                            <div>
+                            <div class="w-full">
                                 <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">
                                     {{ latest_entry.title|truncatechars:50 }}
                                 </h3>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
                                     {% trans "Written on" %} {{ latest_entry.created_at|date:"F j, Y" }}
                                 </p>
-                                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                                    {{ latest_entry.content|truncatewords:20 }}
-                                </p>
+                                <div class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed latest-reflection-text" style="max-height: 6rem; overflow-hidden;">
+                                    {{ latest_entry.content|safe }}
+                                </div>
                             </div>
                         </div>
-                        <a href="{% url 'journal:journal_detail' pk=latest_entry.pk %}"
-                           class="card-action mt-4 sm:mt-0">
+                        <a href="{% url 'journal:journal_detail' pk=latest_entry.pk %}" class="card-action mt-4 sm:mt-0 self-end">
                             {% trans "Read More" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
                         </a>
                     </div>
@@ -54,8 +53,7 @@
                     <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
                         {% trans "No journal entries yet. Start your journey by writing your first reflection!" %}
                     </p>
-                    <a href="{% url 'journal:journal_create' %}"
-                       class="card-action mt-4">
+                    <a href="{% url 'journal:journal_create' %}" class="card-action mt-4">
                         {% trans "Write Your First Entry" %} <i class="fas fa-pencil-alt icon-btn ml-2 text-sm"></i>
                     </a>
                 {% endif %}
@@ -72,23 +70,16 @@
                         <h3 class="text-xl sm:text-2xl font-semibold text-text-light dark:text-text-dark mb-1">{% trans "My Journal" %}</h3>
                         <p class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{% trans "Your Entries" %}</p>
                     </div>
-                    <i class="fas fa-info-circle help-icon ml-2 text-gray-500 dark:text-gray-400 absolute right-0 top-0" data-target="popover-journal" aria-label="Journal information"></i>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Write new entries, revisit your past memories, and reflect on your journey. Your stories await." %}
                 </p>
-                <a href="{% url 'journal:journal_list' %}"
-                   class="card-action mt-auto">
+                <a href="{% url 'journal:journal_list' %}" class="card-action mt-auto">
                     {% trans "Go to Journal" %} <i class="fas fa-arrow-right icon-btn ml-2 text-sm"></i>
                 </a>
-                <div class="help-popover" id="popover-journal" aria-describedby="journal-help">
-                    <p class="text-xs text-gray-900 dark:text-gray-100">
-                        {% trans "Create and view your journal entries here. Reflect on your thoughts and memories." %}
-                    </p>
-                </div>
             </div>
 
-            {# AI Insights Card #}
+            {# AI Insights Card - CORRECTED URL #}
             <div class="dashboard-card group flex flex-col fade-in-element" style="animation-delay: 0.4s;">
                 <div class="flex items-start text-secondary-light dark:text-secondary-dark mb-4">
                     <i class="fas fa-brain fa-2x mr-4 card-icon pt-1"></i>
@@ -98,11 +89,11 @@
                     </div>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
-                    {% trans "Uncover patterns in your emotions and experiences with upcoming AI-powered analysis." %}
+                    {% trans "Uncover patterns in your emotions and experiences with AI-powered analysis." %}
                 </p>
-                <span class="card-action-disabled mt-auto" aria-disabled="true" title="{% trans 'Coming Soon' %}">
-                    {% trans "View Analytics" %} <i class="fas fa-cogs ml-2 text-sm"></i>
-                </span>
+                <a href="{% url 'ai_services:ai_insights_dashboard' %}" class="card-action mt-auto">
+                    {% trans "View Insights" %} <i class="fas fa-chart-line icon-btn ml-2 text-sm"></i>
+                </a>
             </div>
 
             {# Profile & Settings Card #}
@@ -117,7 +108,6 @@
                 <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed flex-grow">
                     {% trans "Manage your account details, preferences, and application settings to tailor your experience." %}
                 </p>
-                {% comment %} UPDATED: Link for "Manage Account" now points to the profile update page {% endcomment %}
                 <a href="{% url 'user_profile:profile_update' %}" class="card-action mt-auto">
                     {% trans "Manage Account" %} <i class="fas fa-sliders-h icon-btn ml-2 text-sm"></i>
                 </a>
@@ -133,12 +123,6 @@
                     <div class="flex flex-col">
                         <h4 class="quick-action-title text-base font-semibold text-text-light dark:text-text-dark">{% trans "Write New Entry" %}</h4>
                         <p class="quick-action-subtitle text-xs text-gray-500 dark:text-gray-400">{% trans "Start a new reflection." %}</p>
-                    </div>
-                    <i class="fas fa-info-circle help-icon absolute right-4 top-4 text-gray-400 dark:text-gray-400" data-target="popover-write-entry" aria-label="Write entry information"></i>
-                    <div class="help-popover" id="popover-write-entry" aria-describedby="write-entry-help">
-                        <p class="text-xs text-gray-900 dark:text-gray-100">
-                            {% trans "Capture your thoughts and memories in a new journal entry." %}
-                        </p>
                     </div>
                 </a>
                 
@@ -166,6 +150,5 @@
 {% endblock %}
 
 {% block extra_js %}
-{# Link to the new JS file specific to dashboard.html #}
 <script src="{% static 'js/dashboard_scripts.js' %}"></script>
 {% endblock %}

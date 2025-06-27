@@ -243,3 +243,56 @@ html {
     opacity: 0.7;
   }
 }
+
+/* Hamburger Menu Styles */
+#hamburger-toggle {
+  position: relative;
+  z-index: 20010; /* Higher than navbar to ensure clickability */
+}
+
+#hamburger-menu {
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+}
+
+#hamburger-menu.open {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+#hamburger-menu:not(.open) {
+  opacity: 0;
+  transform: translateY(-10px);
+  visibility: hidden;
+}
+
+/* Ensure dropdown doesn't overlap other elements */
+#hamburger-menu a {
+  pointer-events: auto;
+}
+
+/* Theme-specific styles for dropdown */
+#hamburger-menu {
+  background: var(--card-light-bg);
+  border: 1px solid var(--border-light-theme);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dark #hamburger-menu {
+  background: var(--card-dark-bg);
+  border: 1px solid var(--border-dark-theme);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Hamburger icon animation */
+#hamburger-toggle i {
+  transition: transform 0.2s ease;
+}
+
+#hamburger-toggle[aria-expanded="true"] i {
+  transform: rotate(90deg); /* Rotate icon when menu is open */
+}
+#delete-modal {
+  z-index: 9999;
+}

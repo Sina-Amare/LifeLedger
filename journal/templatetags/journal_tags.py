@@ -23,3 +23,11 @@ def attr(obj, attr_name):
     if hasattr(obj, str(attr_name)):
         return getattr(obj, str(attr_name))
     return None
+
+@register.filter(name='filter_images')
+def filter_images(attachments):
+    """
+    Filters attachments to return only those with file_type='image'.
+    Usage: {{ entry.attachments|filter_images }}
+    """
+    return attachments.filter(file_type='image')
