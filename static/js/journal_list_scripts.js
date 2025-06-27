@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeBubble = null;
   let activeButton = null;
 
+  // Handle "Read More" buttons for thought bubbles
   const readMoreButtons = document.querySelectorAll(".read-more");
   console.log("Number of Read More buttons found:", readMoreButtons.length);
   readMoreButtons.forEach((button) => {
@@ -155,5 +156,118 @@ document.addEventListener("DOMContentLoaded", () => {
         activeButton = null;
       }
     }
+  });
+
+  // Handle image carousel navigation
+  const carousels = document.querySelectorAll(".image-carousel");
+  console.log("Number of carousels found:", carousels.length);
+  carousels.forEach((carousel, carouselIndex) => {
+    const images = carousel.querySelectorAll(".frame-image");
+    const prevButton = carousel.querySelector(".carousel-nav.prev");
+    const nextButton = carousel.querySelector(".carousel-nav.next");
+    let currentIndex = 0;
+
+    if (images.length === 0) {
+      console.warn(`No images found in carousel ${carouselIndex}`);
+      return;
+    }
+
+    const showImage = (index) => {
+      images.forEach((img, i) => {
+        img.classList.toggle("active", i === index);
+      });
+      if (images.length > 1) {
+        prevButton.style.display = index === 0 ? "none" : "flex";
+        nextButton.style.display =
+          index === images.length - 1 ? "none" : "flex";
+      } else {
+        prevButton.style.display = "none";
+        nextButton.style.display = "none";
+      }
+    };
+
+    if (images.length > 1) {
+      prevButton.addEventListener("click", () => {
+        if (currentIndex > 0) {
+          currentIndex--;
+          showImage(currentIndex);
+          console.log(
+            `Carousel ${carouselIndex}: Showing image ${currentIndex}`
+          );
+        }
+      });
+
+      nextButton.addEventListener("click", () => {
+        if (currentIndex < images.length - 1) {
+          currentIndex++;
+          showImage(currentIndex);
+          console.log(
+            `Carousel ${carouselIndex}: Showing image ${currentIndex}`
+          );
+        }
+      });
+    }
+
+    // Initialize the first image
+    showImage(currentIndex);
+  });
+
+  // Add animated border using canvas
+  const photoFrames = document.querySelectorAll(".photo-frame");
+  photoFrames.forEach((frame) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = frame.offsetWidth;
+    canvas.height = frame.offsetHeight;
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.zIndex = "1";
+    frame.appendChild(canvas);
+
+    const ctx = canvas.getContext("2d");
+    let time = 0;
+
+    function drawAnimatedBorder() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gradient colors
+      const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      gradient.addColorStop(0, "#ff6b6b");
+      gradient.addColorStop(0.33, "#4ecdc4");
+      gradient.addColorStop(0.66, "#45b7d1");
+      gradient.addColorStop(1, "#96c93d");
+
+      // Draw pulsing border
+      const borderWidth = 8 + Math.sin(time) * 2; // Pulsing effect
+      ctx.lineWidth = borderWidth;
+      ctx.strokeStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(borderWidth / 2, borderWidth / 2);
+      ctx.lineTo(canvas.width - borderWidth / 2, borderWidth / 2);
+      ctx.lineTo(
+        canvas.width - borderWidth / 2,
+        canvas.height - borderWidth / 2
+      );
+      ctx.lineTo(borderWidth / 2, canvas.height - borderWidth / 2);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Animate gradient flow
+      time += 0.05;
+      requestAnimationFrame(drawAnimatedBorder);
+    }
+
+    drawAnimatedBorder();
+
+    // Update canvas size on window resize
+    window.addEventListener("resize", () => {
+      canvas.width = frame.offsetWidth;
+      canvas.height = frame.offsetHeight;
+    });
   });
 });
