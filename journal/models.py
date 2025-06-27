@@ -128,6 +128,10 @@ class JournalEntry(models.Model):
         """Returns the URL to access a detail record for this journal entry."""
         return reverse('journal:journal_detail', kwargs={'pk': self.pk})
 
+    def get_image_attachments(self):
+        """Returns a queryset of attachments that are images."""
+        return self.attachments.filter(file_type='image').order_by('uploaded_at')
+
     def delete(self, *args, **kwargs):
         """
         Custom delete method to ensure associated files are also removed from storage.

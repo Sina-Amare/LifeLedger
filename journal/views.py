@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
 from django.forms import inlineformset_factory
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 import logging
@@ -45,7 +45,18 @@ class JournalEntryListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related('tags', 'attachments')
+        # Prefetch image attachments specifically using the model method
+        image_attachments_prefetch = Prefetch(
+            'attachments',
+            queryset=JournalAttachment.objects.filter(file_type='image').order_by('uploaded_at'),
+            to_attr='image_attachments'
+        )
+
+        queryset = JournalEntry.objects.filter(user=self.request.user).prefetch_related(
+            'tags', 
+            image_attachments_prefetch  # Use the specific prefetch for images
+        )
+        
         mood = self.request.GET.get('mood')
         time_period = self.request.GET.get('time_period')
         is_favorite = self.request.GET.get('is_favorite')
@@ -225,7 +236,7 @@ class JournalEntryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
-        attachment_formset = JournalAttachmentInlineFormSet(request.POST, instance=self.object, prefix='attachments')
+        attachment_formset = JournalAttachmentInlineFormSet(request.POST, request.FILES, instance=self.object, prefix='attachments')
 
         if form.is_valid() and attachment_formset.is_valid():
             return self.form_valid(form, attachment_formset)

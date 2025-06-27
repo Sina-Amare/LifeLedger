@@ -87,6 +87,8 @@
             <div class="timeline-container">
                 {% for entry in entries %}
                     <div class="journal-group" id="entry-group-{{ entry.pk }}" data-side="{% if forloop.counter|divisibleby:2 %}right{% else %}left{% endif %}">
+                        
+                        <!-- Journal Entry Card -->
                         <div class="timeline-entry fade-in-element" style="animation-delay: {{ forloop.counter|add:0.3 }}s;">
                             <div class="date-badge">
                                 {{ entry.created_at|date:"F j, Y" }}
@@ -111,6 +113,7 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                                
                                 <div class="entry-meta">
                                     {% if entry.mood %}
                                         {% with mood_visual=mood_visuals|get_item:entry.mood %}
@@ -122,6 +125,7 @@
                                         </div>
                                         {% endwith %}
                                     {% endif %}
+
                                     {% if entry.tags.all %}
                                         <div class="flex flex-wrap gap-2">
                                             {% for tag in entry.tags.all %}
@@ -130,6 +134,7 @@
                                         </div>
                                     {% endif %}
                                 </div>
+                                
                                 <footer class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                                     <div class="flex flex-col sm:flex-row gap-3 mt-4">
                                         <a href="{% url 'journal:journal_update' pk=entry.pk %}" class="edit-button">
@@ -145,29 +150,31 @@
                                 </footer>
                             </article>
                         </div>
-                        {% with images=entry.attachments|filter_images %}
-                            {% if images %}
-                                <div class="timeline-image fade-in-element" style="animation-delay: {{ forloop.counter|add:0.4 }}s;">
-                                    <div class="photo-frame">
-                                        {% if images|length == 1 %}
-                                            <img src="{{ images.0.file.url }}" alt="Journal image" class="frame-image">
-                                        {% else %}
-                                            <div class="image-carousel" data-entry-id="{{ entry.pk }}">
-                                                {% for image in images %}
-                                                    <img src="{{ image.file.url }}" alt="Journal image {{ forloop.counter }}" class="frame-image {% if forloop.first %}active{% endif %}">
-                                                {% endfor %}
-                                                <button class="carousel-nav prev" data-direction="prev" style="display: none;">
-                                                    <i class="fas fa-chevron-left"></i>
-                                                </button>
-                                                <button class="carousel-nav next" data-direction="next" style="display: none;">
-                                                    <i class="fas fa-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        {% endif %}
+
+                        <!-- **** Animated Photo Container Section **** -->
+                        {% with images=entry.image_attachments %}
+                        {% if images %}
+                        <div class="timeline-image-frame-container">
+                            <!-- UPDATED: class changed from photo-frame to animated-photo-container -->
+                            <div class="animated-photo-container" data-gallery-id="gallery-{{ entry.pk }}">
+                                <div class="photo-gallery">
+                                    {% for image in images %}
+                                    <div class="gallery-item {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}">
+                                        <img src="{{ image.file.url }}" alt="Journal image {{ forloop.counter }}">
                                     </div>
+                                    {% endfor %}
                                 </div>
-                            {% endif %}
+                                
+                                {% if images|length > 1 %}
+                                <button class="gallery-nav prev" aria-label="Previous image">&lt;</button>
+                                <button class="gallery-nav next" aria-label="Next image">&gt;</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endwith %}
+                        <!-- **** End of Section **** -->
+
                     </div>
                 {% endfor %}
             </div>
